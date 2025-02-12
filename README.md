@@ -21,7 +21,7 @@ git clone https://github.com/JouTak/JouTakWeb.git
 
 Если у вас ещё не установлен Node.js нужной версии, выполните следующие шаги.
 
-### Для *nix-систем (Linux, macOS):
+### Для \*nix-систем (Linux, macOS):
 
 1. Установите nvm (Node Version Manager):
    ```bash
@@ -59,11 +59,13 @@ git clone https://github.com/JouTak/JouTakWeb.git
 После клонирования репозитория и проверки установки Node.js выполните следующие команды:
 
 1. Перейдите в каталог с фронтендом:
+
    ```bash
    cd JouTakWeb/frontend/
    ```
 
 2. Установите зависимости:
+
    ```bash
    npm install
    ```

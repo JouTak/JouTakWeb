@@ -1,24 +1,36 @@
-import { Link } from "react-router-dom";
+import { Footer } from "@gravity-ui/navigation";
 
-const Footer = () => {
+const CustomFooter = () => {
   return (
-    <footer className="bg-dark text-light py-3 mt-4">
-      <div className="container text-center">
-        <div>© 2025 JoyTak</div>
-        <div className="mb-2">
-          <Link to="/privacy-policy" className="text-light mx-2">
-            Политика конфиденциальности
-          </Link>
-          <Link to="/terms" className="text-light mx-2">
-            Условия использования
-          </Link>
-          <Link to="/contact" className="text-light mx-2">
-            Контакты
-          </Link>
-        </div>
-      </div>
-    </footer>
+    <Footer
+      className="page-footer"
+      withDivider={false}
+      moreButtonTitle="Show more"
+      copyright={`@ ${new Date().getFullYear()} "JouTak"`}
+      logo={{
+        // icon: logoIcon,
+        iconSize: 24,
+        text: "JouTak",
+      }}
+      menuItems={[
+        {
+          text: "Политика конфиденциальности",
+          href: "/privacy-policy",
+          target: "blank",
+        },
+        {
+          text: "Условия использования",
+          href: "/privacy-policy",
+          target: "blank",
+        },
+        {
+          text: "Контакты",
+          href: "/contact",
+          target: "blank",
+        },
+      ]}
+    />
   );
 };
 
-export default Footer;
+export default CustomFooter;

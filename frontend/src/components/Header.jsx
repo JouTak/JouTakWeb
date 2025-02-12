@@ -32,7 +32,7 @@ const Header = () => {
                 </Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link" to="#">
+                <Link className="nav-link" to="http://joutak.ru-mc.ru:18577/">
                   Онлайн карта
                 </Link>
               </li>

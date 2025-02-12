@@ -1,6 +1,6 @@
 # JouTakWeb
 
-[![Lint](https://github.com/JouTak/JouTakWeb/actions/workflows/lint.yml/badge.svg)](https://github.com/JouTak/JouTakWeb/actions/workflows/lint.yml)
+[![Lint](https://github.com/JouTak/JouTakWeb/actions/workflows/CI.yml/badge.svg)](https://github.com/JouTak/JouTakWeb/actions/workflows/lint.yml)
 
 ## Начало работы:
 

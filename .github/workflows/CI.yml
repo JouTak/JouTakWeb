@@ -59,12 +59,12 @@ jobs:
 
       - name: Build and Tag Frontend Image
         run: |
-          FRONTEND_IMAGE=ghcr.io/${{ github.repository_owner }}/joutakweb
+          FRONTEND_IMAGE=ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/joutakweb
           docker build -t $FRONTEND_IMAGE:latest -f ./frontend/Dockerfile ./frontend
           docker tag $FRONTEND_IMAGE:latest $FRONTEND_IMAGE:${{ github.run_number }}
 
       - name: Push Frontend Image
         run: |
-          FRONTEND_IMAGE=ghcr.io/${{ github.repository_owner }}/joutakweb
+          FRONTEND_IMAGE=ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/joutakweb
           docker push $FRONTEND_IMAGE:latest
           docker push $FRONTEND_IMAGE:${{ github.run_number }}

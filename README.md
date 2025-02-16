@@ -1,6 +1,7 @@
 # JouTakWeb
 
 [![Lint](https://github.com/JouTak/JouTakWeb/actions/workflows/CI.yml/badge.svg)](https://github.com/JouTak/JouTakWeb/actions/workflows/lint.yml)
+![GitHub top language](https://img.shields.io/github/languages/top/JouTak/JouTakWeb)
 
 ## Начало работы:
 

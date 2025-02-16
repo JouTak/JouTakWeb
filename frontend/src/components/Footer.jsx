@@ -8,7 +8,7 @@ const CustomFooter = () => {
       moreButtonTitle="Show more"
       copyright={`©  ${new Date().getFullYear()} "JouTak"`}
       logo={{
-        icon: "/img/icons/logo.png",
+        icon: '<img src="/img/icons/logo.png" alt="logo photo logo">',
         iconSize: 24,
         text: "JouTak",
       }}

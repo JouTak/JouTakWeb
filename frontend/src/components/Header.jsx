@@ -65,7 +65,7 @@ const Header = () => {
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
         <div className="container">
           <Breadcrumbs
-            className="text-white"
+            className="text-white g-root_theme_dark"
             itemComponent={RouterBreadcrumbItem}
             popupStyle="inline"
             showRoot={false}

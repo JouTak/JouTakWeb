@@ -6,9 +6,9 @@ const CustomFooter = () => {
       className="page-footer"
       withDivider={false}
       moreButtonTitle="Show more"
-      copyright={`@ ${new Date().getFullYear()} "JouTak"`}
+      copyright={`©  ${new Date().getFullYear()} "JouTak"`}
       logo={{
-        // icon: logoIcon,
+        icon: "/img/icons/logo.png",
         iconSize: 24,
         text: "JouTak",
       }}
@@ -20,7 +20,7 @@ const CustomFooter = () => {
         },
         {
           text: "Условия использования",
-          href: "/privacy-policy",
+          href: "/terms-of-use",
           target: "blank",
         },
         {

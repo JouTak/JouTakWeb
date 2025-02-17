@@ -1,4 +1,4 @@
-const Home = () => {
+const JouTak = () => {
   return (
     <div className="text-center">
       <div
@@ -8,7 +8,11 @@ const Home = () => {
       >
         <div className="carousel-inner">
           <div className="carousel-item active" data-bs-interval="10000">
-            <img src="/img/cronva.png" className="d-block w-100" alt="Кронва" />
+            <img
+              src="/img/nether-hub.png"
+              className="d-block w-100"
+              alt="Nether Hub"
+            />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img src="/img/forest.png" className="d-block w-100" alt="лес" />
@@ -74,4 +78,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default JouTak;

@@ -70,7 +70,7 @@ const JouTak = () => {
             target="_blank"
             rel="noopener noreferrer"
           >
-            Проходка
+            Зарегистрироваться на приватном сервере
           </a>
         </div>
       </div>

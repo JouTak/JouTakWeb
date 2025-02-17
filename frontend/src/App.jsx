@@ -1,12 +1,18 @@
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
 import { ThemeProvider } from "@gravity-ui/uikit";
 
 import Layout from "./components/Layout";
-import Home from "./pages/Home";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
+import JouTak from "./pages/JouTak";
 import NotFound from "./pages/NotFound.jsx";
-// import Terms from './pages/Terms';
-// import Contact from './pages/Contact';
+import Bedrock from "./pages/Bedrock.jsx";
+import MiniGames from "./pages/Minigames.jsx";
+import ItmoCraft from "./pages/ItmoCraft.jsx";
+
 import "@gravity-ui/uikit/styles/fonts.css";
 import "@gravity-ui/uikit/styles/styles.css";
 
@@ -16,8 +22,11 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/" element={<Navigate to="/joutak" replace />} />
+            <Route path="/joutak" element={<JouTak />} />
+            <Route path="/bedrock" element={<Bedrock />} />
+            <Route path="/itmocraft" element={<ItmoCraft />} />
+            <Route path="/minigames" element={<MiniGames />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

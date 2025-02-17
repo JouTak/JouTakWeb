@@ -61,11 +61,11 @@ const ItmoCraft = () => {
           </p>
           <a
             className="btn btn-primary btn-lg"
-            href="https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/"
+            href="https://forms.yandex.ru/u/67773408068ff0452320c8b4/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Заявка в клуб
+            Подать заявку в команду организаторов
           </a>
         </div>
       </div>

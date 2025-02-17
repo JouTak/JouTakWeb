@@ -34,8 +34,12 @@ function ProjectSelect() {
 
   const options = [
     { value: "jou_tak", content: "JouTak" },
-    { value: "mini_games", content: "MiniGame" },
+    {
+      value: "mini_games",
+      content: "MiniGame",
+    },
     { value: "bed_rock", content: "Bedrock" },
+    { value: "itmocraft", content: "ItmoCraft" },
   ];
 
   const selectedValue = [getProjectByPath(location.pathname)];
@@ -77,9 +81,9 @@ const Header = () => {
               minWidth: "200px",
             }}
           >
-            <RouterBreadcrumbItem to="/" title="server">
+            <BreadcrumbsItem title="server" href="/">
               Сервер
-            </RouterBreadcrumbItem>
+            </BreadcrumbsItem>
             <BreadcrumbsItem title="Project Select">
               <ProjectSelect />
             </BreadcrumbsItem>

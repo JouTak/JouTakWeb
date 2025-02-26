@@ -10,3 +10,12 @@ footer {
   bottom: 0;
   width: 100%;
 }
+
+.social-icon {
+  width: 70px;
+  transition: transform 0.3s ease;
+}
+
+.social-icon:hover {
+  transform: scale(1.1);
+}

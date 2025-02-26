@@ -7,11 +7,6 @@ const CustomFooter = () => {
       withDivider={false}
       moreButtonTitle="Show more"
       copyright={`©  ${new Date().getFullYear()} "JouTak"`}
-      logo={{
-        icon: '<img src="/img/icons/logo.png" alt="logo photo">',
-        iconSize: 24,
-        text: "JouTak",
-      }}
       menuItems={[
         {
           text: "Политика конфиденциальности",

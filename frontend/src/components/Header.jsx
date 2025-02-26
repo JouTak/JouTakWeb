@@ -1,32 +1,7 @@
-import {
-  useNavigate,
-  useLocation,
-  useHref,
-  useLinkClickHandler,
-} from "react-router-dom";
-import PropTypes from "prop-types";
-import {
-  unstable_Breadcrumbs as Breadcrumbs,
-  unstable_BreadcrumbsItem as BreadcrumbsItem,
-} from "@gravity-ui/uikit/unstable";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Select } from "@gravity-ui/uikit";
 import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
 import DynamicMenu from "./DynamicMenu";
-
-function RouterBreadcrumbItem({ to, children, ...props }) {
-  const href = useHref(to);
-  const onClick = useLinkClickHandler(to);
-  return (
-    <BreadcrumbsItem {...props} href={href} onClick={onClick}>
-      {children}
-    </BreadcrumbsItem>
-  );
-}
-
-RouterBreadcrumbItem.propTypes = {
-  to: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).isRequired,
-  children: PropTypes.node.isRequired,
-};
 
 function ProjectSelect() {
   const navigate = useNavigate();
@@ -54,61 +29,76 @@ function ProjectSelect() {
   };
 
   return (
-    <Select
-      options={options}
-      value={selectedValue}
-      onUpdate={handleUpdate}
-      width="max"
-    />
+    <div>
+      сервер /&nbsp;
+      <Select options={options} value={selectedValue} onUpdate={handleUpdate} />
+    </div>
   );
 }
 
 const Header = () => {
   return (
-    <header>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div className="container">
-          <Breadcrumbs
-            className="text-white g-root_theme_dark"
-            itemComponent={RouterBreadcrumbItem}
-            popupStyle="inline"
-            showRoot={false}
-            separator="/"
-            showMoreButton={false}
-            style={{
-              whiteSpace: "nowrap",
-              maxWidth: "100%",
-              minWidth: "200px",
-            }}
-          >
-            <BreadcrumbsItem title="server" href="/">
-              Сервер
-            </BreadcrumbsItem>
-            <BreadcrumbsItem title="Project Select">
+    <>
+      <header>
+        <nav className="navbar navbar-dark bg-dark">
+          <div className="container container-fluid">
+            <a className="navbar-brand" href="#">
+              <img
+                src="/img/icons/logo.png"
+                alt="Logo"
+                width="30"
+                height="30"
+                className="d-inline-block align-text-top"
+              />
+            </a>
+
+            <div className="mx-auto">
               <ProjectSelect />
-            </BreadcrumbsItem>
-          </Breadcrumbs>
+            </div>
 
+            <button
+              className="navbar-toggler"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#offcanvasDarkNavbar"
+              aria-controls="offcanvasDarkNavbar"
+              aria-label="Toggle navigation"
+            >
+              <span className="navbar-toggler-icon"></span>
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      <div
+        className="offcanvas offcanvas-start text-bg-dark"
+        tabIndex="-1"
+        id="offcanvasDarkNavbar"
+        aria-labelledby="offcanvasDarkNavbarLabel"
+      >
+        <div className="offcanvas-header">
+          <h5 className="offcanvas-title" id="offcanvasDarkNavbarLabel">
+            Меню
+          </h5>
           <button
-            className="navbar-toggler"
             type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#navbarNav"
-            aria-controls="navbarNav"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </button>
-
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <DynamicMenu />
-            </ul>
+            className="btn-close btn-close-white"
+            data-bs-dismiss="offcanvas"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div className="offcanvas-body">
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            <DynamicMenu />
+          </ul>
+          <div className="d-flex align-items-center">
+            <button className="btn btn-outline-primary btn-sm" disabled>
+              Авторизация
+            </button>
           </div>
         </div>
-      </nav>
-    </header>
+      </div>
+    </>
   );
 };
 

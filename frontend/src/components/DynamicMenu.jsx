@@ -14,7 +14,7 @@ const DynamicMenu = () => {
           </Link>
         </li>
         <li className="nav-item">
-          <Link className="nav-link" to="http://joutak.ru-mc.ru:18577/">
+          <Link className="nav-link" to="http://map.joutak.ru">
             Онлайн карта
           </Link>
         </li>

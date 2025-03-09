@@ -3,11 +3,26 @@ body,
 #root {
   min-height: 100vh;
   margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+main{
+  flex: 1;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 footer {
-  position: fixed;
-  bottom: 0;
   width: 100%;
 }
 

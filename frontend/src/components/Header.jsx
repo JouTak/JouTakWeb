@@ -41,8 +41,8 @@ const Header = () => {
     <>
       <header>
         <nav className="navbar navbar-dark bg-dark">
-          <div className="container container-fluid">
-            <a className="navbar-brand" href="#">
+          <div className="container container-fluid d-flex justify-content-between align-items-center">
+            <a className="navbar-brand" href="https://joutak.ru">
               <img
                 src="/img/icons/logo.png"
                 alt="Logo"
@@ -52,7 +52,7 @@ const Header = () => {
               />
             </a>
 
-            <div className="mx-auto">
+            <div className="mx-auto g-root_theme_dark text-light">
               <ProjectSelect />
             </div>
 

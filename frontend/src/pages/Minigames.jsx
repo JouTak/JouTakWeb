@@ -65,13 +65,16 @@ const MiniGames = () => {
             спартакиада по майнкрафту!
           </p>
           <a
-            className="btn btn-primary btn-lg"
-            href="joutak.ru/sparta"
-            target="_blank"
-            rel="noopener noreferrer"
+            className="btn btn-primary btn-lg disabled"
+            href="#"
+            style={{ pointerEvents: "none" }}
+            title="Регистрация еще не началась"
           >
             Зарегистрироаться на спартакиаду
           </a>
+          <div className="alert alert-warning mt-3">
+            Регистрация пока еще не началась
+          </div>
         </div>
       </div>
     </div>

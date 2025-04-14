@@ -60,7 +60,7 @@ const MiniGames = () => {
       <div className="container py-3">
         <div className="my-4">
           <img
-            src="/img/logoMiniGames.jpg"
+            src="/img/logo_minigames.png"
             alt="MiniGames Logo"
             style={{ height: "100px" }}
           />

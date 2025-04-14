@@ -76,7 +76,7 @@ const MiniGames = () => {
             Кронверскских барсов
           </a>
           . Здесь вас ждут проверенные классические режимы, разработанные с нуля
-          от наших разработчиков:<br></br> <b>Block Party, Ace Race, UHC</b>.
+          от наших разработчиков:<br></br> <b>Block Party, Ace Race, Survival Games</b>.
         </p>
 
         <div className="my-4 d-flex justify-content-center">

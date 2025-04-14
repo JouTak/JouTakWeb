@@ -58,13 +58,13 @@ const MiniGames = () => {
       </div>
 
       <div className="container py-3">
-        <div className="my-4">
-          <img
-            src="/img/logoMiniGames.jpg"
-            alt="MiniGames Logo"
-            style={{ height: "100px" }}
-          />
-        </div>
+        {/*<div className="my-4">*/}
+        {/*  <img*/}
+        {/*    src="/img/logoMiniGames.jpg"*/}
+        {/*    alt="MiniGames Logo"*/}
+        {/*    style={{ height: "100px" }}*/}
+        {/*  />*/}
+        {/*</div>*/}
         <p className="col-md-8 fs-4 lh-1 mx-auto">
           Мини-игры стали неотъемлемой частью Minecraft, и наш сервер приглашает
           вас окунуться в мир соревнований. Здесь вас ждут классические режимы,

@@ -78,7 +78,7 @@ const MiniGames = () => {
           <div className="my-4 d-flex justify-content-center">
             <a
                 className="btn btn-secondary btn-lg mx-2"
-                href="https://vk.cc/cDvqOw"
+                href="https://vk.me/join/WDyZMd4pF8Xhu/egqaDnrHmbajAmm0cZ2og="
                 target="_blank"
                 rel="noopener noreferrer"
             >

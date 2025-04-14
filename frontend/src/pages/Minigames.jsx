@@ -58,31 +58,39 @@ const MiniGames = () => {
       </div>
 
       <div className="container py-3">
-        {/*<div className="my-4">*/}
-        {/*  <img*/}
-        {/*    src="/img/logoMiniGames.jpg"*/}
-        {/*    alt="MiniGames Logo"*/}
-        {/*    style={{ height: "100px" }}*/}
-        {/*  />*/}
-        {/*</div>*/}
+        <div className="my-4">
+          <img
+            src="/img/logoMiniGames.jpg"
+            alt="MiniGames Logo"
+            style={{ height: "100px" }}
+          />
+        </div>
+        <br />
+
         <p className="col-md-8 fs-4 lh-1 mx-auto">
           Мини-игры стали неотъемлемой частью Minecraft, и наш сервер приглашает
           вас окунуться в мир соревнований. Здесь вас ждут классические режимы,
-          разработанные с нуля нашими разработчиками:<br></br>
+          разработанные с нуля нашими разработчиками:
+          <br />
           <b>Block Party, Ace Race и Survival Games</b>.
         </p>
-        <p className="col-md-8 fs-4 lh-1 mx-auto mt-3">
+        <br />
+        <p className="col-md-8 fs-4 lh-1 mx-auto">
+          Мемы, найткор и пасхалки уже ждут вас!
+        </p>
+        <br />
+        <p className="col-md-8 fs-4 lh-1 mx-auto">
           Кроме того, в этом сезоне наш сервер снова становится площадкой для
-          масштабного события — спартакиады по Minecraft! Организованная при
-          поддержке{" "}
+          масштабного события — спартакиады по Minecraft, организованной
+          совместно с{" "}
           <a
             href="https://vk.com/kb_esports"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Кронверскских барсов
+            Кронверскскими барсами
           </a>
-          . Не упустите шанс продемонстрировать свои навыки в любимых режимах!
+          !
         </p>
 
         <div className="my-4 d-flex justify-content-center">
@@ -110,6 +118,46 @@ const MiniGames = () => {
         >
           Читать регламент спартакиады
         </a>
+
+        <hr className="my-4" />
+
+        <p className="col-md-8 fs-5 lh-1 mx-auto">
+          <b>Разработчики:</b>
+          <br />
+          Головин Семён — stunnerer
+          <br />
+          Берман Денис — EnderDissa
+          <br />
+          Крук Илья — technosimpp
+          <br />
+          Рязанов Никита — s4dnex
+        </p>
+        <p className="col-md-8 fs-5 lh-1 mx-auto">
+          <b>Билдеры:</b>
+          <br />
+          <u>Лобби</u>
+          <br />
+          Ромашко Алиса — Romashich_
+          <br />
+          Касьяненко Вера — Capycat
+          <br />
+          <br />
+          <u>Block Party</u>
+          <br />
+          Бородина Алена — MiniTac0s
+          <br />
+          <br />
+          <u>Ace Race</u>
+          <br />
+          Лебедева Алиса — OilTea
+          <br />
+          Скобликов Кирилл — 3Gmini
+          <br />
+          <br />
+          <u>Survival Games</u>
+          <br />
+          Некрасов Ярослав — _ShinaMashiro_
+        </p>
       </div>
     </div>
   );

@@ -157,6 +157,8 @@ const MiniGames = () => {
           <u>Survival Games</u>
           <br />
           Некрасов Ярослав — _ShinaMashiro_
+          <br />
+          Кашкарова Алёна — jacolik
         </p>
       </div>
     </div>

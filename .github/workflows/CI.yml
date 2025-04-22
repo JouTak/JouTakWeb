@@ -65,3 +65,12 @@ jobs:
           FRONTEND_IMAGE=ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/joutakweb
           docker push $FRONTEND_IMAGE:latest
           docker push $FRONTEND_IMAGE:${{ github.run_number }}
+      - name: Execute SSH Commands
+        uses: GPTED/SSH-My-Action@0.1
+        with:
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: web_dev
+          PORT: ${{ secrets.PORT }}
+          PRIVATE_KEY: ${{ secrets.WEB_DEV_SSH_PRIVATE_KEY }}
+          CMD: |
+            sudo /usr/bin/podman auto-update

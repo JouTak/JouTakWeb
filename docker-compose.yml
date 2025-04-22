@@ -1,0 +1,65 @@
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.dashboard.address=:8080"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - JouTak_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`localhost`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=dashboard"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+
+
+  backend:
+    build:
+      context: ./backend
+    image: joutak-backend:dev
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SECRET=${DJANGO_SECRET_KEY}
+      - DEBUG=${DJANGO_DEBUG}
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+    networks:
+      - JouTak_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.joutak-backend.rule=Host(`localhost`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.joutak-backend.entrypoints=web"
+      - "traefik.http.services.joutak-backend.loadbalancer.server.port=8000"
+
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_API_URL: "http://localhost/api/"
+    image: joutak-frontend:dev
+    environment:
+      - REACT_APP_API_URL=http://localhost/api/
+    networks:
+      - JouTak_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.joutak-frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.joutak-frontend.entrypoints=web"
+      - "traefik.http.services.joutak-frontend.loadbalancer.server.port=80"
+
+networks:
+  JouTak_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,8 +1,8 @@
 export const projectMapping = {
   jou_tak: "/joutak",
   mini_games: "/minigames",
-  bed_rock: "/bedrock",
-  itmocraft: "/itmocraft",
+  legacy: "/legacy",
+  itmo_craft: "/itmocraft",
 };
 
 export function getProjectByPath(path) {

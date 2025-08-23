@@ -20,7 +20,7 @@ const DynamicMenu = () => {
         </li>
       </>
     );
-  } else if (currentProject === "mini_games" || currentProject === "bed_rock") {
+  } else if (currentProject === "mini_games" || currentProject === "legacy") {
     return (
       <>
         <li className="nav-item">

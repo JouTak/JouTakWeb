@@ -13,8 +13,8 @@ function ProjectSelect() {
       value: "mini_games",
       content: "miniGAMES",
     },
-    { value: "bed_rock", content: "Bedrock" },
-    { value: "itmocraft", content: "ItmoCraft" },
+    { value: "legacy", content: "Legacy" },
+    { value: "itmo_craft", content: "ITMOcraft" },
   ];
 
   const selectedValue = [getProjectByPath(location.pathname)];

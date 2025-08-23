@@ -9,7 +9,7 @@ import { ThemeProvider } from "@gravity-ui/uikit";
 import Layout from "./components/Layout";
 import JouTak from "./pages/JouTak";
 import NotFound from "./pages/NotFound.jsx";
-import Bedrock from "./pages/Bedrock.jsx";
+import Legacy from "./pages/Legacy.jsx";
 import MiniGames from "./pages/Minigames.jsx";
 import ItmoCraft from "./pages/ItmoCraft.jsx";
 import Contact from "./pages/Contact.jsx";
@@ -25,7 +25,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/joutak" replace />} />
             <Route path="/joutak" element={<JouTak />} />
-            <Route path="/bedrock" element={<Bedrock />} />
+            <Route path="/legacy" element={<Legacy />} />
             <Route path="/itmocraft" element={<ItmoCraft />} />
             <Route path="/minigames" element={<MiniGames />} />
             <Route path="/contact" element={<Contact />} />

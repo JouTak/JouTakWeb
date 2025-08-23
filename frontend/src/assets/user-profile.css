@@ -1,0 +1,121 @@
+:root {
+  --chip-white-border: #eaf0f1;
+  --chip-white-bg: #797e8044;
+  --chip-white-text: #ffffff;
+
+  --chip-green-border: #0d9410;
+  --chip-green-bg: #128a1444;
+  --chip-green-text: #b0ffa9;
+
+  --chip-blue-border: #809fff;
+  --chip-blue-bg: #27259c44;
+  --chip-blue-text: #9ed0ff;
+}
+
+section.user-profile {
+  padding-block: 2rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+article.user-card {
+  display: grid;
+  grid-template-columns: 1fr 4fr;
+  gap: 2rem;
+
+  padding: 1rem;
+
+  border: 1px solid #444444;
+  border-radius: 3rem;
+
+  & > figure {
+    margin-bottom: 0;
+
+    & > picture {
+      & > img {
+        width: 100%;
+        aspect-ratio: 1;
+
+        border-radius: 2rem;
+      }
+    }
+  }
+
+  & > div {
+    & > p.nickname {
+      margin-bottom: 1rem;
+
+      font-size: 3rem;
+      line-height: 1;
+    }
+
+    & > p.realname {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+ul.chips-list {
+  list-style: none;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+
+  margin: 0;
+  padding: 0;
+
+  & > li {
+    --chip-border: #ffffff;
+    --chip-bg: #ffffff88;
+    --chip-text: #000000;
+
+    &[data-color="white"] {
+      --chip-border: var(--chip-white-border);
+      --chip-bg: var(--chip-white-bg);
+      --chip-text: var(--chip-white-text);
+    }
+
+    &[data-color="green"] {
+      --chip-border: var(--chip-green-border);
+      --chip-bg: var(--chip-green-bg);
+      --chip-text: var(--chip-green-text);
+    }
+
+    &[data-color="blue"] {
+      --chip-border: var(--chip-blue-border);
+      --chip-bg: var(--chip-blue-bg);
+      --chip-text: var(--chip-blue-text);
+    }
+
+    & > p {
+      padding: 0.25rem 0.5rem;
+      margin: 0;
+
+      border: 1px solid var(--chip-border);
+      border-radius: 0.5rem;
+
+      background: var(--chip-bg);
+      color: var(--chip-text);
+    }
+  }
+}
+
+span.icon > svg {
+  width: 1.5rem;
+  height: 1.5rem;
+
+  fill: white;
+}
+
+p:has(> span.icon) {
+  & > span {
+    margin-right: 0.33rem;
+  }
+}
+
+a.email {
+  color: white;
+}

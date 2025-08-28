@@ -71,6 +71,12 @@ article.user-card {
         }
       }
     }
+
+    &[data-expanded="false"] {
+      & > div > div > div {
+        padding-top: 0;
+      }
+    }
   }
 
   & > div {
@@ -102,6 +108,7 @@ article.user-card {
 
     & > div {
       & > div {
+        padding-top: 1.5rem;
         transition: padding 0.3s ease;
 
         & > p,

@@ -1,7 +1,7 @@
 import "../assets/user-profile.css";
 import UserCard from "../components/UserCard.jsx";
 
-const Me = () => {
+const ProfilePrototype = () => {
   const data = [{
     "UUID": "26969461-3d36-4e5c-b99b-d219c9aae471",
     "email": "Sasavot123456@joutak.ru",
@@ -302,4 +302,4 @@ const Me = () => {
   );
 };
 
-export default Me;
+export default ProfilePrototype;

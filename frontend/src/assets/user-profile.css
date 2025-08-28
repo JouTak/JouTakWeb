@@ -79,9 +79,18 @@ article.user-card {
     border: 1px solid #444444bd;
     border-radius: 2rem;
 
-    background: linear-gradient(to bottom, #34383681, #17123311);
+    background-image: linear-gradient(to bottom, #3a3f3c81 5%, #34383681 30%, #17123311 90%);
+    background-position: 0% 100%;
+    background-size: 100% 200%;
 
     box-shadow: 0 10px 10px rgba(25, 25, 27, 0.507);
+
+    transition: background-position 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover {
+      background-position: 0% 1%;
+      box-shadow: 0 10px 10px rgba(25, 25, 27, 0.8);
+    }
 
     @media (width < 600px) {
       border-radius: 1rem;

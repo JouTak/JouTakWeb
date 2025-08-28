@@ -16,7 +16,7 @@ import Contact from "./pages/Contact.jsx";
 
 import "@gravity-ui/uikit/styles/fonts.css";
 import "@gravity-ui/uikit/styles/styles.css";
-import Me from "./pages/Me.jsx";
+import ProfilePrototype from "./pages/ProfilePrototype.jsx";
 
 function App() {
   return (
@@ -30,7 +30,7 @@ function App() {
             <Route path="/itmocraft" element={<ItmoCraft />} />
             <Route path="/minigames" element={<MiniGames />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/me" element={<Me />} />
+            <Route path="/profile-prototype" element={<ProfilePrototype />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

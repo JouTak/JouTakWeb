@@ -31,11 +31,9 @@ const UserCard = ({ data, mode }) => {
 
         <div className="expandable">
           <div>
-            <a className="email" href={`mailto:${data.email}`}>
-              <p title="Электронная почта"><EmailIcon />
-                {data.email}
-              </p>
-            </a>
+            <p className="email" title="Электронная почта"><EmailIcon />
+              {data.email}
+            </p>
 
             <p title="День рождения"><CalendarIcon />{birthdateRus}</p>
 

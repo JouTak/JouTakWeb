@@ -64,6 +64,10 @@ article.user-card {
       & > div {
         & > div {
           grid-template-rows: 1fr;
+
+          & > div {
+            padding-top: 1.5rem;
+          }
         }
       }
     }
@@ -98,7 +102,7 @@ article.user-card {
 
     & > div {
       & > div {
-        padding-top: 1.5rem;
+        transition: padding 0.3s ease;
 
         & > p,
         & > a > p {

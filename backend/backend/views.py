@@ -1,12 +1,10 @@
 from http import HTTPStatus
+from ninja import Router
+from django.http import HttpResponse
 
-from rest_framework.response import Response
-
-__all__ = "health"
+router = Router()
 
 
+@router.get("/health", response={HTTPStatus.OK: str})
 def health(request):
-    if request.method != "GET":
-        return Response(status=HTTPStatus.METHOD_NOT_ALLOWED)
-
-    return Response("<p>Alive<p/>", status=HTTPStatus.OK)
+    return HttpResponse("<p>Alive</p>", status=HTTPStatus.OK)

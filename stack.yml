@@ -1,0 +1,135 @@
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.swarmMode=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --log.level=INFO
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.traefik.rule=Host(`traefik.joutak.ru`)
+        - traefik.http.routers.traefik.entrypoints=web
+        - traefik.http.routers.traefik-sec.rule=Host(`traefik.joutak.ru`)
+    networks:
+      - joutak_net
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: joutak
+      POSTGRES_USER: joutak
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - joutak_net
+    deploy:
+      placement:
+        constraints: [ node.role == manager ]
+
+  backend:
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    env_file:
+      - ./.env.production
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings.prod
+      USE_X_FORWARDED_PROTO: "true"
+      SECURE_SSL_REDIRECT: "true"
+      SECURE_HSTS_SECONDS: "31536000"
+      DJANGO_MIGRATE: "1"
+      DJANGO_COLLECTSTATIC: "1"
+      DJANGO_CHECK_DEPLOY: "1"
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      DATABASE_URL_FILE: /run/secrets/database_url
+      #      YANDEX_CLIENT_ID_FILE: /run/secrets/yandex_client_id
+      #      YANDEX_SECRET_FILE: /run/secrets/yandex_secret
+      #      GITHUB_CLIENT_ID_FILE: /run/secrets/github_client_id
+      #      GITHUB_SECRET_FILE: /run/secrets/github_secret
+      SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+    secrets:
+      - django_secret_key
+      - database_url
+      #      - yandex_client_id
+      #      - yandex_secret
+      #      - github_client_id
+      #      - github_secret
+      - sentry_dsn
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    networks:
+      - joutak_net
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.backend.rule=Host(`api.joutak.ru`)
+        - traefik.http.routers.backend.entrypoints=web
+        - traefik.http.routers.backend.middlewares=redirect-to-https
+        - traefik.http.routers.backend-sec.rule=Host(`api.joutak.ru`)
+        - traefik.http.routers.backend-sec.entrypoints=websecure
+        - traefik.http.routers.backend-sec.tls=true
+        - traefik.http.routers.backend-sec.tls.certresolver=le
+        - traefik.http.services.backend.loadbalancer.server.port=8000
+
+  frontend:
+    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
+    env_file:
+      - ./.env.production
+    environment:
+      API_URL: ${PUBLIC_API_URL}
+    networks:
+      - joutak_net
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.frontend.rule=Host(`joutak.ru`)
+        - traefik.http.routers.frontend.entrypoints=web
+        - traefik.http.routers.frontend.middlewares=redirect-to-https
+        - traefik.http.routers.frontend-sec.rule=Host(`joutak.ru`)
+        - traefik.http.routers.frontend-sec.entrypoints=websecure
+        - traefik.http.routers.frontend-sec.tls=true
+        - traefik.http.routers.frontend-sec.tls.certresolver=le
+        - traefik.http.services.frontend.loadbalancer.server.port=80
+
+secrets:
+  django_secret_key:
+    external: true
+  postgres_password:
+    external: true
+  database_url:
+    external: true
+  yandex_client_id:
+    external: true
+  yandex_secret:
+    external: true
+  github_client_id:
+    external: true
+  github_secret:
+    external: true
+  sentry_dsn:
+    external: true
+
+
+networks:
+  joutak_net:
+    driver: overlay
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
+  letsencrypt: { }

@@ -1,21 +1,30 @@
-import {useNavigate, useLocation} from "react-router-dom";
-import {Select, DropdownMenu, Button, Avatar, Loader} from "@gravity-ui/uikit";
-import {useState, useCallback, useEffect, useMemo} from "react";
-import {getProjectByPath, getPathByProject} from "../utils/projectUtils";
+import { useNavigate, useLocation } from "react-router-dom";
+import {
+  Select,
+  DropdownMenu,
+  Button,
+  Avatar,
+  Loader,
+} from "@gravity-ui/uikit";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
 import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
-import {me, tokenStore, logout} from "../services/api";
+import { me, tokenStore, logout } from "../services/api";
 
 function ProjectSelect() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const options = useMemo(() => ([
-    { value: "jou_tak", content: "JouTak" },
-    { value: "mini_games", content: "miniGAMES" },
-    { value: "bed_rock", content: "Bedrock" },
-    { value: "itmocraft", content: "ItmoCraft" },
-  ]), []);
+  const options = useMemo(
+    () => [
+      { value: "jou_tak", content: "JouTak" },
+      { value: "mini_games", content: "miniGAMES" },
+      { value: "bed_rock", content: "Bedrock" },
+      { value: "itmocraft", content: "ItmoCraft" },
+    ],
+    [],
+  );
 
   const selectedValue = [getProjectByPath(location.pathname)];
   const handleUpdate = (newVal) => {
@@ -84,8 +93,12 @@ const Header = () => {
     }
   }, []);
 
-  useEffect(() => { loadProfileIfTokens(); }, [loadProfileIfTokens]);
-  useEffect(() => { if (!authOpen) loadProfileIfTokens(); }, [authOpen, loadProfileIfTokens]);
+  useEffect(() => {
+    loadProfileIfTokens();
+  }, [loadProfileIfTokens]);
+  useEffect(() => {
+    if (!authOpen) loadProfileIfTokens();
+  }, [authOpen, loadProfileIfTokens]);
 
   const goSecurity = () => navigate("/account/security");
   const onLogout = () => {
@@ -100,7 +113,7 @@ const Header = () => {
       view="flat"
       aria-label={profile ? "Меню аккаунта" : "Войти"}
       title={profile ? "Меню аккаунта" : "Войти"}
-      style={{padding: 0, borderRadius: 12}}
+      style={{ padding: 0, borderRadius: 12 }}
       className="ms-2"
     >
       <Avatar
@@ -140,8 +153,8 @@ const Header = () => {
                   size="m"
                   renderSwitcher={renderAccountSwitcher}
                   items={[
-                    [{text: "Аккаунт и безопасность", action: goSecurity}],
-                    {text: "Выйти", action: onLogout, theme: "danger"},
+                    [{ text: "Аккаунт и безопасность", action: goSecurity }],
+                    { text: "Выйти", action: onLogout, theme: "danger" },
                   ]}
                 />
               ) : (
@@ -152,7 +165,7 @@ const Header = () => {
                   aria-label="Войти"
                   title="Войти"
                   className="ms-2"
-                  style={{padding: 0, borderRadius: 12}}
+                  style={{ padding: 0, borderRadius: 12 }}
                 >
                   <Avatar size="m" text="?" view="outlined" title="Гость" />
                 </Button>
@@ -180,7 +193,9 @@ const Header = () => {
         aria-labelledby="offcanvasDarkNavbarLabel"
       >
         <div className="offcanvas-header">
-          <h5 className="offcanvas-title" id="offcanvasDarkNavbarLabel">Меню</h5>
+          <h5 className="offcanvas-title" id="offcanvasDarkNavbarLabel">
+            Меню
+          </h5>
           <button
             type="button"
             className="btn-close btn-close-white"

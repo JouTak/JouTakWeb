@@ -1,33 +1,10 @@
 services:
-#  traefik:
-#    image: traefik:v3.1
-#    command:
-#      - --api.dashboard=true
-#      - --providers.docker=true
-#      - --providers.docker.exposedbydefault=false
-#      - --entrypoints.web.address=:80
-#      - --log.level=DEBUG
-#    ports:
-#      - "80:80"
-#      - "8080:8080"
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock:ro
-#    labels:
-#      - traefik.enable=true
-#      - traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)
-#      - traefik.http.routers.traefik-dashboard.entrypoints=web
-#      - traefik.http.routers.traefik-dashboard.service=api@internal
-#    networks:
-#      - joutak_net
-
   db:
     image: postgres:16-alpine
-    env_file:
-      - ./.env.development
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env.development}
-      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env.development}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.development}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     healthcheck:
       test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -41,59 +18,59 @@ services:
       - traefik.enable=false
 
   backend:
+#    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
-    pull_policy: always
+    pull_policy: build
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - ./.env.development
+    ports:
+      - "8000:8000"
     environment:
-      DJANGO_SETTINGS_MODULE: backend.settings.dev
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DJANGO_SETTINGS_MODULE: backend.settings.prod
+
       USE_X_FORWARDED_PROTO: "false"
       SECURE_SSL_REDIRECT: "false"
       SECURE_HSTS_SECONDS: "0"
-      DB_SSL_REQUIRED: "false"
 
+      SESSION_COOKIE_SAMESITE: "None"
+      CSRF_COOKIE_SAMESITE: "None"
+      SESSION_COOKIE_SECURE: "false"
+      CSRF_COOKIE_SECURE: "false"
 
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1"
+      CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1"
+
+      DB_SSL_REQUIRED: "False"
       DJANGO_MIGRATE: "1"
       DJANGO_COLLECTSTATIC: "1"
-      DJANGO_CHECK_DEPLOY: "0"
-
-      HEALTHCHECK_URL: ${BACKEND_HEALTH_URL:-http://127.0.0.1:8000/health}
+      DJANGO_CHECK_DEPLOY: "1"
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- $$HEALTHCHECK_URL || exit 1" ]
+      test: ["CMD-SHELL", "wget -qO- localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 30
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.backend.rule=Host(`${BACKEND_HOST}`) && PathPrefix(`/api`)
-      - traefik.http.routers.backend.entrypoints=web
-      - traefik.http.middlewares.api-strip.stripprefix.prefixes=/api
-      - traefik.http.routers.backend.middlewares=api-strip
-      - traefik.http.services.backend.loadbalancer.server.port=8000
     networks:
       - joutak_net
 
   frontend:
+#    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
     build:
       context: ./frontend
+      dockerfile: Dockerfile
     pull_policy: always
-    env_file:
-      - ./.env.development
     environment:
-      REACT_APP_API_URL: ${PUBLIC_API_URL}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.frontend.rule=Host(`${FRONTEND_HOST}`) && PathPrefix(`/`) && !PathPrefix(`/api`)
-      - traefik.http.routers.frontend.entrypoints=web
-      - traefik.http.services.frontend.loadbalancer.server.port=80
+      REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    ports:
+      - "80:80"
     networks:
       - joutak_net
 

@@ -43,7 +43,7 @@ USER appuser
 ENTRYPOINT ["/usr/bin/tini","--","/entrypoint.sh"]
 
 HEALTHCHECK --interval=20s --timeout=3s --retries=6 \
-  CMD /bin/sh -c 'curl -fsS "${HEALTHCHECK_URL:-http://127.0.0.1:8000/health}" >/dev/null || exit 1'
+  CMD /bin/sh -c 'curl -fsS "${http://127.0.0.1:8000/health}" >/dev/null || exit 1'
 
 CMD ["bash","-lc","exec gunicorn backend.wsgi:application \
   --workers ${GUNICORN_WORKERS} \

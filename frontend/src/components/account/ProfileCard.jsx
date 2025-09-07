@@ -1,25 +1,30 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Loader, TextInput, useToaster } from '@gravity-ui/uikit';
-import { me, updateProfile } from '../../services/api';
+import { useEffect, useMemo, useState } from "react";
+import { Button, Loader, TextInput, useToaster } from "@gravity-ui/uikit";
+import { me, updateProfile } from "../../services/api";
 
 const cardStyle = {
-  border: '1px solid rgba(255,255,255,0.12)',
+  border: "1px solid rgba(255,255,255,0.12)",
   borderRadius: 12,
   padding: 16,
-  display: 'grid',
+  display: "grid",
   gap: 12,
 };
-const headerStyle = { display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 };
+const headerStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+};
 
 export default function NameCard() {
-  const [firstName, setFirstName] = useState('');
-  const [lastName,  setLastName]  = useState('');
-  const [loading,   setLoading]   = useState(true);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [open,      setOpen]      = useState(false);
-  const [busy,      setBusy]      = useState(false);
-  const [fDraft,    setFDraft]    = useState('');
-  const [lDraft,    setLDraft]    = useState('');
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [fDraft, setFDraft] = useState("");
+  const [lDraft, setLDraft] = useState("");
 
   const { add } = useToaster();
 
@@ -27,13 +32,15 @@ export default function NameCard() {
     setLoading(true);
     try {
       const data = await me();
-      setFirstName(data.first_name || '');
-      setLastName(data.last_name || '');
+      setFirstName(data.first_name || "");
+      setLastName(data.last_name || "");
     } finally {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function openForm() {
     setFDraft(firstName);
@@ -43,11 +50,11 @@ export default function NameCard() {
 
   const dirty = useMemo(
     () => fDraft !== firstName || lDraft !== lastName,
-    [fDraft, lDraft, firstName, lastName]
+    [fDraft, lDraft, firstName, lastName],
   );
   const valid = useMemo(() => {
-    const f = (fDraft || '').trim();
-    const l = (lDraft || '').trim();
+    const f = (fDraft || "").trim();
+    const l = (lDraft || "").trim();
     return (f.length > 0 || l.length > 0) && f.length <= 100 && l.length <= 100;
   }, [fDraft, lDraft]);
 
@@ -56,15 +63,28 @@ export default function NameCard() {
     if (!dirty || !valid) return;
     setBusy(true);
     try {
-      const payload = { first_name: (fDraft || '').trim(), last_name: (lDraft || '').trim() };
+      const payload = {
+        first_name: (fDraft || "").trim(),
+        last_name: (lDraft || "").trim(),
+      };
       const { message } = await updateProfile(payload);
       setFirstName(payload.first_name);
       setLastName(payload.last_name);
-      add({ name:'name-save', title:'Профиль', content: message || 'Сохранено', theme:'success' });
+      add({
+        name: "name-save",
+        title: "Профиль",
+        content: message || "Сохранено",
+        theme: "success",
+      });
       setOpen(false);
     } catch (e) {
-      const msg = e?.response?.data?.detail || 'Не удалось сохранить';
-      add({ name:'name-save-err', title:'Ошибка', content: String(msg), theme:'danger' });
+      const msg = e?.response?.data?.detail || "Не удалось сохранить";
+      add({
+        name: "name-save-err",
+        title: "Ошибка",
+        content: String(msg),
+        theme: "danger",
+      });
     } finally {
       setBusy(false);
     }
@@ -77,9 +97,14 @@ export default function NameCard() {
   return (
     <section style={cardStyle}>
       <div style={headerStyle}>
-        <h3 style={{margin:0, fontSize:18}}>Имя и фамилия</h3>
+        <h3 style={{ margin: 0, fontSize: 18 }}>Имя и фамилия</h3>
         {!open && (
-          <Button view="outlined" size="m" onClick={openForm} disabled={loading}>
+          <Button
+            view="outlined"
+            size="m"
+            onClick={openForm}
+            disabled={loading}
+          >
             Изменить
           </Button>
         )}
@@ -89,13 +114,19 @@ export default function NameCard() {
         <Loader size="m" />
       ) : (
         <>
-          <div><b>{firstName || '—'}</b> {lastName || ''}</div>
+          <div>
+            <b>{firstName || "—"}</b> {lastName || ""}
+          </div>
 
           {/* Инлайн-форма с плавным раскрытием */}
-          <div className={`collapse-y ${open ? 'open' : ''}`}>
+          <div className={`collapse-y ${open ? "open" : ""}`}>
             <div>
               {open && (
-                <form onSubmit={onSave} className="inline-edit" style={{display:'grid', gap:12}}>
+                <form
+                  onSubmit={onSave}
+                  className="inline-edit"
+                  style={{ display: "grid", gap: 12 }}
+                >
                   <TextInput
                     size="l"
                     label="Имя"
@@ -112,11 +143,28 @@ export default function NameCard() {
                     value={lDraft}
                     onUpdate={setLDraft}
                   />
-                  <div style={{display:'flex', gap:8, justifyContent:'flex-end', marginTop:4}}>
-                    <Button view="flat" type="button" onClick={onCancel} disabled={busy}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      justifyContent: "flex-end",
+                      marginTop: 4,
+                    }}
+                  >
+                    <Button
+                      view="flat"
+                      type="button"
+                      onClick={onCancel}
+                      disabled={busy}
+                    >
                       Отмена
                     </Button>
-                    <Button view="action" type="submit" loading={busy} disabled={!dirty || !valid}>
+                    <Button
+                      view="action"
+                      type="submit"
+                      loading={busy}
+                      disabled={!dirty || !valid}
+                    >
                       Сохранить
                     </Button>
                   </div>

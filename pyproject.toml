@@ -1,7 +1,7 @@
 [project]
-name = "backend"
+name = "JouTak Backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "JouTak Backend Service"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

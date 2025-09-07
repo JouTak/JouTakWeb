@@ -1,47 +1,12 @@
 services:
-#  traefik:
-#    image: traefik:v3.1
-#    command:
-#      - --api.dashboard=true
-#      - --providers.docker=true
-#      - --providers.docker.exposedbydefault=false
-#      - --entrypoints.web.address=:80
-#      - --log.level=INFO
-#    ports:
-#      - "80:80"
-#      - "443:443"
-#      - "8080:8080"
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock:ro
-#      - letsencrypt:/letsencrypt
-#    labels:
-#      - traefik.enable=true
-#
-#      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-#      - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true
-#
-#      - traefik.http.routers.traefik-dashboard.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)
-#      - traefik.http.routers.traefik-dashboard.entrypoints=web
-#      - traefik.http.routers.traefik-dashboard.middlewares=redirect-to-https
-#      - traefik.http.routers.traefik-dashboard-sec.rule=Host(`${TRAEFIK_DASHBOARD_HOST}`)
-#      - traefik.http.routers.traefik-dashboard-sec.entrypoints=websecure
-#      - traefik.http.routers.traefik-dashboard-sec.tls=true
-#      - traefik.http.routers.traefik-dashboard-sec.tls.certresolver=le
-#      - traefik.http.routers.traefik-dashboard-sec.service=api@internal
-#    networks:
-#      - joutak_net
-
   db:
     image: postgres:16-alpine
-    env_file:
-      - ./.env.production
-      - ./.env.production.secrets
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     healthcheck:
-      test: [ "CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -53,77 +18,61 @@ services:
       - traefik.enable=false
 
   backend:
-    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
-#    build:
-#      context: ./backend
-#      dockerfile: Dockerfile
-    pull_policy: always
+#    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - ./.env.production
-      - ./.env.production.secrets
+    ports:
+      - "8000:8000"
     environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-
       DJANGO_SETTINGS_MODULE: backend.settings.prod
-      USE_X_FORWARDED_PROTO: "true"
-      SECURE_SSL_REDIRECT: "true"
-      SECURE_HSTS_SECONDS: "31536000"
-      DB_SSL_REQUIRED: False # нет поскольку сингл нода в одной сети
 
+      USE_X_FORWARDED_PROTO: "false"
+      SECURE_SSL_REDIRECT: "false"
+      SECURE_HSTS_SECONDS: "0"
+
+      SESSION_COOKIE_SAMESITE: "None"
+      CSRF_COOKIE_SAMESITE: "None"
+      SESSION_COOKIE_SECURE: "false"
+      CSRF_COOKIE_SECURE: "false"
+
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1"
+      CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1"
+
+      DB_SSL_REQUIRED: "False"
       DJANGO_MIGRATE: "1"
       DJANGO_COLLECTSTATIC: "1"
       DJANGO_CHECK_DEPLOY: "1"
-
-      HEALTHCHECK_URL: ${BACKEND_HEALTH_URL:-http://127.0.0.1:8000/health}
-    healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- $$HEALTHCHECK_URL || exit 1" ]
-      interval: 10s
-      timeout: 3s
-      retries: 30
+#    healthcheck:
+#      test: ["CMD-SHELL", "wget -qO- localhost:8000/health || exit 1"]
+#      interval: 10s
+#      timeout: 3s
+#      retries: 30
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
-    labels:
-      - traefik.enable=true
-
-      - traefik.http.routers.backend.rule=Host(`${BACKEND_HOST}`)
-      - traefik.http.routers.backend.entrypoints=web
-
-      - traefik.http.routers.backend-sec.rule=Host(`${BACKEND_HOST}`)
-      - traefik.http.routers.backend-sec.entrypoints=websecure
-      - traefik.http.routers.backend-sec.tls=true
-      - traefik.http.routers.backend-sec.tls.certresolver=le
-      - traefik.http.services.backend.loadbalancer.server.port=8000
     networks:
       - joutak_net
 
   frontend:
-    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
-#    build:
-#      context: ./frontend
-#      dockerfile: Dockerfile
+#    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     pull_policy: always
-    env_file:
-      - ./.env.production
     environment:
-      REACT_APP_API_URL: ${PUBLIC_API_URL}
-    labels:
-#      - traefik.enable=true
-#
-#      - traefik.http.routers.frontend.rule=Host(`${FRONTEND_HOST}`)
-#      - traefik.http.routers.frontend.entrypoints=web
-#
-#      - traefik.http.routers.frontend-sec.rule=Host(`${FRONTEND_HOST}`)
-#      - traefik.http.routers.frontend-sec.entrypoints=websecure
-#      - traefik.http.routers.frontend-sec.tls=true
-#      - traefik.http.routers.frontend-sec.tls.certresolver=le
-#      - traefik.http.services.frontend.loadbalancer.server.port=80
+      REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    ports:
+      - "80:80"
     networks:
       - joutak_net
-
 
 networks:
   joutak_net:
@@ -133,4 +82,3 @@ volumes:
   postgres_data:
   media_data:
   static_data:
-#  letsencrypt: { } -> не надо учитывая, как сейчас хендшейки идут

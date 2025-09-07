@@ -1,5 +1,5 @@
 [project]
-name = "JouTak Backend"
+name = "JouTak-Backend"
 version = "0.1.0"
 description = "JouTak Backend Service"
 readme = "README.md"

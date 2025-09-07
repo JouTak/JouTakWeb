@@ -63,6 +63,7 @@ jobs:
 
       - name: Django tests (sqlite)
         env:
+          PYTHONPATH: ${{ github.workspace }}
           DJANGO_SETTINGS_MODULE: backend.settings.prod
           DJANGO_SECRET_KEY: test-secret-key-change-me-please-very-long-1234567890
           DATABASE_URL: sqlite:///./testdb.sqlite3
@@ -79,8 +80,8 @@ jobs:
           CSRF_COOKIE_SAMESITE: 'None'
         run: |
           uv run python --version
-          uv run python manage.py check
-          uv run python manage.py test -v 2
+          uv run python backend/manage.py check
+          uv run python backend/manage.py test -v 2
 
   build-and-push:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

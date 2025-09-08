@@ -1,6 +1,8 @@
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponse
+
 from ninja import NinjaAPI
 from ninja_jwt.routers.obtain import obtain_pair_router
 from ninja_jwt.routers.verify import verify_router
@@ -23,11 +25,15 @@ api.add_router("/token", obtain_pair_router)
 api.add_router("/token", verify_router)
 api.add_router("/token", blacklist_router)
 
+
+def health(_request):
+    return HttpResponse("Alive", content_type="text/plain", status=200)
+
+
 urlpatterns = [
+    path("health/", health),
     path("api/", api.urls),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(
-        settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
-    )
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

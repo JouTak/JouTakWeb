@@ -3,6 +3,19 @@ set -euo pipefail
 
 log() { printf "\033[1;34m[entrypoint]\033[0m %s\n" "$*"; }
 
+# --- NEW: найти и перейти в директорию с manage.py ---
+APP_DIR="${APP_DIR:-/app}"
+if [ -f "$APP_DIR/backend/manage.py" ]; then
+  cd "$APP_DIR/backend"
+elif [ -f "$APP_DIR/manage.py" ]; then
+  cd "$APP_DIR"
+else
+  log "manage.py not found in $APP_DIR or $APP_DIR/backend"
+  ls -la "$APP_DIR" || true
+  ls -la "$APP_DIR/backend" || true
+  exit 1
+fi
+
 wait_for_db() {
   if [ -n "${DATABASE_URL:-}" ] && printf "%s" "$DATABASE_URL" | grep -qE '^postgres(ql)?://'; then
     log "Waiting for PostgreSQL..."
@@ -33,7 +46,7 @@ django_bootstrap() {
     python manage.py collectstatic --noinput
   fi
 
-  if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL:-}" ]; then
+  if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL:-}" ] ; then
     log "Creating superuser ${DJANGO_SUPERUSER_USERNAME} (if not exists) ..."
     python - <<'PY'
 import os

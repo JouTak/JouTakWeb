@@ -20,7 +20,7 @@ function ProjectSelect() {
     () => [
       { value: "jou_tak", content: "JouTak" },
       { value: "mini_games", content: "miniGAMES" },
-      { value: "bed_rock", content: "Bedrock" },
+      { value: "legacy", content: "Legacy" },
       { value: "itmocraft", content: "ItmoCraft" },
     ],
     [],

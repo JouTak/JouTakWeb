@@ -1,4 +1,4 @@
-const Bedrock = () => {
+const Legacy = () => {
   return (
     <div className="text-center">
       <div
@@ -49,13 +49,14 @@ const Bedrock = () => {
 
       <div className="p-5 mb-4 rounded-3">
         <div className="container py-5">
-          <h1 className="display-5 fw-bold">Bedrock Civilization</h1>
+          <h1 className="display-5 fw-bold">ITMOCRAFT Legacy</h1>
           <p className="col-md-8 fs-4 lh-1 mx-auto">
-            Наше бедрок направление. Тут проходят ивенты
+            Наше ностальгическое направление. Тут проходят аутентичные ивенты.
+            Доступ у всех игроков с Джоутека. IP: legacy.joutak.ru:42181
           </p>
           <a
             className="btn btn-primary btn-lg"
-            href="joutak.ru/bedrock/info"
+            href="https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -67,4 +68,4 @@ const Bedrock = () => {
   );
 };
 
-export default Bedrock;
+export default Legacy;

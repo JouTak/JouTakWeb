@@ -10,6 +10,7 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,6 +30,7 @@ jobs:
 
       - name: Prettier check
         run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
+
 
       - name: Stylelint
         run: npx stylelint "**/*.{css,scss}"

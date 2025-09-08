@@ -1,0 +1,3 @@
+-r prod.txt
+-r test.txt
+black>=25.1.0

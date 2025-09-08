@@ -1,0 +1,84 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - joutak_net
+    labels:
+      - traefik.enable=false
+
+  backend:
+#    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DJANGO_SETTINGS_MODULE: backend.settings.prod
+
+      USE_X_FORWARDED_PROTO: "false"
+      SECURE_SSL_REDIRECT: "false"
+      SECURE_HSTS_SECONDS: "0"
+
+      SESSION_COOKIE_SAMESITE: "None"
+      CSRF_COOKIE_SAMESITE: "None"
+      SESSION_COOKIE_SECURE: "false"
+      CSRF_COOKIE_SECURE: "false"
+
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1"
+      CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1"
+
+      DB_SSL_REQUIRED: "False"
+      DJANGO_MIGRATE: "1"
+      DJANGO_COLLECTSTATIC: "1"
+      DJANGO_CHECK_DEPLOY: "1"
+#    healthcheck:
+#      test: ["CMD-SHELL", "wget -qO- localhost:8000/health || exit 1"]
+#      interval: 10s
+#      timeout: 3s
+#      retries: 30
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    networks:
+      - joutak_net
+
+  frontend:
+#    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    pull_policy: always
+    environment:
+      REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    ports:
+      - "80:80"
+    networks:
+      - joutak_net
+
+networks:
+  joutak_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:

@@ -1,11 +1,18 @@
 name: CI
 
 on:
-  push: { }
-  pull_request: { }
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint:
+  frontend_lint:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -13,65 +20,72 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci
 
-      - name: Run ESLint
+      - name: ESLint
         run: npx eslint .
 
-      - name: Run Prettier check
-        run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}" --write
+      - name: Prettier check
+        run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
 
-      - name: Run Stylelint
+      - name: Stylelint
         run: npx stylelint "**/*.{css,scss}"
 
-  build-and-push:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  backend_test:
     runs-on: ubuntu-latest
-    needs: lint
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and Tag Frontend Image
+      - name: Install uv
         run: |
-          FRONTEND_IMAGE=ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/joutakweb
-          docker build -t $FRONTEND_IMAGE:latest -f ./frontend/Dockerfile ./frontend
-          docker tag $FRONTEND_IMAGE:latest $FRONTEND_IMAGE:${{ github.run_number }}
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Push Frontend Image
-        run: |
-          FRONTEND_IMAGE=ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/joutakweb
-          docker push $FRONTEND_IMAGE:latest
-          docker push $FRONTEND_IMAGE:${{ github.run_number }}
-      - name: Execute SSH Commands
-        uses: GPTED/SSH-My-Action@0.1
+      - name: Cache uv
+        uses: actions/cache@v4
         with:
-          HOST: ${{ secrets.SSH_HOST }}
-          USER: web_dev
-          PORT: ${{ secrets.PORT }}
-          PRIVATE_KEY: ${{ secrets.WEB_DEV_SSH_PRIVATE_KEY }}
-          CMD: |
-            sudo /usr/bin/podman auto-update
+          path: |
+            ~/.cache/uv
+            .venv
+            uv.lock
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
+      - name: Sync deps (with dev)
+        run: uv sync --python 3.12 --group dev
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: Django tests (sqlite)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          DJANGO_SETTINGS_MODULE: backend.settings.prod
+          DJANGO_SECRET_KEY: test-secret-key-change-me-please-very-long-1234567890
+          DATABASE_URL: sqlite:///./testdb.sqlite3
+          DB_SSL_REQUIRED: 'false'
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.joutak.ru
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru,https://api.joutak.ru
+          CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru
+          USE_X_FORWARDED_PROTO: 'false'
+          SECURE_SSL_REDIRECT: 'false'
+          SECURE_HSTS_SECONDS: '0'
+          SESSION_COOKIE_SECURE: 'false'
+          CSRF_COOKIE_SECURE: 'false'
+          SESSION_COOKIE_SAMESITE: 'None'
+          CSRF_COOKIE_SAMESITE: 'None'
+        run: |
+          uv run python --version
+          uv run python backend/manage.py check
+          uv run python backend/manage.py test -v 2

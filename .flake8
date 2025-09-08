@@ -1,0 +1,5 @@
+[flake8]
+exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,.venv,migrations,frontend
+max-line-length = 79
+max-complexity = 10
+inline-quotes = "

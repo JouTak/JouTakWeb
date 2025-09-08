@@ -16,7 +16,7 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 
 WORKDIR /app
 
-# манифесты из КОРНЯ
+# manifest files from the project root
 COPY pyproject.toml uv.lock ./
 
 # зависимости из lock (без dev)

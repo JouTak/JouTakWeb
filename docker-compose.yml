@@ -19,9 +19,6 @@ services:
 
   backend:
     image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
-#    build:
-#      context: .
-#      dockerfile: backend/Dockerfile
     pull_policy: build
     depends_on:
       db:
@@ -33,20 +30,6 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       DJANGO_SETTINGS_MODULE: backend.settings.prod
 
-      USE_X_FORWARDED_PROTO: "false"
-      SECURE_SSL_REDIRECT: "false"
-      SECURE_HSTS_SECONDS: "0"
-
-      SESSION_COOKIE_SAMESITE: "None"
-      CSRF_COOKIE_SAMESITE: "None"
-      SESSION_COOKIE_SECURE: "false"
-      CSRF_COOKIE_SECURE: "false"
-
-      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
-      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1"
-      CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1"
-
-      DB_SSL_REQUIRED: "False"
       DJANGO_MIGRATE: "1"
       DJANGO_COLLECTSTATIC: "1"
       DJANGO_CHECK_DEPLOY: "1"
@@ -63,9 +46,6 @@ services:
 
   frontend:
     image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
-#    build:
-#      context: ./frontend
-#      dockerfile: Dockerfile
     pull_policy: always
     environment:
       REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}

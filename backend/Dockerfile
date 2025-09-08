@@ -16,18 +16,17 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 
 WORKDIR /app
 
-# manifest files from the project root
 COPY pyproject.toml uv.lock ./
 
-# зависимости из lock (без dev)
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv export --frozen --no-dev -o /tmp/req.lock.txt && \
     uv pip install --system -r /tmp/req.lock.txt
 
-# backend code
 COPY backend/ ./backend/
 
-# unprivileged user
+COPY backend/docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 RUN useradd -u 10001 -m appuser && chown -R appuser:appuser /app
 USER appuser
 
@@ -38,7 +37,7 @@ ENV DJANGO_SETTINGS_MODULE=backend.settings.prod \
     GUNICORN_BIND=0.0.0.0:8000 \
     HEALTHCHECK_URL=http://127.0.0.1:8000/health
 
-ENTRYPOINT ["/usr/bin/tini","--"]
+ENTRYPOINT ["/usr/bin/tini","--","/entrypoint.sh"]
 
 HEALTHCHECK --interval=20s --timeout=3s --retries=6 \
   CMD curl -fsS "$HEALTHCHECK_URL" >/dev/null || exit 1

@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # код бекенда
 COPY backend/ ./backend/
 
-# непривилегированный пользователь
+# unprivileged user
 RUN useradd -u 10001 -m appuser && chown -R appuser:appuser /app
 USER appuser
 

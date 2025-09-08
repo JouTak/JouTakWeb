@@ -31,7 +31,6 @@ jobs:
       - name: Prettier check
         run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
 
-
       - name: Stylelint
         run: npx stylelint "**/*.{css,scss}"
 

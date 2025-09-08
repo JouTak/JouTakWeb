@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv export --frozen --no-dev -o /tmp/req.lock.txt && \
     uv pip install --system -r /tmp/req.lock.txt
 
-# код бекенда
+# backend code
 COPY backend/ ./backend/
 
 # unprivileged user

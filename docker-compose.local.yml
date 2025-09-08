@@ -62,10 +62,10 @@ services:
       - joutak_net
 
   frontend:
-#    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
     pull_policy: always
     environment:
       REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}

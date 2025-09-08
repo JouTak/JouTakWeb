@@ -217,7 +217,9 @@ export async function doLogin({ username, password }) {
   await loginApp({ username, password });
   try {
     await jwtFromSession();
-  } catch {}
+  } catch (e) {
+    void e;
+  }
   return tokenStore.get();
 }
 
@@ -225,7 +227,9 @@ export async function doSignupAndLogin({ username, email, password }) {
   await signupApp({ username, email, password });
   try {
     await jwtFromSession();
-  } catch {}
+  } catch (e) {
+    void e;
+  }
   return tokenStore.get();
 }
 

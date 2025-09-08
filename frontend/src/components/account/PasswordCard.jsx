@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
+import PropTypes from "prop-types";
 import { Button, TextInput } from "@gravity-ui/uikit";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
 import { changePassword } from "../../services/api";
@@ -82,7 +83,7 @@ function StrengthBar({ score, label }) {
   return (
     <div style={{ display: "grid", gap: 6 }}>
       <div
-        aria-hidden
+        aria-hidden="true"
         style={{
           height: 8,
           background: "rgba(255,255,255,0.08)",
@@ -103,6 +104,11 @@ function StrengthBar({ score, label }) {
     </div>
   );
 }
+
+StrengthBar.propTypes = {
+  score: PropTypes.number.isRequired,
+  label: PropTypes.string.isRequired,
+};
 
 export default function PasswordCard({
   username,
@@ -226,7 +232,9 @@ export default function PasswordCard({
           });
           navigator.credentials.store(cred).catch(() => {});
         }
-      } catch {}
+      } catch (err) {
+        void err;
+      }
 
       if (autoCloseOnSuccess) {
         onCancel();
@@ -393,3 +401,10 @@ export default function PasswordCard({
     </section>
   );
 }
+
+PasswordCard.propTypes = {
+  username: PropTypes.string,
+  minLength: PropTypes.number,
+  defaultOpen: PropTypes.bool,
+  autoCloseOnSuccess: PropTypes.bool,
+};

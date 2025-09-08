@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Button,
   Label,
@@ -31,9 +31,11 @@ const rowBetween = {
   gap: 12,
 };
 
+const WINDOW_HOURS = 48;
+
 function shortUA(ua = "") {
   if (!ua) return "Неизвестное устройство";
-  return ua.length > 96 ? ua.slice(0, 96) + "…" : ua;
+  return ua.length > 96 ? `${ua.slice(0, 96)}…` : ua;
 }
 
 function reasonBadge(reason) {
@@ -103,9 +105,7 @@ export default function SessionsCard() {
   const [confirmAction, setConfirmAction] = useState(null);
   const [targetSessionId, setTargetSessionId] = useState(null);
 
-  const WINDOW_HOURS = 48;
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const raw = await listSessionsHeadless();
@@ -122,11 +122,11 @@ export default function SessionsCard() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showHistory]);
 
   useEffect(() => {
     load();
-  }, [showHistory]);
+  }, [load]);
 
   function askRevokeOne(id) {
     setConfirmAction("revoke-one");

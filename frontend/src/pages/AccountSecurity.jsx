@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
 import { me } from "../services/api";
 
@@ -32,6 +33,10 @@ function SkeletonBlock({ minHeight = 160 }) {
     </div>
   );
 }
+
+SkeletonBlock.propTypes = {
+  minHeight: PropTypes.number,
+};
 
 function AccountSecuritySkeleton() {
   return (
@@ -75,6 +80,7 @@ export default function AccountSecurity() {
       const p = await me();
       setProfile(p);
     } catch (e) {
+      void e;
       toaster.add({ title: "Не удалось обновить профиль", theme: "danger" });
     } finally {
       setLoading(false);
@@ -88,6 +94,7 @@ export default function AccountSecurity() {
         const p = await me();
         if (!cancelled) setProfile(p);
       } catch (e) {
+        void e;
         toaster.add({ title: "Ошибка загрузки профиля", theme: "danger" });
       } finally {
         if (!cancelled) setLoading(false);

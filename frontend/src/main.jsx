@@ -1,5 +1,5 @@
-import React from "react";
 import { createRoot } from "react-dom/client";
+import axios from "axios";
 import App from "./App.jsx";
 import { setupAxiosInterceptors } from "./services/api";
 
@@ -19,13 +19,13 @@ import "./assets/index.css";
 
 setupAxiosInterceptors(() => {
   localStorage.removeItem("joutak_auth");
-  delete axios.defaults.headers.common["Authorization"];
+  delete axios.defaults.headers.common.Authorization;
   window.location.href = "/login";
 });
 
 configure({ lang: "ru" });
 
-function Root() {
+export function Root() {
   return (
     <ThemeProvider theme="dark">
       <ToasterProvider>

@@ -1,9 +1,8 @@
-FROM python:3.12-slim AS base
+FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    UV_SYSTEM_PYTHON=1 \
     UV_LINK_MODE=copy
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -17,17 +16,19 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 
 WORKDIR /app
 
+# manifest files from the project root
 COPY pyproject.toml uv.lock ./
 
+# зависимости из lock (без dev)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --python 3.12
+    uv export --frozen --no-dev -o /tmp/req.lock.txt && \
+    uv pip install --system -r /tmp/req.lock.txt
 
-ENV PATH="/app/.venv/bin:${PATH}"
+# backend code
+COPY backend/ ./backend/
 
-COPY . .
-
-RUN useradd -u 10001 -m appuser \
- && chown -R appuser:appuser /app
+# unprivileged user
+RUN useradd -u 10001 -m appuser && chown -R appuser:appuser /app
 USER appuser
 
 ENV DJANGO_SETTINGS_MODULE=backend.settings.prod \
@@ -40,9 +41,11 @@ ENV DJANGO_SETTINGS_MODULE=backend.settings.prod \
 ENTRYPOINT ["/usr/bin/tini","--"]
 
 HEALTHCHECK --interval=20s --timeout=3s --retries=6 \
-  CMD /bin/sh -c 'curl -fsS "${http://127.0.0.1:8000/health}" >/dev/null || exit 1'
+  CMD curl -fsS "$HEALTHCHECK_URL" >/dev/null || exit 1
 
+EXPOSE 8000
 CMD ["bash","-lc","exec gunicorn backend.wsgi:application \
+  --chdir backend \
   --workers ${GUNICORN_WORKERS} \
   --threads ${GUNICORN_THREADS} \
   --timeout ${GUNICORN_TIMEOUT} \

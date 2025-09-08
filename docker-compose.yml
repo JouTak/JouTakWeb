@@ -18,10 +18,10 @@ services:
       - traefik.enable=false
 
   backend:
-#    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+#    build:
+#      context: .
+#      dockerfile: backend/Dockerfile
     pull_policy: build
     depends_on:
       db:
@@ -50,11 +50,11 @@ services:
       DJANGO_MIGRATE: "1"
       DJANGO_COLLECTSTATIC: "1"
       DJANGO_CHECK_DEPLOY: "1"
-#    healthcheck:
-#      test: ["CMD-SHELL", "wget -qO- localhost:8000/health || exit 1"]
-#      interval: 10s
-#      timeout: 3s
-#      retries: 30
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
@@ -62,10 +62,10 @@ services:
       - joutak_net
 
   frontend:
-#    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
     pull_policy: always
     environment:
       REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}

@@ -1,5 +1,5 @@
 [project]
-name = "JouTak-Backend"
+name = "backend"
 version = "0.1.0"
 description = "JouTak Backend Service"
 readme = "README.md"
@@ -20,6 +20,8 @@ dependencies = [
     "requests>=2.32.5",
     "typing-extensions==4.15.0rc1",
     "whitenoise>=6.9.0",
+    "gunicorn>=21.2",
+    "psycopg==3.2.3",
 ]
 
 [dependency-groups]

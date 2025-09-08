@@ -20,8 +20,8 @@ services:
   backend:
 #    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     pull_policy: build
     depends_on:
       db:
@@ -51,7 +51,7 @@ services:
       DJANGO_COLLECTSTATIC: "1"
       DJANGO_CHECK_DEPLOY: "1"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- localhost:8000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 30

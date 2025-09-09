@@ -48,7 +48,6 @@ services:
 
       DB_SSL_REQUIRED: "False"
       DJANGO_MIGRATE: "1"
-      DJANGO_COLLECTSTATIC: "1"
       DJANGO_CHECK_DEPLOY: "1"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS localhost:8000/health || exit 1"]

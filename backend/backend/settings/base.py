@@ -88,8 +88,12 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"
+    },
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -104,7 +108,9 @@ NINJA_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=config("JWT_REFRESH_DAYS", cast=int, default=30)
     ),
-    "ROTATE_REFRESH_TOKENS": config("JWT_ROTATE_REFRESH", cast=bool, default=True),
+    "ROTATE_REFRESH_TOKENS": config(
+        "JWT_ROTATE_REFRESH", cast=bool, default=True
+    ),
     "BLACKLIST_AFTER_ROTATION": config(
         "JWT_BLACKLIST_AFTER_ROTATION", cast=bool, default=True
     ),
@@ -119,7 +125,9 @@ ACCOUNT_EMAIL_VERIFICATION = config(
     "ACCOUNT_EMAIL_VERIFICATION", default="mandatory"
 )
 """
-ACCOUNT_EMAIL_VERIFICATION = config("ACCOUNT_EMAIL_VERIFICATION", default="optional")
+ACCOUNT_EMAIL_VERIFICATION = config(
+    "ACCOUNT_EMAIL_VERIFICATION", default="optional"
+)
 HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "http://localhost:5173/confirm-email?key={key}",
     "account_reset_password": "http://localhost:5173/reset-password?key={key}",
@@ -137,7 +145,9 @@ MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
 MFA_TOTP_ISSUER = config("MFA_TOTP_ISSUER", default="JouTak")
 MFA_TOTP_PERIOD = config("MFA_TOTP_PERIOD", cast=int, default=30)
 MFA_TOTP_TOLERANCE = config("MFA_TOTP_TOLERANCE", cast=int, default=1)
-MFA_PASSKEY_LOGIN_ENABLED = config("MFA_PASSKEY_LOGIN_ENABLED", cast=bool, default=True)
+MFA_PASSKEY_LOGIN_ENABLED = config(
+    "MFA_PASSKEY_LOGIN_ENABLED", cast=bool, default=True
+)
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
 
 LANGUAGE_CODE = "ru-RU"

@@ -1,0 +1,10 @@
+.git
+frontend
+node_modules
+**/__pycache__/
+**/*.py[cod]
+dist
+build
+media
+staticfiles
+.env

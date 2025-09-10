@@ -19,7 +19,7 @@ services:
 
   backend:
     image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
-    pull_policy: build
+    pull_policy: always
     depends_on:
       db:
         condition: service_healthy

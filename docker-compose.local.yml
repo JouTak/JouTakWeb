@@ -18,11 +18,11 @@ services:
       - traefik.enable=false
 
   backend:
-#    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    pull_policy: build
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+#    build:
+#      context: .
+#      dockerfile: backend/Dockerfile
+    pull_policy: always
     depends_on:
       db:
         condition: service_healthy

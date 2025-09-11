@@ -21,7 +21,7 @@ function ProjectSelect() {
       { value: "jou_tak", content: "JouTak" },
       { value: "mini_games", content: "miniGAMES" },
       { value: "legacy", content: "Legacy" },
-      { value: "itmocraft", content: "ItmoCraft" },
+      { value: "itmo_craft", content: "ITMOCraft" },
     ],
     [],
   );

@@ -165,7 +165,7 @@ export default function EmailCard() {
                 type="email"
                 value={newEmail}
                 onUpdate={setNewEmail}
-                name="email"
+                name="joutak__email"
                 autoComplete="email"
                 required
               />

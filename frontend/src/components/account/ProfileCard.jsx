@@ -130,7 +130,7 @@ export default function NameCard() {
                   <TextInput
                     size="l"
                     label="Имя"
-                    name="given-name"
+                    name="joutak__given-name"
                     autoComplete="given-name"
                     value={fDraft}
                     onUpdate={setFDraft}
@@ -138,7 +138,7 @@ export default function NameCard() {
                   <TextInput
                     size="l"
                     label="Фамилия"
-                    name="family-name"
+                    name="joutak__family-name"
                     autoComplete="family-name"
                     value={lDraft}
                     onUpdate={setLDraft}

@@ -315,7 +315,7 @@ export default function PasswordCard({
             onKeyUp={(e) =>
               setCapsCur(e.getModifierState && e.getModifierState("CapsLock"))
             }
-            name="current-password"
+            name="joutak__password"
             autoComplete="current-password"
             validationState={curErr ? "invalid" : undefined}
             errorMessage={curErr || undefined}
@@ -339,7 +339,7 @@ export default function PasswordCard({
             onKeyUp={(e) =>
               setCapsNew(e.getModifierState && e.getModifierState("CapsLock"))
             }
-            name="new-password"
+            name="joutak__password"
             autoComplete="new-password"
             inputProps={{ passwordRules: `minlength: ${minLength};` }}
             validationState={n1Err ? "invalid" : undefined}
@@ -361,7 +361,7 @@ export default function PasswordCard({
               if (!touched.n2) setTouched((t) => ({ ...t, n2: true }));
             }}
             onBlur={() => setTouched((t) => ({ ...t, n2: true }))}
-            name="new-password-confirm"
+            name="joutak__password"
             autoComplete="new-password"
             validationState={n2Err ? "invalid" : undefined}
             errorMessage={n2Err || undefined}

@@ -138,7 +138,7 @@ export default function AuthModal({ open = false, onClose }) {
               label="Никнейм"
               value={username}
               onUpdate={setUsername}
-              name="username"
+              name="joutak__username"
               autoComplete="username"
               autoFocus
               hasClear
@@ -150,7 +150,7 @@ export default function AuthModal({ open = false, onClose }) {
               label="Пароль"
               value={password}
               onUpdate={setPassword}
-              name="current-password"
+              name="joutak__password"
               autoComplete="current-password"
               disabled={busy}
             />
@@ -190,7 +190,7 @@ export default function AuthModal({ open = false, onClose }) {
               label="Никнейм"
               value={suUsername}
               onUpdate={setSuUsername}
-              name="username"
+              name="joutak__username"
               autoComplete="username"
               hasClear
               disabled={busy}
@@ -201,7 +201,7 @@ export default function AuthModal({ open = false, onClose }) {
               label="Email"
               value={suEmail}
               onUpdate={setSuEmail}
-              name="email"
+              name="joutak__email"
               autoComplete="email"
               hasClear
               disabled={busy}
@@ -212,7 +212,7 @@ export default function AuthModal({ open = false, onClose }) {
               label="Пароль"
               value={suPassword}
               onUpdate={setSuPassword}
-              name="new-password"
+              name="joutak__password"
               autoComplete="new-password"
               disabled={busy}
             />
@@ -222,7 +222,7 @@ export default function AuthModal({ open = false, onClose }) {
               label="Повторите пароль"
               value={suPassword2}
               onUpdate={setSuPassword2}
-              name="new-password"
+              name="joutak__password"
               autoComplete="new-password"
               disabled={busy}
             />

@@ -141,7 +141,6 @@ export default function AuthModal({ open = false, onClose }) {
               name="joutak__username"
               autoComplete="username"
               autoFocus
-              hasClear
               disabled={busy}
             />
             <TextInput
@@ -192,7 +191,6 @@ export default function AuthModal({ open = false, onClose }) {
               onUpdate={setSuUsername}
               name="joutak__username"
               autoComplete="username"
-              hasClear
               disabled={busy}
             />
             <TextInput
@@ -203,7 +201,6 @@ export default function AuthModal({ open = false, onClose }) {
               onUpdate={setSuEmail}
               name="joutak__email"
               autoComplete="email"
-              hasClear
               disabled={busy}
             />
             <TextInput

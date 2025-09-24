@@ -15,7 +15,7 @@ iframe.pay {
 @media (max-width: 1024px) {
   iframe.pay {
     width: 100%;
-    
+
     padding: 24px;
   }
 }

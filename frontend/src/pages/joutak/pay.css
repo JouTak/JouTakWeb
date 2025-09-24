@@ -1,6 +1,6 @@
 iframe.pay {
   width: 800px;
-  height: 1100px;
+  height: 1320px;
 
   display: block;
 
@@ -15,19 +15,25 @@ iframe.pay {
 @media (max-width: 1024px) {
   iframe.pay {
     width: 100%;
-    
+
     padding: 24px;
   }
 }
 
 @media (max-width: 768px) {
   iframe.pay {
-    height: calc(1250px - 10vw);
+    height: calc(1450px - 10vw);
   }
 }
 
 @media (max-width: 450px) {
   iframe.pay {
-    height: calc(1450px - 20vw);
+    height: calc(1650px - 20vw);
+  }
+}
+
+@media (max-width: 390px) {
+  iframe.pay {
+    height: calc(1680px - 20vw);
   }
 }

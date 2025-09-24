@@ -56,7 +56,7 @@ const JouTak = () => {
       <div className="p-5 mb-4 rounded-3">
         <div className="container py-5">
           <h1 className="display-5 fw-bold">JouTak</h1>
-          <p className="col-md-8 fs-4 lh-1 mx-auto">
+          <p className="col-md-8 fs-4 lh-xs mx-auto">
             Джоутек&nbsp;&mdash; колыбель итмокрафта. Запускавшийся парой школьников как
             летсплей в&nbsp;2018 году, этот сервер смог пройти сквозь года без
             вайпов, сохранить память и&nbsp;честность. Здесь нет ни&nbsp;приватов, ни
@@ -66,7 +66,7 @@ const JouTak = () => {
             для тебя и&nbsp;твоих друзей найдётся место на&nbsp;нашем проекте.
             Регистрируйся, и&nbsp;мы&nbsp;расскажем всё подробнее.
           </p>
-          <p className="col-md-8 fs-4 lh-1 mx-auto fw-bold">IP: mc.joutak.ru</p>
+          <p className="col-md-8 fs-4 lh-xs mx-auto fw-bold">IP: mc.joutak.ru</p>
           <a
             className="btn btn-primary btn-lg mt-4"
             href="https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/"

@@ -26,7 +26,7 @@ const Contact = () => {
         style={{ zIndex: 2 }}
       >
         <h1 className="display-5 fw-bold">Наши сообщества</h1>
-        <p className="col-md-10 fs-4 lh-1">
+        <p className="col-md-10 fs-4 lh-xs">
           Подпишись, чтобы быть в курсе новостей Джоутека, <br></br>ИТМОкрафта и
           майнкрафта!
         </p>

@@ -70,6 +70,7 @@ const JouTak = () => {
           <p className="col-md-8 fs-4 lh-xs mx-auto fw-bold">
             IP: mc.joutak.ru
           </p>
+          <p className="col-md-8 fs-4 lh-xs mx-auto fw-bold">IP: mc.joutak.ru</p>
           <a
             className="btn btn-primary btn-lg mt-4"
             href="https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/"

@@ -67,7 +67,7 @@ const MiniGames = () => {
         </div>
         <br />
 
-        <p className="col-md-8 fs-4 lh-1 mx-auto">
+        <p className="col-md-8 fs-4 lh-xs mx-auto">
           Мини-игры стали неотъемлемой частью Minecraft, и наш сервер приглашает
           вас окунуться в мир соревнований. IP: craft.itmo.ru. Здесь вас ждут
           классические режимы, разработанные с нуля нашими разработчиками:
@@ -75,11 +75,11 @@ const MiniGames = () => {
           <b>Block Party, Ace Race и Survival Games</b>.
         </p>
         <br />
-        <p className="col-md-8 fs-4 lh-1 mx-auto">
+        <p className="col-md-8 fs-4 lh-xs mx-auto">
           Мемы, найткор и пасхалки уже ждут вас!
         </p>
         <br />
-        <p className="col-md-8 fs-4 lh-1 mx-auto">
+        <p className="col-md-8 fs-4 lh-xs mx-auto">
           Кроме того, раз в полгода наш сервер снова становится площадкой для
           масштабного события — спартакиады по Minecraft, организованной
           совместно с{" "}
@@ -121,7 +121,7 @@ const MiniGames = () => {
 
         <hr className="my-4" />
 
-        <p className="col-md-8 fs-5 lh-1 mx-auto">
+        <p className="col-md-8 fs-5 lh-xs mx-auto">
           <b>Разработчики:</b>
           <br />
           Головин Семён — stunnerer
@@ -132,7 +132,7 @@ const MiniGames = () => {
           <br />
           Рязанов Никита — s4dnex
         </p>
-        <p className="col-md-8 fs-5 lh-1 mx-auto">
+        <p className="col-md-8 fs-5 lh-xs mx-auto">
           <b>Билдеры:</b>
           <br />
           <u>Лобби</u>

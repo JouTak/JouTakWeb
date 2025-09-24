@@ -54,7 +54,7 @@ const ItmoCraft = () => {
       <div className="p-5 mb-4 rounded-3">
         <div className="container py-5">
           <h1 className="display-5 fw-bold">ITMOcraft</h1>
-          <p className="col-md-8 fs-4 lh-1 mx-auto">
+          <p className="col-md-8 fs-4 lh-xs mx-auto">
             Комьюнити итмошников, любящих майнкрафт и всё, что с ним связано.
             Орг. состав итмокрафта занимается разработкой плагинов,
             строительством ивентов, а также медиа. Подавай заявку:

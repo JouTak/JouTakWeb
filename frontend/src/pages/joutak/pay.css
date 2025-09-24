@@ -1,0 +1,33 @@
+iframe.pay {
+  width: 800px;
+  height: 1024px;
+
+  display: block;
+
+  margin-top: 40px;
+  margin-inline: auto;
+
+  padding: 48px;
+  border-radius: 24px;
+  border: 1px solid var(--g-color-line-generic);
+}
+
+@media (max-width: 1024px) {
+  iframe.pay {
+    width: 100%;
+    
+    padding: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  iframe.pay {
+    height: calc(1200px - 10vw);
+  }
+}
+
+@media (max-width: 450px) {
+  iframe.pay {
+    height: calc(1400px - 20vw);
+  }
+}

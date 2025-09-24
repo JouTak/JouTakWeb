@@ -16,6 +16,8 @@ import Contact from "./pages/Contact.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import AccountSecurity from "./pages/AccountSecurity.jsx";
+import Pay from "./pages/joutak/Pay.jsx";
+import ScrollToTop from "./components/ScrollToTop.jsx";
 
 function LoginModalRoute() {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ function AppRoutes() {
         <Route path="/minigames" element={<MiniGames />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/account/security" element={<AccountSecurity />} />
+        <Route path="/joutak/pay" element={<Pay />} />
 
         <Route path="/login" element={<LoginModalRoute />} />
         <Route path="*" element={<NotFound />} />
@@ -53,6 +56,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <Layout>
         <AppRoutes />
       </Layout>

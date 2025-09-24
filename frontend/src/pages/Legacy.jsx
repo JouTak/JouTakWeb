@@ -50,7 +50,7 @@ const Legacy = () => {
       <div className="p-5 mb-4 rounded-3">
         <div className="container py-5">
           <h1 className="display-5 fw-bold">ITMOCRAFT Legacy</h1>
-          <p className="col-md-8 fs-4 lh-1 mx-auto">
+          <p className="col-md-8 fs-4 lh-xs mx-auto">
             Наше ностальгическое направление. Тут проходят аутентичные ивенты.
             Доступ у всех игроков с Джоутека. IP: legacy.joutak.ru:42181
           </p>

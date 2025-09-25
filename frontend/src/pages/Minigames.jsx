@@ -8,26 +8,28 @@ const MiniGames = () => {
         className="carousel slide"
         data-bs-ride="carousel"
       >
-        <div className="carousel-inner">
+        <div className="carousel-inner w-100" style={{
+          "aspectRatio": "16 / 9"
+        }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="/img/aether-portal.png"
+              src="https://cloud.joutak.ru/s/swb4NibNCmna8gp/download"
               className="d-block w-100"
-              alt="Aether Portal"
+              alt="Центральная локация Survival Games"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="/img/final-stage.png"
+              src="https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/download"
               className="d-block w-100"
-              alt="Final Stage"
+              alt="Block Party"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="/img/top-players.png"
+              src="https://cloud.joutak.ru/s/nWyfRiYDqgow62f/download"
               className="d-block w-100"
-              alt="Top Players"
+              alt="Ace Race"
             />
           </div>
         </div>

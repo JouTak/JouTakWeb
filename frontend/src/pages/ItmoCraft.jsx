@@ -6,23 +6,25 @@ const ItmoCraft = () => {
         className="carousel slide"
         data-bs-ride="carousel"
       >
-        <div className="carousel-inner">
+        <div className="carousel-inner w-100" style={{
+          "aspectRatio": "16 / 9"
+        }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="/img/itmo-meetup.jpeg"
+              src="https://cloud.joutak.ru/s/pj8iiBCcDXabYWM/download"
               className="d-block w-100"
-              alt="Сходка итмокрафта"
+              alt="Выезд клуба в Ягодное 2025"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="/img/itmo-comunity.jpeg"
+              src="https://cloud.joutak.ru/s/eZwEndZTJcogxTQ/download"
               className="d-block w-100"
-              alt="Сходка итмокрафта - комьюнити <3"
+              alt="Сходка итмокрафта — комьюнити <3"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="/img/cronva.png" className="d-block w-100" alt="Кронва" />
+            <img src="https://cloud.joutak.ru/s/59F3qBTsMbXm5KD/download" className="d-block w-100" alt="Здание корпуса на Кронверкском, построенное на сервере" />
           </div>
         </div>
         <button
@@ -52,12 +54,12 @@ const ItmoCraft = () => {
       </div>
 
       <div className="p-5 mb-4 rounded-3">
-        <div className="container py-5">
+        <div className="container pb-5">
           <h1 className="display-5 fw-bold">ITMOcraft</h1>
           <p className="col-md-8 fs-4 lh-xs mx-auto">
-            Комьюнити итмошников, любящих майнкрафт и всё, что с ним связано.
-            Орг. состав итмокрафта занимается разработкой плагинов,
-            строительством ивентов, а также медиа. Подавай заявку:
+            Комьюнити итмошников, любящих майнкрафт и&nbsp;всё, что с&nbsp;ним связано.
+            Орг.&nbsp;состав итмокрафта занимается разработкой плагинов,
+            строительством ивентов, а&nbsp;также медиа.<br />Подавай заявку:
           </p>
           <a
             className="btn btn-primary btn-lg"

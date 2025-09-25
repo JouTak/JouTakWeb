@@ -6,19 +6,21 @@ const Legacy = () => {
         className="carousel slide"
         data-bs-ride="carousel"
       >
-        <div className="carousel-inner">
+        <div className="carousel-inner w-100" style={{
+          "aspectRatio": "16 / 9"
+        }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="/img/snow-event.png"
+              src="https://cloud.joutak.ru/s/2nmyGq7ayfQpWfe/download"
               className="d-block w-100"
-              alt="Кронва"
+              alt="Сходка игроков в деревне"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="/img/fireplace.png" className="d-block w-100" alt="лес" />
+            <img src="https://cloud.joutak.ru/s/DBJpmG2DjrSnXyS/download" className="d-block w-100" alt="Портал в рай" />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="/img/river.png" className="d-block w-100" alt="грибы" />
+            <img src="https://cloud.joutak.ru/s/6BgqZdrr9LyinAB/download" className="d-block w-100" alt="Деревня" />
           </div>
         </div>
         <button
@@ -48,12 +50,13 @@ const Legacy = () => {
       </div>
 
       <div className="p-5 mb-4 rounded-3">
-        <div className="container py-5">
+        <div className="container pb-5">
           <h1 className="display-5 fw-bold">ITMOcraft Legacy</h1>
           <p className="col-md-8 fs-4 lh-xs mx-auto">
             Наше ностальгическое направление. Тут проходят аутентичные ивенты.
-            Доступ у всех игроков с Джоутека. IP: legacy.joutak.ru:42181
+            Доступ у всех игроков с Джоутека.
           </p>
+          <p className="col-md-8 fs-4 lh-xs mx-auto fw-bold">IP: legacy.joutak.ru:42181</p>
           <a
             className="btn btn-primary btn-lg"
             href="https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/"

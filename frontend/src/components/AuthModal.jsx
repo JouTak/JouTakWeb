@@ -162,6 +162,9 @@ export default function AuthModal({ open = false, onClose }) {
             >
               Войти
             </Button>
+
+            {/*
+            // TODO: Обновить регистрацию
             <Button
               view="outlined"
               size="l"
@@ -170,6 +173,8 @@ export default function AuthModal({ open = false, onClose }) {
             >
               Нет аккаунта? Зарегистрируйтесь
             </Button>
+            */}
+
             <div
               style={{
                 display: "flex",

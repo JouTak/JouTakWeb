@@ -19,6 +19,8 @@ def login(request, payload: LoginIn = Body(...)):
         body, headers={"X-Session-Token": st, "Cache-Control": "no-store"}
     )
 
+"""
+TODO: Обновить авторизацию 
 
 @headless_router.post(
     "/signup",
@@ -34,3 +36,4 @@ def signup(request, payload: SignupIn = Body(...)):
         {"meta": {"session_token": st}},
         headers={"X-Session-Token": st, "Cache-Control": "no-store"},
     )
+"""

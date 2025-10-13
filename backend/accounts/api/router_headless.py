@@ -1,6 +1,6 @@
 from ninja import Router, Body
 from ninja.responses import Response
-from accounts.transport.schemas import ErrorOut, LoginOut, LoginIn, SignupIn
+from accounts.transport.schemas import ErrorOut, LoginOut, LoginIn
 from accounts.services.headless import HeadlessService
 
 headless_router = Router(tags=["Auth"])

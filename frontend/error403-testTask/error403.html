@@ -13,12 +13,18 @@
     </header>
     
     <main class="container">
-        <img src="images/guard.png" alt="охранник, который показывает ограниченный доступ">
-        <h1>403 - FORBIDDEN</h1>
-        <p>Приносим извинения, но у вас нет доступа к этой странице или ресурсу.</p>
-        <a href="#">Вернуться на главную страницу</a>
-        <a href="#">Назад</a>
-        <a href="#">Войти / сменить аккаунт</a>
+        <img id="warden" src="images/warden.png" alt="варден, который символизирует ограниченный доступ">
+        <div class="page-info">
+            <h1>403</h1>
+            <h2>FORBIDDEN</h2>
+            <img id="table" src="images/error-info.png" alt="табличка, на которой написано, что у пользователя нет доступа к этой странице">
+
+            <div class="buttons">
+                <a href="#"><img src="images/back-btn.png" alt="кнопка, чтобы вернуться назад"></a>
+                <a href="#"><img src="images/main-page-btn.png" alt="ссылка, чтобы вернуться на главную страницу"></a>
+                <a href="#"><img src="images/change-acc-btn.png" alt="кнопка, чтобы сменить аккаунт"></a>
+            </div>
+        </div>
     </main>
 
     <script src="error403-script.js"></script>

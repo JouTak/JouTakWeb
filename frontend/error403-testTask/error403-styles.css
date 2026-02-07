@@ -1,0 +1,66 @@
+:root {
+    --base-color: #D6D58B;
+    --error-num-color: #A80000;
+    --error-meaning-color: #5C4D2F;
+    --theme-base-color: #B3B347;
+}
+
+
+@font-face {
+    font-family: 'MinecraftFont';
+    src: url('fonts/minecraft-ten-font-cyrillic.ttf');
+}
+
+body {
+    margin: 0;
+    background-color: var(--base-color);
+    font-family: 'MinecraftFont', sans-serif;
+}
+
+header {
+    text-align: end;
+}
+
+.container {
+    display: flex;
+    justify-content: space-around;
+}
+
+.page-info {
+    text-align: center;
+}
+
+
+#warden {
+    height: 500px;
+}
+
+#table {
+    height: 200px;
+    margin-top: 20px;
+}
+
+h1 {
+    color: var(--error-num-color);
+    text-shadow: 2px 2px 2px black;
+    font-size: 100px;
+    margin: 0px 0px;
+}
+
+h2 {
+    color: var(--error-meaning-color);
+    text-shadow: 2px 2px 2px black;
+    font-size: 50px;
+    margin: 0px 0px;
+}
+
+.buttons img {
+    height: 70px;
+}
+
+.buttons {
+    margin-top: 20px;
+    width: 600px;
+    display: flex;
+    justify-content: space-between;
+}

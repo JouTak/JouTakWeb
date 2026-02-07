@@ -1,13 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error 403</title>
-    <link rel="stylesheet" href="error403-styles.css">
-</head>
-<body>
+const hasAccess = false
+const path = window.location.pathname
 
+function showError403Page() {
+    document.body.innerHTML = `
     <header>
         <button id="theme-switch">
             <img src="images/light-mode-icon.svg" alt="иконка солнца, символизирующая светлую тему страницы">
@@ -23,13 +18,29 @@
             <img id="table" src="images/error-info.png" alt="табличка, на которой написано, что у пользователя нет доступа к этой странице">
 
             <div class="buttons">
-                <a href="#"><img src="images/back-btn.png" alt="кнопка, чтобы вернуться назад"></a>
+                <a href="javascript:history.back()"><img src="images/back-btn.png" alt="кнопка, чтобы вернуться назад"></a>
                 <a href="#"><img src="images/main-page-btn.png" alt="ссылка, чтобы вернуться на главную страницу"></a>
                 <a href="#"><img src="images/change-acc-btn.png" alt="кнопка, чтобы сменить аккаунт"></a>
             </div>
         </div>
-    </main>
+    </main>`
 
-    <script src="error403-script.js"></script>
-</body>
-</html>
+    const switchThemeBtn = document.getElementById("theme-switch")
+
+    switchThemeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('darkmode')
+    })
+}
+
+if (path.includes('403.html')) {
+    showError403Page()
+}
+
+if (path.includes('restricted.html')) {
+    if (!hasAccess) {
+        showError403Page()
+    } else {
+       document.body.innerHTML = '<p>доступ разрешен! вы на секретной страничке)</p>'
+    }
+}
+

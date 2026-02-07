@@ -24,6 +24,7 @@ body {
     margin: 0;
     background-color: var(--base-color);
     font-family: 'MinecraftFont', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 header {

@@ -1,3 +1,4 @@
+//const hasAccess = true
 const hasAccess = false
 const path = window.location.pathname
 
@@ -20,7 +21,7 @@ function showError403Page() {
             <div class="buttons">
                 <a href="javascript:history.back()"><img src="images/back-btn.png" alt="кнопка, чтобы вернуться назад"></a>
                 <a href="#"><img src="images/main-page-btn.png" alt="ссылка, чтобы вернуться на главную страницу"></a>
-                <a href="#"><img src="images/change-acc-btn.png" alt="кнопка, чтобы сменить аккаунт"></a>
+                <a href="https://cloud.joutak.ru/login"><img src="images/change-acc-btn.png" alt="кнопка, чтобы сменить аккаунт"></a>
             </div>
         </div>
     </main>`

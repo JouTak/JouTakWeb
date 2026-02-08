@@ -11,20 +11,24 @@ const ItmoCraft = () => {
         }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/pj8iiBCcDXabYWM/download"
+              src="https://storage.yandexcloud.net/joutak-public/img/itmo-meetup.jpeg"
               className="d-block w-100"
               alt="Выезд клуба в Ягодное 2025"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/eZwEndZTJcogxTQ/download"
+              src="https://storage.yandexcloud.net/joutak-public/img/itmo-comunity.jpeg"
               className="d-block w-100"
               alt="Сходка итмокрафта — комьюнити <3"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="https://cloud.joutak.ru/s/59F3qBTsMbXm5KD/download" className="d-block w-100" alt="Здание корпуса на Кронверкском, построенное на сервере" />
+            <img 
+            src="https://storage.yandexcloud.net/joutak-public/img/cronva.png" 
+            className="d-block w-100" 
+            alt="Здание корпуса на Кронверкском, построенное на сервере" 
+            />
           </div>
         </div>
         <button

@@ -11,6 +11,16 @@ const MiniGames = () => {
         <div className="carousel-inner w-100" style={{
           "aspectRatio": "16 / 9"
         }}>
+          {/* Todo: Убрать, ниже временный вариант заполнения */}
+          <div className="carousel-item active" data-bs-interval="10000">
+            <img
+              src="https://storage.yandexcloud.net/joutak-public/img/final-stage.png"
+              className="d-block w-100"
+              alt="Final Stage в MiniGames"
+            />
+          </div>
+          {/* 
+          TODO: Найти снимки.
           <div className="carousel-item active" data-bs-interval="10000">
             <img
               src="https://cloud.joutak.ru/s/swb4NibNCmna8gp/download"
@@ -32,6 +42,7 @@ const MiniGames = () => {
               alt="Ace Race"
             />
           </div>
+          */}
         </div>
         <button
           className="carousel-control-prev"
@@ -62,7 +73,7 @@ const MiniGames = () => {
       <div className="container py-3">
         <div className="my-4">
           <img
-            src="/img/logo_minigames.png"
+            src="https://storage.yandexcloud.net/joutak-public/img/logo_minigames.png"
             alt="MiniGames Logo"
             style={{ height: "100px" }}
           />

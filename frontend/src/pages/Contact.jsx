@@ -3,7 +3,7 @@ const Contact = () => {
     <div
       className="p-5 mb-4 bg-light shadow-lg position-relative"
       style={{
-        backgroundImage: "url(/img/river.png)",
+        backgroundImage: "url(https://storage.yandexcloud.net/joutak-public/img/river.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         position: "relative",

@@ -7,6 +7,8 @@ import {
   useLocation,
 } from "react-router-dom";
 
+import Forbidden from "./pages/Forbidden.jsx";
+import Restricted from "./pages/Restricted.jsx";
 import Layout from "./components/Layout";
 import JouTak from "./pages/JouTak";
 import Legacy from "./pages/Legacy.jsx";
@@ -41,6 +43,8 @@ function AppRoutes() {
         <Route path="/joutak/pay" element={<Pay />} />
 
         <Route path="/login" element={<LoginModalRoute />} />
+        <Route path="/403" element={<Forbidden />} />
+        <Route path="/restricted" element={<Restricted />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
 

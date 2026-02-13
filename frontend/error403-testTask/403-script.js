@@ -1,4 +1,3 @@
-//const hasAccess = true
 const hasAccess = false
 const path = window.location.pathname
 

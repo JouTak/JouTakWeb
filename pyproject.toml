@@ -47,3 +47,28 @@ exclude = '''
   | frontend
 )/
 '''
+
+[tool.ruff]
+line-length = 79
+target-version = "py312"
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build",
+    "dist",
+    ".venv",
+    "frontend",
+    "backend/.ruff_cache",
+    "backend/core/migrations",
+]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "B", "C4", "RET", "T20", "PLC0415"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"backend/manage.py" = ["PLC0415"]
+"backend/backend/settings/dev.py" = ["F403", "F405"]
+"backend/backend/settings/prod.py" = ["F403"]

@@ -1,6 +1,7 @@
-from .base import *  # noqa: F403
-from decouple import config, Csv
 import dj_database_url
+from decouple import Csv, config
+
+from .base import *  # noqa: F403
 
 DEBUG = False
 

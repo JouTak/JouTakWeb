@@ -1,7 +1,7 @@
-from ninja import Router, Body
-from ninja.responses import Response
-from accounts.transport.schemas import ErrorOut, LoginOut, LoginIn
 from accounts.services.headless import HeadlessService
+from accounts.transport.schemas import ErrorOut, LoginIn, LoginOut, SignupIn
+from ninja import Body, Router
+from ninja.responses import Response
 
 headless_router = Router(tags=["Auth"])
 
@@ -19,8 +19,6 @@ def login(request, payload: LoginIn = Body(...)):
         body, headers={"X-Session-Token": st, "Cache-Control": "no-store"}
     )
 
-"""
-TODO: Обновить авторизацию 
 
 @headless_router.post(
     "/signup",
@@ -36,4 +34,3 @@ def signup(request, payload: SignupIn = Body(...)):
         {"meta": {"session_token": st}},
         headers={"X-Session-Token": st, "Cache-Control": "no-store"},
     )
-"""

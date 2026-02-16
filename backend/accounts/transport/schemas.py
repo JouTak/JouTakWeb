@@ -1,6 +1,8 @@
 from __future__ import annotations
-from typing import Optional, List
+
 from datetime import datetime
+from typing import List, Optional
+
 from ninja import Schema
 
 
@@ -13,6 +15,8 @@ class FieldErrorItem(Schema):
 class ErrorOut(Schema):
     detail: str
     code: int | None = None
+    error_code: Optional[str] = None
+    blocking_reasons: Optional[list[str]] = None
     # Optional structured validation payload (e.g., Django form errors)
     errors: Optional[dict[str, list[FieldErrorItem]]] = None
     # Convenience: first message per field (flat)
@@ -28,6 +32,11 @@ class OkOut(Schema):
 class ProfileUpdateIn(Schema):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    vk_username: Optional[str] = None
+    minecraft_nick: Optional[str] = None
+    minecraft_has_license: Optional[bool] = None
+    is_itmo_student: Optional[bool] = None
+    itmo_isu: Optional[str] = None
 
 
 class EmailStatusOut(Schema):
@@ -74,7 +83,7 @@ class RevokeOut(Schema):
     # single
     id: Optional[str] = None
     revoked_reason: Optional[str] = None
-    revoked_at: Optional[str] = None
+    revoked_at: Optional[datetime] = None
 
 
 # ---------- Auth / JWT ----------
@@ -97,6 +106,10 @@ class ChangePasswordIn(Schema):
     new_password: str
 
 
+class DeleteAccountIn(Schema):
+    current_password: str
+
+
 class ProfileOut(Schema):
     username: str
     email: str
@@ -106,6 +119,51 @@ class ProfileOut(Schema):
     last_name: Optional[str] = None
     avatar_url: Optional[str] = None
     email_verified: bool = False
+    profile_complete: bool = False
+    account_active: bool = False
+    registration_completed: bool = False
+    profile_state: str = "basic"
+    profile_tier: str = "basic"
+    blocking_reasons: List[str]
+    personalization_ui_enabled: bool = True
+    personalization_interstitial_enabled: bool = True
+    personalization_enforce_enabled: bool = False
+    missing_fields: List[str]
+    vk_username: Optional[str] = None
+    minecraft_nick: Optional[str] = None
+    minecraft_has_license: Optional[bool] = None
+    is_itmo_student: Optional[bool] = None
+    itmo_isu: Optional[str] = None
+
+
+class AccountStatusOut(Schema):
+    email_verified: bool = False
+    profile_complete: bool = False
+    account_active: bool = False
+    registration_completed: bool = False
+    profile_state: str = "basic"
+    profile_tier: str = "basic"
+    blocking_reasons: List[str]
+    personalization_ui_enabled: bool = True
+    personalization_interstitial_enabled: bool = True
+    personalization_enforce_enabled: bool = False
+    missing_fields: List[str]
+
+
+class ProfileUpdateOut(Schema):
+    ok: bool
+    message: Optional[str] = None
+    email_verified: bool = False
+    profile_complete: bool = False
+    account_active: bool = False
+    registration_completed: bool = False
+    profile_state: str = "basic"
+    profile_tier: str = "basic"
+    blocking_reasons: List[str]
+    personalization_ui_enabled: bool = True
+    personalization_interstitial_enabled: bool = True
+    personalization_enforce_enabled: bool = False
+    missing_fields: List[str]
 
 
 # ---------- Headless (session token) ----------
@@ -136,32 +194,3 @@ class ProvidersOut(Schema):
 class OAuthLinkOut(Schema):
     authorize_url: str
     method: str
-
-
-for _m in (
-    FieldErrorItem,
-    ErrorOut,
-    OkOut,
-    ProfileUpdateIn,
-    EmailStatusOut,
-    ChangeEmailIn,
-    SessionRowOut,
-    SessionsOut,
-    RevokeSessionsIn,
-    RevokeOut,
-    TokenPairOut,
-    TokenRefreshIn,
-    TokenRefreshOut,
-    ChangePasswordIn,
-    ProfileOut,
-    SessionMetaOut,
-    LoginOut,
-    LoginIn,
-    SignupIn,
-    ProvidersOut,
-    OAuthLinkOut,
-):
-    try:
-        _m.model_rebuild()
-    except Exception:
-        pass

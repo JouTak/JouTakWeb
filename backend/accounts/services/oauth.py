@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from urllib.parse import urlencode
-from django.urls import reverse, NoReverseMatch
-from django.conf import settings as dj_settings
-from allauth.socialaccount.providers import registry
+
 from allauth.socialaccount.models import SocialApp
+from allauth.socialaccount.providers import registry
+from django.conf import settings as dj_settings
+from django.urls import NoReverseMatch, reverse
 from ninja.errors import HttpError
 
 
@@ -46,8 +48,8 @@ class OAuthService:
         except NoReverseMatch:
             try:
                 path = reverse(f"{provider}_login")
-            except NoReverseMatch:
-                raise HttpError(404, "unknown provider")
+            except NoReverseMatch as e:
+                raise HttpError(404, "unknown provider") from e
         method = (
             "GET"
             if getattr(dj_settings, "SOCIALACCOUNT_LOGIN_ON_GET", False)

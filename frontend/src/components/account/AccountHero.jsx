@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import { Avatar, Label } from "@gravity-ui/uikit";
+import { isPersonalizedProfile } from "../../utils/profileState";
 
 function AccountHero({ profile }) {
   const first = profile?.first_name || "";
@@ -9,7 +10,7 @@ function AccountHero({ profile }) {
     fullName || profile?.username || profile?.nickname || "Anonymous";
   const avatarUrl = profile?.avatar_url || "";
   const email = profile?.email || "";
-  const emailVerified = profile?.email_verified === true;
+  const isBasicAccount = !isPersonalizedProfile(profile);
 
   return (
     <section
@@ -39,22 +40,19 @@ function AccountHero({ profile }) {
             style={{
               opacity: 0.9,
               display: "flex",
-              gap: 8,
               alignItems: "center",
             }}
           >
             <span>
               Email: <b>{email}</b>
             </span>
-            {emailVerified ? (
-              <Label size="s" theme="success">
-                Подтверждён
-              </Label>
-            ) : (
-              <Label size="s" theme="danger">
-                Не подтверждён
-              </Label>
-            )}
+          </div>
+        )}
+        {isBasicAccount && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Label size="s" theme="danger">
+              Базовый аккаунт
+            </Label>
           </div>
         )}
       </div>
@@ -71,6 +69,11 @@ AccountHero.propTypes = {
     avatar_url: PropTypes.string,
     email: PropTypes.string,
     email_verified: PropTypes.bool,
+    profile_complete: PropTypes.bool,
+    account_active: PropTypes.bool,
+    registration_completed: PropTypes.bool,
+    profile_tier: PropTypes.string,
+    missing_fields: PropTypes.arrayOf(PropTypes.string),
   }),
 };
 

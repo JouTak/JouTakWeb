@@ -1,9 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button, TextInput, useToaster } from "@gravity-ui/uikit";
+import { useNavigate } from "react-router-dom";
 import { doLogin, doSignupAndLogin, me } from "../services/api";
+import { needsPersonalization } from "../utils/profileState";
 
-export default function AuthModal({ open = false, onClose }) {
+function isSafeInternalPath(path) {
+  return (
+    typeof path === "string" &&
+    path.startsWith("/") &&
+    !path.startsWith("//")
+  );
+}
+
+function extractErrorMessage(error, fallback) {
+  const data = error?.response?.data;
+  if (data?.fields && typeof data.fields === "object") {
+    const firstFieldMessage = Object.values(data.fields).find(
+      (value) => typeof value === "string" && value.trim(),
+    );
+    if (firstFieldMessage) return firstFieldMessage;
+  }
+  if (data?.errors && typeof data.errors === "object") {
+    for (const entries of Object.values(data.errors)) {
+      if (!Array.isArray(entries)) continue;
+      const first = entries.find(
+        (entry) =>
+          entry &&
+          typeof entry === "object" &&
+          typeof entry.message === "string" &&
+          entry.message.trim(),
+      );
+      if (first?.message) return first.message;
+    }
+  }
+  return data?.detail || data?.message || fallback;
+}
+
+export default function AuthModal({
+  open = false,
+  onClose,
+  successRedirectTo = null,
+}) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
 
@@ -18,6 +57,10 @@ export default function AuthModal({ open = false, onClose }) {
   const toaster = useToaster();
   const isLogin = mode === "login";
   const title = useMemo(() => (isLogin ? "Вход" : "Регистрация"), [isLogin]);
+  const safeSuccessRedirectTo = useMemo(() => {
+    if (isSafeInternalPath(successRedirectTo)) return successRedirectTo;
+    return null;
+  }, [successRedirectTo]);
 
   function resetForms() {
     setUsername("");
@@ -47,7 +90,6 @@ export default function AuthModal({ open = false, onClose }) {
   function validateLogin() {
     if (!username.trim()) return "Укажите логин.";
     if (!password) return "Введите пароль.";
-    if (password.length < 8) return "Минимальная длина пароля — 8 символов.";
     return null;
   }
 
@@ -74,15 +116,30 @@ export default function AuthModal({ open = false, onClose }) {
         content: `Здравствуйте, ${p.username}.`,
         theme: "success",
       });
+      if (needsPersonalization(p)) {
+        toaster.add({
+          title: "Нужна персонализация профиля",
+          content:
+            "Чтобы открыть полный функционал, заполни обязательные поля профиля.",
+          theme: "warning",
+        });
+        resetForms();
+        setBusy(false);
+        navigate("/account/complete-profile", { replace: true });
+        return;
+      }
+      if (safeSuccessRedirectTo) {
+        resetForms();
+        setBusy(false);
+        navigate(safeSuccessRedirectTo, { replace: true });
+        return;
+      }
       close();
     } catch (ex) {
-      const r = ex?.response;
-      const msg =
-        r?.data?.errors?.[0]?.message ||
-        r?.data?.detail ||
-        r?.data?.message ||
-        "Ошибка входа";
-      toaster.add({ title: msg, theme: "danger" });
+      toaster.add({
+        title: extractErrorMessage(ex, "Ошибка входа"),
+        theme: "danger",
+      });
     } finally {
       setBusy(false);
     }
@@ -105,15 +162,24 @@ export default function AuthModal({ open = false, onClose }) {
         content: `Добро пожаловать, ${p.username}!`,
         theme: "success",
       });
+      if (needsPersonalization(p)) {
+        resetForms();
+        setBusy(false);
+        navigate("/account/complete-profile", { replace: true });
+        return;
+      }
+      if (safeSuccessRedirectTo) {
+        resetForms();
+        setBusy(false);
+        navigate(safeSuccessRedirectTo, { replace: true });
+        return;
+      }
       close();
     } catch (ex) {
-      const r = ex?.response;
-      const msg =
-        r?.data?.errors?.[0]?.message ||
-        r?.data?.detail ||
-        r?.data?.message ||
-        "Ошибка регистрации";
-      toaster.add({ title: msg, theme: "danger" });
+      toaster.add({
+        title: extractErrorMessage(ex, "Ошибка регистрации"),
+        theme: "danger",
+      });
     } finally {
       setBusy(false);
     }
@@ -163,8 +229,6 @@ export default function AuthModal({ open = false, onClose }) {
               Войти
             </Button>
 
-            {/*
-            // TODO: Обновить регистрацию
             <Button
               view="outlined"
               size="l"
@@ -173,7 +237,6 @@ export default function AuthModal({ open = false, onClose }) {
             >
               Нет аккаунта? Зарегистрируйтесь
             </Button>
-            */}
 
             <div
               style={{
@@ -266,4 +329,5 @@ export default function AuthModal({ open = false, onClose }) {
 AuthModal.propTypes = {
   open: PropTypes.bool,
   onClose: PropTypes.func,
+  successRedirectTo: PropTypes.string,
 };

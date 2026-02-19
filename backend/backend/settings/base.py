@@ -1,7 +1,17 @@
-from pathlib import Path
+import warnings
 from datetime import timedelta
-from decouple import config, Csv
+from pathlib import Path
+
 from corsheaders.defaults import default_headers
+from decouple import Csv, config
+
+warnings.filterwarnings(
+    "ignore",
+    message=(
+        "allauth.headless.tokens.base.AbstractTokenStrategy is deprecated*"
+    ),
+    category=UserWarning,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -85,14 +95,21 @@ DATABASES = {}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "UserAttributeSimilarityValidator"
+        )
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"
+        "NAME": (
+            "django.contrib.auth.password_validation.CommonPasswordValidator"
+        )
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"
+        "NAME": (
+            "django.contrib.auth.password_validation.NumericPasswordValidator"
+        )
     },
 ]
 
@@ -120,11 +137,6 @@ NINJA_JWT = {
 
 ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["email", "username*", "password1*", "password2*"]
-"""
-ACCOUNT_EMAIL_VERIFICATION = config(
-    "ACCOUNT_EMAIL_VERIFICATION", default="mandatory"
-)
-"""
 ACCOUNT_EMAIL_VERIFICATION = config(
     "ACCOUNT_EMAIL_VERIFICATION", default="optional"
 )
@@ -132,14 +144,15 @@ HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": "http://localhost:5173/confirm-email?key={key}",
     "account_reset_password": "http://localhost:5173/reset-password?key={key}",
 }
-# TODO сознательно отключено, т.к. почта не настроена
-#  нужно либо настроить почту, либо реализовать отправку через сторонний сервис
-
 ACCOUNT_CHANGE_EMAIL = True
 
 HEADLESS_ONLY = True
 HEADLESS_CLIENTS = tuple(config("HEADLESS_CLIENTS", default="app", cast=Csv()))
 HEADLESS_SERVE_SPECIFICATION = DEBUG
+HEADLESS_TOKEN_STRATEGY = config(
+    "HEADLESS_TOKEN_STRATEGY",
+    default="allauth.headless.tokens.strategies.sessions.SessionTokenStrategy",
+)
 
 MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
 MFA_TOTP_ISSUER = config("MFA_TOTP_ISSUER", default="JouTak")
@@ -193,3 +206,14 @@ CORS_EXPOSE_HEADERS = ["X-Session-Token"]
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+
+# Profile personalization rollout flags
+FF_PROFILE_PERSONALIZATION_UI = config(
+    "FF_PROFILE_PERSONALIZATION_UI", cast=bool, default=True
+)
+FF_PROFILE_PERSONALIZATION_INTERSTITIAL = config(
+    "FF_PROFILE_PERSONALIZATION_INTERSTITIAL", cast=bool, default=True
+)
+FF_PROFILE_PERSONALIZATION_ENFORCE = config(
+    "FF_PROFILE_PERSONALIZATION_ENFORCE", cast=bool, default=False
+)

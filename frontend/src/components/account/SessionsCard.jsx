@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Label,
@@ -14,7 +15,7 @@ import {
   revokeSessionHeadless,
   bulkRevokeSessionsHeadless,
   logout,
-} from "../../services/api.jsx";
+} from "../../services/api";
 
 const cardStyle = {
   border: "1px solid rgba(255,255,255,0.12)",
@@ -97,6 +98,7 @@ function normalizeSession(raw) {
 }
 
 export default function SessionsCard() {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
@@ -104,6 +106,14 @@ export default function SessionsCard() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [targetSessionId, setTargetSessionId] = useState(null);
+
+  const redirectToSessionExpired = useCallback(() => {
+    const params = new URLSearchParams({
+      reason: "SESSION_UNAUTHORIZED",
+      next: "/account/security",
+    });
+    navigate(`/session-expired?${params.toString()}`, { replace: true });
+  }, [navigate]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,10 +129,16 @@ export default function SessionsCard() {
       });
       const final = showHistory ? inWindow : inWindow.filter((s) => !s.revoked);
       setSessions(final);
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        redirectToSessionExpired();
+        return;
+      }
+      setMsg("Не удалось загрузить список сессий.");
     } finally {
       setLoading(false);
     }
-  }, [showHistory]);
+  }, [redirectToSessionExpired, showHistory]);
 
   useEffect(() => {
     load();
@@ -177,6 +193,7 @@ export default function SessionsCard() {
       } else if (confirmAction === "signout-current") {
         await logout();
         setMsg("Вы вышли из аккаунта на этом устройстве.");
+        redirectToSessionExpired();
       } else if (confirmAction === "revoke-all-except-current") {
         await revokeAllExceptCurrent();
         setMsg("Все сессии завершены, кроме текущей.");

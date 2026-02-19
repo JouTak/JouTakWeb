@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { toaster } from "@gravity-ui/uikit/toaster-singleton";
+import { Button } from "@gravity-ui/uikit";
+
 import { me } from "../services/api";
+
+import { needsPersonalization } from "../utils/profileState";
 
 import AccountHero from "../components/account/AccountHero";
 import ProfileCard from "../components/account/ProfileCard";
 import EmailCard from "../components/account/EmailCard";
 import PasswordCard from "../components/account/PasswordCard";
+import DeleteAccountCard from "../components/account/DeleteAccountCard";
 // import MfaCard from '../components/account/MfaCard';
 // import PasskeysCard from '../components/account/PasskeysCard';
 // import OauthCard from '../components/account/OauthCard';
@@ -71,17 +76,25 @@ function AccountSecuritySkeleton() {
 }
 
 export default function AccountSecurity() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const redirectToSessionExpired = useCallback(() => {
+    const params = new URLSearchParams({
+      reason: "SESSION_UNAUTHORIZED",
+      next: "/account/security",
+    });
+    navigate(`/session-expired?${params.toString()}`, { replace: true });
+  }, [navigate]);
 
   const reload = async () => {
     setLoading(true);
     try {
       const p = await me();
       setProfile(p);
-    } catch (e) {
-      void e;
-      toaster.add({ title: "Не удалось обновить профиль", theme: "danger" });
+    } catch {
+      redirectToSessionExpired();
     } finally {
       setLoading(false);
     }
@@ -93,9 +106,10 @@ export default function AccountSecurity() {
       try {
         const p = await me();
         if (!cancelled) setProfile(p);
-      } catch (e) {
-        void e;
-        toaster.add({ title: "Ошибка загрузки профиля", theme: "danger" });
+      } catch {
+        if (!cancelled) {
+          redirectToSessionExpired();
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -103,23 +117,51 @@ export default function AccountSecurity() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [redirectToSessionExpired]);
 
   if (loading) return <AccountSecuritySkeleton />;
+  if (!profile) return null;
 
   return (
     <div
       className="container py-4"
       style={{ maxWidth: 960, display: "grid", gap: 24 }}
     >
+      {needsPersonalization(profile) && (
+        <section
+          style={{
+            border: "1px solid rgba(255, 163, 0, 0.45)",
+            borderRadius: 12,
+            padding: 16,
+            background: "rgba(255, 163, 0, 0.12)",
+            display: "grid",
+            gap: 8,
+          }}
+        >
+          <b>Базовый аккаунт: персонализация профиля не завершена</b>
+          <span>
+            Заполни обязательные поля профиля, чтобы открыть полный
+            функционал.
+          </span>
+          <div>
+            <Button
+              view="normal"
+              onClick={() => navigate("/account/complete-profile")}
+            >
+              Завершить профиль
+            </Button>
+          </div>
+        </section>
+      )}
       <AccountHero profile={profile} />
-      <ProfileCard profile={profile} onUpdated={reload} />
+      <ProfileCard onUpdated={reload} />
       <EmailCard />
       <PasswordCard />
       {/*<MfaCard profile={profile} />*/}
       {/*<PasskeysCard />*/}
       {/*<OauthCard />*/}
       <SessionsCard />
+      <DeleteAccountCard />
     </div>
   );
 }

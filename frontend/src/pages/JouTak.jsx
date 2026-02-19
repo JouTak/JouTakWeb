@@ -13,31 +13,31 @@ const JouTak = () => {
         }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/2oQALeqNkndEQMw/download"
+              src="https://cloud.joutak.ru/s/2oQALeqNkndEQMw/preview"
               className="d-block w-100"
               alt="Центральный район сервера"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="https://cloud.joutak.ru/s/fAn6tq8jn3wcbzy/download" className="d-block w-100" alt="Большой гриб на нулевых координатах" />
+            <img src="https://cloud.joutak.ru/s/fAn6tq8jn3wcbzy/preview" className="d-block w-100" alt="Большой гриб на нулевых координатах" />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/oD9SmGSnqGCYqLP/download"
+              src="https://cloud.joutak.ru/s/oD9SmGSnqGCYqLP/preview"
               className="d-block w-100"
               alt="Летучий Голландец в Казахстане"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/D8MH8Bmia4f6Ab5/download"
+              src="https://cloud.joutak.ru/s/D8MH8Bmia4f6Ab5/preview"
               className="d-block w-100"
               alt="Крупная сходка новых игроков 2025"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/3ebFJexTFSntZmL/download"
+              src="https://cloud.joutak.ru/s/3ebFJexTFSntZmL/preview"
               className="d-block w-100"
               alt="Центральный хаб в Нижнем мире"
             />

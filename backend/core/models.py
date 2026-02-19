@@ -40,3 +40,31 @@ class UserSessionToken(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["user", "session_key"])]
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="extended_profile",
+    )
+    vk_username = models.CharField(max_length=128, blank=True, default="")
+    minecraft_nick = models.CharField(max_length=16, blank=True, default="")
+    minecraft_has_license = models.BooleanField(null=True, blank=True)
+    is_itmo_student = models.BooleanField(null=True, blank=True)
+    itmo_isu = models.CharField(max_length=32, null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["user", "updated_at"],
+                name="core_userpr_user_id_557362_idx",
+            ),
+            models.Index(
+                fields=["is_itmo_student"],
+                name="core_userpr_is_itmo_17f9c2_idx",
+            ),
+        ]

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, DropdownMenu, Loader } from "@gravity-ui/uikit";
+import { Button, DropdownMenu, Loader, useToaster } from "@gravity-ui/uikit";
 import { getOAuthProviders, getOAuthLink } from "../../services/api";
 
 const cardStyle = {
@@ -20,6 +20,7 @@ const row = {
 export default function OauthCard() {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { add } = useToaster();
 
   useEffect(() => {
     let cancelled = false;
@@ -64,9 +65,25 @@ export default function OauthCard() {
       }
       const u = new URL(url, window.location.origin);
       const params = Object.fromEntries(u.searchParams.entries());
-      submitPost(u.pathname, params);
-    } catch {
-      alert("Не удалось получить ссылку провайдера");
+      submitPost(u.toString(), params);
+    } catch (error) {
+      const response = error?.response?.data;
+      if (response?.error_code === "PROFILE_PERSONALIZATION_REQUIRED") {
+        add({
+          name: "oauth-personalization-required",
+          title: "Сначала заверши персонализацию профиля",
+          content:
+            "Связка внешних аккаунтов доступна после заполнения обязательных полей.",
+          theme: "warning",
+        });
+        return;
+      }
+      add({
+        name: "oauth-link-error",
+        title: "Ошибка",
+        content: "Не удалось получить ссылку провайдера",
+        theme: "danger",
+      });
     }
   }
 

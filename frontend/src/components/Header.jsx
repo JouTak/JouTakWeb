@@ -5,12 +5,17 @@ import {
   Button,
   Avatar,
   Loader,
+  Modal,
+  Label,
 } from "@gravity-ui/uikit";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
 import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
-import { me, tokenStore, logout } from "../services/api";
+import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
+import { isPersonalizedProfile, needsPersonalization } from "../utils/profileState";
+
+const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 
 function ProjectSelect() {
   const navigate = useNavigate();
@@ -49,11 +54,7 @@ const Header = () => {
   const [authOpen, setAuthOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-
-  const hasAnyToken = () => {
-    const saved = tokenStore.get();
-    return Boolean(saved?.access || saved?.refresh);
-  };
+  const [personalizationModalOpen, setPersonalizationModalOpen] = useState(false);
 
   const closeOffcanvas = useCallback(() => {
     const el = document.getElementById("offcanvasDarkNavbar");
@@ -78,7 +79,7 @@ const Header = () => {
   }, [location.pathname, closeOffcanvas]);
 
   const loadProfileIfTokens = useCallback(async () => {
-    if (!hasAnyToken()) {
+    if (!hasStoredAuth()) {
       setProfile(null);
       return;
     }
@@ -99,12 +100,58 @@ const Header = () => {
   useEffect(() => {
     if (!authOpen) loadProfileIfTokens();
   }, [authOpen, loadProfileIfTokens]);
+  useEffect(() => {
+    const onAuthStateChanged = () => {
+      loadProfileIfTokens();
+    };
+    window.addEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+    };
+  }, [loadProfileIfTokens]);
 
   const goSecurity = () => navigate("/account/security");
+  const goOnboarding = () => navigate("/account/complete-profile");
   const onLogout = () => {
     logout();
     setProfile(null);
   };
+
+  const registrationCompleted = useMemo(
+    () => isPersonalizedProfile(profile),
+    [profile],
+  );
+
+  const personalizationNoticeKey = useMemo(() => {
+    const username = profile?.username || "";
+    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${username}`;
+  }, [profile?.username]);
+
+  const closePersonalizationModal = useCallback(
+    ({ markSeen = true } = {}) => {
+      if (markSeen && profile?.username) {
+        localStorage.setItem(personalizationNoticeKey, "1");
+      }
+      setPersonalizationModalOpen(false);
+    },
+    [personalizationNoticeKey, profile?.username],
+  );
+
+  const openPersonalizationFlow = useCallback(() => {
+    closePersonalizationModal({ markSeen: true });
+    navigate("/account/complete-profile");
+  }, [closePersonalizationModal, navigate]);
+
+  useEffect(() => {
+    if (!profile || authOpen) return;
+    if (location.pathname.startsWith("/account/complete-registration")) return;
+    if (location.pathname.startsWith("/account/complete-profile")) return;
+    if (location.pathname.startsWith("/account/onboarding")) return;
+    if (!needsPersonalization(profile)) return;
+    if (profile?.personalization_interstitial_enabled === false) return;
+    if (localStorage.getItem(personalizationNoticeKey) === "1") return;
+    setPersonalizationModalOpen(true);
+  }, [authOpen, location.pathname, personalizationNoticeKey, profile]);
 
   const renderAccountSwitcher = (switcherProps) => (
     <Button
@@ -153,6 +200,14 @@ const Header = () => {
                   size="m"
                   renderSwitcher={renderAccountSwitcher}
                   items={[
+                    ...(!registrationCompleted
+                      ? [[
+                          {
+                            text: "Завершить профиль",
+                            action: goOnboarding,
+                          },
+                        ]]
+                      : []),
                     [{ text: "Аккаунт и безопасность", action: goSecurity }],
                     { text: "Выйти", action: onLogout, theme: "danger" },
                   ]}
@@ -211,6 +266,52 @@ const Header = () => {
       </div>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+
+      <Modal
+        open={personalizationModalOpen}
+        onClose={() => closePersonalizationModal({ markSeen: true })}
+        aria-labelledby="personalization-modal-title"
+        style={{ "--g-modal-width": "620px" }}
+      >
+        <div style={{ padding: 24, display: "grid", gap: 12 }}>
+          <h3 id="personalization-modal-title" style={{ margin: 0 }}>
+            Обязательная персонализация профиля
+          </h3>
+          <p style={{ margin: 0, opacity: 0.9 }}>
+            Мы обновили требования профиля. Чтобы использовать часть функций,
+            нужно заполнить обязательные данные аккаунта.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Label theme="warning" size="s">
+              Пока профиль базовый, часть действий будет ограничена
+            </Label>
+            {Array.isArray(profile?.missing_fields) &&
+              profile.missing_fields.length > 0 && (
+                <Label theme="danger" size="s">
+                  Осталось заполнить: {profile.missing_fields.length}
+                </Label>
+              )}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              marginTop: 4,
+            }}
+          >
+            <Button
+              view="flat"
+              onClick={() => closePersonalizationModal({ markSeen: true })}
+            >
+              Позже
+            </Button>
+            <Button view="action" onClick={openPersonalizationFlow}>
+              Заполнить сейчас
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

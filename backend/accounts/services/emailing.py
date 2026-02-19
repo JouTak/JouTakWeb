@@ -1,9 +1,12 @@
 from __future__ import annotations
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from ninja.errors import HttpError
+
 from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.account.models import EmailAddress
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from ninja.errors import HttpError
 
 User = get_user_model()
 
@@ -20,8 +23,14 @@ class EmailService:
     def request_change(request, user: User, *, new_email: str) -> None:
         try:
             email = get_account_adapter().clean_email(new_email or "")
-        except Exception:
-            raise HttpError(400, "Invalid email")
+        except ValidationError as e:
+            raise HttpError(400, "Invalid email") from e
+
+        email = (email or "").strip()
+        try:
+            validate_email(email)
+        except ValidationError as e:
+            raise HttpError(400, "Invalid email") from e
         if not email:
             raise HttpError(400, "Invalid email")
 

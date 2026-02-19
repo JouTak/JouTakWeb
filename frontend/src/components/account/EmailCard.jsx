@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Button,
   Label,
@@ -36,21 +36,28 @@ export default function EmailCard() {
   const [busy, setBusy] = useState(false);
   const { add } = useToaster();
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const s = await getEmailStatus();
       setEmail(s.email || "");
       setVerified(!!s.verified);
       setNewEmail(s.email || "");
+    } catch {
+      add({
+        name: "email-load-error",
+        title: "Ошибка",
+        content: "Не удалось загрузить статус email",
+        theme: "danger",
+      });
     } finally {
       setLoading(false);
     }
-  }
+  }, [add]);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   async function onResend() {
     setBusy(true);
@@ -139,11 +146,6 @@ export default function EmailCard() {
               <div>
                 <b>{email || "—"}</b>
               </div>
-              {!verified && email && (
-                <div style={{ color: "#d9534f" }}>
-                  Ваш email не подтверждён. Пожалуйста, подтвердите его.
-                </div>
-              )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Button view="outlined" onClick={() => setEditMode(true)}>
                   Изменить email

@@ -63,6 +63,9 @@ jobs:
       - name: Sync deps (with dev)
         run: uv sync --python 3.12 --group dev
 
+      - name: Install backend test tooling
+        run: uv pip install --python .venv/bin/python pytest pytest-django
+
       - name: Ruff
         run: uv run ruff check .
 

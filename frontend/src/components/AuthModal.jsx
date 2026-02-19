@@ -71,10 +71,10 @@ export default function AuthModal({
     setSuPassword2("");
   }
 
-  function close() {
+  function close({ notifyParent = true } = {}) {
     resetForms();
     setBusy(false);
-    onClose?.();
+    if (notifyParent) onClose?.();
   }
 
   useEffect(() => {
@@ -123,8 +123,7 @@ export default function AuthModal({
             "Чтобы открыть полный функционал, заполни обязательные поля профиля.",
           theme: "warning",
         });
-        resetForms();
-        setBusy(false);
+        close({ notifyParent: !safeSuccessRedirectTo });
         navigate("/account/complete-profile", { replace: true });
         return;
       }
@@ -163,8 +162,7 @@ export default function AuthModal({
         theme: "success",
       });
       if (needsPersonalization(p)) {
-        resetForms();
-        setBusy(false);
+        close({ notifyParent: !safeSuccessRedirectTo });
         navigate("/account/complete-profile", { replace: true });
         return;
       }

@@ -1,18 +1,17 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from django.utils import timezone
-from django.contrib.sessions.models import Session
-from django.contrib.auth import logout as dj_logout, get_user_model
-from ninja.errors import HttpError
-
+from accounts.transport.schemas import RevokeSessionsIn, SessionRowOut
 from allauth.usersessions.models import UserSession
-
-from ninja_jwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-
 from core.models import UserSessionMeta, UserSessionToken
-from accounts.transport.schemas import SessionRowOut, RevokeSessionsIn
+from django.contrib.auth import get_user_model
+from django.contrib.auth import logout as dj_logout
+from django.contrib.sessions.models import Session
+from django.utils import timezone
+from ninja.errors import HttpError
+from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 User = get_user_model()
 
@@ -243,6 +242,16 @@ class SessionService:
         SessionService.assert_session_allowed(request)
         user: User = request.auth
         SessionService.touch(request, user)
+        ids = payload.ids or []
+
+        if ids and payload.all_except_current:
+            raise HttpError(
+                400, "Use either ids or all_except_current, not both"
+            )
+        if not ids and not payload.all_except_current:
+            raise HttpError(
+                400, "Either ids or all_except_current=true is required"
+            )
 
         token = SessionService._header_token(request)
         cur_meta = UserSessionMeta.objects.filter(
@@ -254,8 +263,8 @@ class SessionService:
 
         reason = (payload.reason or "bulk_except_current").lower()
         qs = UserSession.objects.filter(user=user)
-        if payload.ids:
-            qs = qs.filter(session_key__in=payload.ids)
+        if ids:
+            qs = qs.filter(session_key__in=ids)
         elif cur_key and payload.all_except_current:
             qs = qs.exclude(session_key=cur_key)
 
@@ -338,11 +347,13 @@ class SessionService:
         SessionService._blacklist_session_tokens(user, us.session_key, now)
         SessionService._kill_django_session(request, us.session_key)
 
+        revoked_at = getattr(us, "ended_at", None) or getattr(
+            us, "revoked_at", now
+        )
         return {
             "ok": True,
             "id": us.session_key,
             "revoked_reason": getattr(us, "ended_reason", None)
             or getattr(us, "revoked_reason", reason),
-            "revoked_at": getattr(us, "ended_at", None)
-            or getattr(us, "revoked_at", now),
+            "revoked_at": revoked_at,
         }

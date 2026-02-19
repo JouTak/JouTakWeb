@@ -7,6 +7,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -17,7 +20,7 @@ jobs:
     defaults:
       run:
         working-directory: frontend
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "20"
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
@@ -47,29 +50,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Cache uv
-        uses: actions/cache@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            ~/.cache/uv
-            .venv
-            uv.lock
-          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            uv-${{ runner.os }}-
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Sync deps (with dev)
         run: uv sync --python 3.12 --group dev
 
+      - name: Install backend test tooling
+        run: uv pip install --python .venv/bin/python pytest pytest-django
+
       - name: Ruff
         run: uv run ruff check .
 
-      - name: Django tests (sqlite)
+      - name: Backend tests (sqlite)
         env:
           PYTHONPATH: ${{ github.workspace }}
           DJANGO_SETTINGS_MODULE: backend.settings.prod
@@ -89,4 +89,33 @@ jobs:
         run: |
           uv run python --version
           uv run python backend/manage.py check
-          uv run python backend/manage.py test -v 2
+          uv run pytest backend -q
+
+  docker_checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Validate docker compose files
+        env:
+          POSTGRES_DB: ci_db
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          DJANGO_SECRET_KEY: ci-secret-key-please-change
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1
+          CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
+          PUBLIC_API_URL: http://localhost:8000
+        run: |
+          docker compose -f docker-compose.yml config >/dev/null
+          docker compose -f docker-compose.local.yml config >/dev/null
+
+      - name: Build backend image
+        run: |
+          docker build -f ./backend/Dockerfile -t joutakweb-api:ci .
+
+      - name: Build frontend image
+        run: |
+          docker build -f ./frontend/Dockerfile -t joutakweb:ci ./frontend

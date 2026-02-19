@@ -13,21 +13,21 @@ const MiniGames = () => {
         }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/swb4NibNCmna8gp/download"
+              src="https://cloud.joutak.ru/s/swb4NibNCmna8gp/preview"
               className="d-block w-100"
               alt="Центральная локация Survival Games"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/download"
+              src="https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/preview"
               className="d-block w-100"
               alt="Block Party"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/nWyfRiYDqgow62f/download"
+              src="https://cloud.joutak.ru/s/nWyfRiYDqgow62f/preview"
               className="d-block w-100"
               alt="Ace Race"
             />

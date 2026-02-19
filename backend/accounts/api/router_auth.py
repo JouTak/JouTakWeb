@@ -1,15 +1,15 @@
-from ninja import Router, Body
-from allauth.headless.contrib.ninja.security import x_session_token_auth
+from accounts.services.auth import AuthService
 from accounts.transport.schemas import (
+    ChangePasswordIn,
     ErrorOut,
     OkOut,
+    ProfileOut,
     TokenPairOut,
     TokenRefreshIn,
     TokenRefreshOut,
-    ChangePasswordIn,
-    ProfileOut,
 )
-from accounts.services.auth import AuthService
+from allauth.headless.contrib.ninja.security import x_session_token_auth
+from ninja import Body, Router
 
 auth_router = Router(tags=["Auth"])
 
@@ -28,7 +28,7 @@ def jwt_from_session(request):
 @auth_router.post(
     "/logout",
     auth=[x_session_token_auth],
-    response={200: OkOut},
+    response={200: OkOut, 401: ErrorOut},
     summary="Logout current session",
     operation_id="auth_logout",
 )
@@ -69,4 +69,4 @@ def change_password(request, payload: ChangePasswordIn = Body(...)):
     operation_id="auth_refresh",
 )
 def refresh_pair(request, payload: TokenRefreshIn = Body(...)):
-    return AuthService.refresh_pair(payload)
+    return AuthService.refresh_pair(request, payload)

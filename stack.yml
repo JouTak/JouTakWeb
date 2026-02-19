@@ -53,6 +53,7 @@ services:
       DJANGO_MIGRATE: "1"
       DJANGO_COLLECTSTATIC: "1"
       DJANGO_CHECK_DEPLOY: "1"
+      DJANGO_CHECK_DEPLOY_STRICT: "1"
       DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
       DATABASE_URL_FILE: /run/secrets/database_url
       #      YANDEX_CLIENT_ID_FILE: /run/secrets/yandex_client_id
@@ -90,7 +91,7 @@ services:
     env_file:
       - ./.env.production
     environment:
-      API_URL: ${PUBLIC_API_URL}
+      REACT_APP_API_URL: ${PUBLIC_API_URL}
     networks:
       - joutak_net
     deploy:
@@ -103,7 +104,7 @@ services:
         - traefik.http.routers.frontend-sec.entrypoints=websecure
         - traefik.http.routers.frontend-sec.tls=true
         - traefik.http.routers.frontend-sec.tls.certresolver=le
-        - traefik.http.services.frontend.loadbalancer.server.port=80
+        - traefik.http.services.frontend.loadbalancer.server.port=8080
 
 secrets:
   django_secret_key:

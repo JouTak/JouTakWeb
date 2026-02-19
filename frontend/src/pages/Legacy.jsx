@@ -11,16 +11,16 @@ const Legacy = () => {
         }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/2nmyGq7ayfQpWfe/download"
+              src="https://cloud.joutak.ru/s/2nmyGq7ayfQpWfe/preview"
               className="d-block w-100"
               alt="Сходка игроков в деревне"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="https://cloud.joutak.ru/s/DBJpmG2DjrSnXyS/download" className="d-block w-100" alt="Портал в рай" />
+            <img src="https://cloud.joutak.ru/s/DBJpmG2DjrSnXyS/preview" className="d-block w-100" alt="Портал в рай" />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="https://cloud.joutak.ru/s/6BgqZdrr9LyinAB/download" className="d-block w-100" alt="Деревня" />
+            <img src="https://cloud.joutak.ru/s/6BgqZdrr9LyinAB/preview" className="d-block w-100" alt="Деревня" />
           </div>
         </div>
         <button

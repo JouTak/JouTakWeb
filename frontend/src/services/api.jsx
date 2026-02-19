@@ -3,93 +3,145 @@ import axios from "axios";
 export const BACKEND_URL = "__REACT_APP_API_URL__";
 const API_BASE = `${BACKEND_URL.replace(/\/$/, "")}/api`;
 const TOKENS_KEY = "joutak_auth";
+export const AUTH_STATE_EVENT = "joutak:auth-state-changed";
 
-export function setupAxiosInterceptors(onHardLogout = () => {}) {
-  const saved = tokenStore.get();
-  if (saved?.access) setAuthHeader(saved.access);
+const CLIENT_HEADERS = Object.freeze({
+  "X-Client": "app",
+  "X-Allauth-Client": "app",
+});
 
-  axios.interceptors.response.use(
-    (r) => r,
-    async (error) => {
-      const { response, config } = error || {};
-      if (!response) return Promise.reject(error);
-      if (config?.__noGlobal401) return Promise.reject(error);
+const HARD_LOGOUT_REASONS = Object.freeze({
+  MISSING_REFRESH: "MISSING_REFRESH",
+  REFRESH_FAILED: "REFRESH_FAILED",
+  SESSION_UNAUTHORIZED: "SESSION_UNAUTHORIZED",
+});
 
-      const is401 = response.status === 401;
-      const isRefreshCall = config?.url?.includes("/api/auth/refresh");
-      const isSessionExchange = config?.url?.includes(
-        "/api/auth/jwt/from_session",
-      );
+const bareClient = axios.create({ baseURL: API_BASE });
 
-      if (!is401 || isRefreshCall || isSessionExchange) {
-        return Promise.reject(error);
-      }
+let hardLogoutHandler = () => {};
+let refreshPromise = null;
 
-      const tokens = tokenStore.get();
-      const refresh = tokens?.refresh;
-      if (!refresh) {
-        onHardLogout();
-        return Promise.reject(error);
-      }
-
-      try {
-        config.__retry = true;
-        const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
-          refresh,
-        });
-        const newAccess = data?.access;
-        const newRefresh = data?.refresh || refresh;
-        tokenStore.set({ ...tokens, access: newAccess, refresh: newRefresh });
-        setAuthHeader(newAccess);
-        return axios(config);
-      } catch (e) {
-        onHardLogout();
-        tokenStore.clear();
-        setAuthHeader();
-        return Promise.reject(e);
-      }
-    },
-  );
+function hasAuthTokens(tokens) {
+  return Boolean(tokens?.session_token || tokens?.access || tokens?.refresh);
 }
 
-export const tokenStore = {
-  get() {
-    try {
-      return JSON.parse(localStorage.getItem(TOKENS_KEY) || "{}");
-    } catch {
-      return {};
-    }
-  },
-  set(tokens) {
-    localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens || {}));
-  },
-  clear() {
+function emitAuthStateChanged() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+}
+
+function readStoredTokens() {
+  try {
+    return JSON.parse(localStorage.getItem(TOKENS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredTokens(tokens, { emit = true } = {}) {
+  const previousTokens = readStoredTokens();
+  const nextTokens = tokens && typeof tokens === "object" ? tokens : {};
+
+  if (Object.keys(nextTokens).length === 0) {
     localStorage.removeItem(TOKENS_KEY);
-  },
-  getSessionToken() {
-    return tokenStore.get()?.session_token || null;
-  },
-};
+  } else {
+    localStorage.setItem(TOKENS_KEY, JSON.stringify(nextTokens));
+  }
 
-export const setAuthHeader = (access) => {
-  if (access) axios.defaults.headers.common.Authorization = `Bearer ${access}`;
-  else delete axios.defaults.headers.common.Authorization;
-};
+  if (emit) {
+    const previousState = hasAuthTokens(previousTokens);
+    const nextState = hasAuthTokens(nextTokens);
+    if (previousState !== nextState) {
+      emitAuthStateChanged();
+    }
+  }
+}
 
-const takeSessionToken = (respOrErrResp) => {
+function mergeStoredTokens(partial, { emit = true } = {}) {
+  const currentTokens = readStoredTokens();
+  writeStoredTokens({ ...currentTokens, ...(partial || {}) }, { emit });
+}
+
+function isUnauthorized(error) {
+  return error?.response?.status === 401;
+}
+
+function extractSessionToken(respOrErrResp) {
   const meta = respOrErrResp?.data?.meta || {};
-  return (
-    meta.session_token || respOrErrResp?.headers?.["x-session-token"] || null
-  );
-};
+  return meta.session_token || respOrErrResp?.headers?.["x-session-token"] || null;
+}
 
-const withSessionHeaders = (sessionToken) => ({
-  headers: {
+function setSessionToken(sessionToken, { emit = false } = {}) {
+  if (!sessionToken) {
+    return;
+  }
+  mergeStoredTokens({ session_token: sessionToken }, { emit });
+}
+
+function buildSessionHeaders(sessionToken) {
+  const accessToken = readStoredTokens()?.access || null;
+  return {
+    ...CLIENT_HEADERS,
     ...(sessionToken ? { "X-Session-Token": sessionToken } : {}),
-    "X-Client": "app",
-    "X-Allauth-Client": "app",
-  },
-});
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+  };
+}
+
+function clearAuthStorage({ emit = true } = {}) {
+  writeStoredTokens({}, { emit });
+}
+
+function performHardLogout(reason = HARD_LOGOUT_REASONS.SESSION_UNAUTHORIZED) {
+  clearAuthStorage({ emit: true });
+  hardLogoutHandler?.({ reason });
+}
+
+async function refreshAccessToken({ hardLogoutOnFailure = true } = {}) {
+  const refreshToken = readStoredTokens()?.refresh || null;
+
+  if (!refreshToken) {
+    const error = new Error("Refresh token is missing");
+    error.code = HARD_LOGOUT_REASONS.MISSING_REFRESH;
+    if (hardLogoutOnFailure) {
+      performHardLogout(HARD_LOGOUT_REASONS.MISSING_REFRESH);
+    }
+    throw error;
+  }
+
+  if (!refreshPromise) {
+    refreshPromise = bareClient
+      .post(
+        "/auth/refresh",
+        { refresh: refreshToken },
+        { headers: buildSessionHeaders(tokenStore.getSessionToken()) },
+      )
+      .then(({ data }) => {
+        const access = data?.access;
+        const refresh = data?.refresh || refreshToken;
+
+        if (!access) {
+          throw new Error("Access token is missing in refresh response");
+        }
+
+        mergeStoredTokens({ access, refresh }, { emit: false });
+        return { access, refresh };
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  try {
+    return await refreshPromise;
+  } catch (error) {
+    if (hardLogoutOnFailure) {
+      performHardLogout(HARD_LOGOUT_REASONS.REFRESH_FAILED);
+    }
+    throw error;
+  }
+}
 
 function sanitizeUrl(u) {
   if (typeof u !== "string") return "";
@@ -102,114 +154,192 @@ function sanitizeUrl(u) {
   return `${base}${path}`;
 }
 
-async function postWithSession(url, body) {
-  const st = tokenStore.getSessionToken();
-  try {
-    const resp = await axios.post(url, body, {
-      ...withSessionHeaders(st),
-      __noGlobal401: true,
-    });
-    const st2 = takeSessionToken(resp);
-    if (st2 && st2 !== st)
-      tokenStore.set({ ...tokenStore.get(), session_token: st2 });
-    return resp;
-  } catch (e) {
-    const r = e?.response;
-    const st3 = takeSessionToken(r);
-    if (r?.status === 401 && st3) {
-      tokenStore.set({ ...tokenStore.get(), session_token: st3 });
-      return await axios.post(url, body, {
-        ...withSessionHeaders(st3),
-        __noGlobal401: true,
-      });
-    }
-    throw e;
+async function executeSessionRequest(method, url, { data = null, params, sessionToken } = {}) {
+  const response = await bareClient.request({
+    method,
+    url,
+    data,
+    params,
+    headers: buildSessionHeaders(sessionToken),
+  });
+
+  const rotatedToken = extractSessionToken(response);
+  if (rotatedToken && rotatedToken !== sessionToken) {
+    setSessionToken(rotatedToken, { emit: false });
   }
+
+  return response;
 }
 
-async function getWithSession(url, params) {
-  const st = tokenStore.getSessionToken();
+async function requestWithSession(
+  method,
+  url,
+  {
+    data = null,
+    params,
+    rotateSessionTokenOn401 = true,
+    refreshAccessOn401 = true,
+    hardLogoutOn401 = true,
+  } = {},
+) {
+  const initialSessionToken = tokenStore.getSessionToken();
+  let lastError = null;
+  let refreshFailed = false;
+
   try {
-    const resp = await axios.get(url, {
-      ...withSessionHeaders(st),
+    return await executeSessionRequest(method, url, {
+      data,
       params,
-      __noGlobal401: true,
+      sessionToken: initialSessionToken,
     });
-    const st2 = takeSessionToken(resp);
-    if (st2 && st2 !== st)
-      tokenStore.set({ ...tokenStore.get(), session_token: st2 });
-    return resp;
-  } catch (e) {
-    const r = e?.response;
-    const st3 = takeSessionToken(r);
-    if (r?.status === 401 && st3) {
-      tokenStore.set({ ...tokenStore.get(), session_token: st3 });
-      return await axios.get(url, {
-        ...withSessionHeaders(st3),
-        params,
-        __noGlobal401: true,
-      });
-    }
-    throw e;
+  } catch (error) {
+    lastError = error;
   }
+
+  if (!isUnauthorized(lastError)) {
+    throw lastError;
+  }
+
+  if (rotateSessionTokenOn401) {
+    const rotatedToken = extractSessionToken(lastError.response);
+    if (rotatedToken && rotatedToken !== initialSessionToken) {
+      setSessionToken(rotatedToken, { emit: false });
+      try {
+        return await executeSessionRequest(method, url, {
+          data,
+          params,
+          sessionToken: rotatedToken,
+        });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+  }
+
+  if (refreshAccessOn401 && isUnauthorized(lastError)) {
+    let refreshed = false;
+    try {
+      await refreshAccessToken({ hardLogoutOnFailure: false });
+      refreshed = true;
+    } catch (error) {
+      refreshFailed = true;
+      lastError = error;
+    }
+
+    if (refreshed) {
+      try {
+        return await executeSessionRequest(method, url, {
+          data,
+          params,
+          sessionToken: tokenStore.getSessionToken(),
+        });
+      } catch (error) {
+        lastError = error;
+      }
+    }
+  }
+
+  if (hardLogoutOn401 && (refreshFailed || isUnauthorized(lastError))) {
+    performHardLogout(
+      refreshFailed
+        ? HARD_LOGOUT_REASONS.REFRESH_FAILED
+        : HARD_LOGOUT_REASONS.SESSION_UNAUTHORIZED,
+    );
+  }
+
+  throw lastError;
 }
 
-async function delWithSession(url, params) {
-  const st = tokenStore.getSessionToken();
-  try {
-    const resp = await axios.delete(url, {
-      ...withSessionHeaders(st),
-      params,
-      __noGlobal401: true,
-    });
-    const st2 = takeSessionToken(resp);
-    if (st2 && st2 !== st)
-      tokenStore.set({ ...tokenStore.get(), session_token: st2 });
-    return resp;
-  } catch (e) {
-    const r = e?.response;
-    const st3 = takeSessionToken(r);
-    if (r?.status === 401 && st3) {
-      tokenStore.set({ ...tokenStore.get(), session_token: st3 });
-      return await axios.delete(url, {
-        ...withSessionHeaders(st3),
-        params,
-        __noGlobal401: true,
-      });
-    }
-    throw e;
-  }
+async function sessionGet(url, params, options = {}) {
+  return requestWithSession("get", url, { ...options, params });
+}
+
+async function sessionPost(url, data, options = {}) {
+  return requestWithSession("post", url, { ...options, data });
+}
+
+async function sessionPatch(url, data, options = {}) {
+  return requestWithSession("patch", url, { ...options, data });
+}
+
+async function sessionDelete(url, params, options = {}) {
+  return requestWithSession("delete", url, { ...options, params });
+}
+
+export function setupAxiosInterceptors(onHardLogout = () => {}) {
+  hardLogoutHandler = typeof onHardLogout === "function" ? onHardLogout : () => {};
+}
+
+export const tokenStore = {
+  get() {
+    return readStoredTokens();
+  },
+  set(tokens) {
+    writeStoredTokens(tokens, { emit: true });
+  },
+  clear() {
+    clearAuthStorage({ emit: true });
+  },
+  getSessionToken() {
+    return readStoredTokens()?.session_token || null;
+  },
+};
+
+export function hasStoredAuth() {
+  return hasAuthTokens(readStoredTokens());
+}
+
+export function clearAuthState() {
+  clearAuthStorage({ emit: true });
 }
 
 export async function loginApp({ username, password }) {
-  const { data, headers } = await axios.post(`${API_BASE}/auth/login`, {
+  const { data, headers } = await bareClient.post("/auth/login", {
     username: String(username || "").trim(),
     password,
   });
-  const st = takeSessionToken({ data, headers });
-  if (!st) throw new Error("No session token returned on login");
-  tokenStore.set({ ...tokenStore.get(), session_token: st });
-  return st;
+
+  const sessionToken = extractSessionToken({ data, headers });
+  if (!sessionToken) {
+    throw new Error("No session token returned on login");
+  }
+
+  setSessionToken(sessionToken, { emit: true });
+  return sessionToken;
 }
 
 export async function signupApp({ username, email, password }) {
   const body = {
     username: String(username || "").trim(),
     email: String(email || "").trim(),
-    password: password,
+    password,
   };
-  const { data, headers } = await axios.post(`${API_BASE}/auth/signup`, body);
-  const st = takeSessionToken({ data, headers });
-  if (!st) throw new Error("No session token returned on signup");
-  tokenStore.set({ ...tokenStore.get(), session_token: st });
-  return st;
+
+  const { data, headers } = await bareClient.post("/auth/signup", body);
+  const sessionToken = extractSessionToken({ data, headers });
+
+  if (!sessionToken) {
+    throw new Error("No session token returned on signup");
+  }
+
+  setSessionToken(sessionToken, { emit: true });
+  return sessionToken;
 }
 
 export async function jwtFromSession() {
-  const resp = await postWithSession(`${API_BASE}/auth/jwt/from_session`, null);
-  const pair = resp.data;
-  tokenStore.set({ ...tokenStore.get(), ...pair });
-  setAuthHeader(pair.access);
+  const response = await sessionPost("/auth/jwt/from_session", null, {
+    hardLogoutOn401: false,
+    refreshAccessOn401: false,
+  });
+
+  const pair = response.data;
+  mergeStoredTokens(
+    {
+      access: pair?.access || null,
+      refresh: pair?.refresh || null,
+    },
+    { emit: false },
+  );
   return pair;
 }
 
@@ -217,8 +347,8 @@ export async function doLogin({ username, password }) {
   await loginApp({ username, password });
   try {
     await jwtFromSession();
-  } catch (e) {
-    void e;
+  } catch {
+    // Session can still be valid for headless endpoints even if JWT exchange fails.
   }
   return tokenStore.get();
 }
@@ -227,28 +357,30 @@ export async function doSignupAndLogin({ username, email, password }) {
   await signupApp({ username, email, password });
   try {
     await jwtFromSession();
-  } catch (e) {
-    void e;
+  } catch {
+    // Session can still be valid for headless endpoints even if JWT exchange fails.
   }
   return tokenStore.get();
 }
 
 export async function logout() {
   try {
-    await postWithSession(`${API_BASE}/auth/logout`, null);
+    await sessionPost("/auth/logout", null, {
+      hardLogoutOn401: false,
+      refreshAccessOn401: false,
+    });
   } finally {
-    tokenStore.clear();
-    setAuthHeader();
+    clearAuthStorage({ emit: true });
   }
 }
 
 export async function me() {
-  const { data } = await getWithSession(`${API_BASE}/auth/me`);
+  const { data } = await sessionGet("/auth/me");
   return data;
 }
 
 export async function changePassword({ current_password, new_password }) {
-  const { data } = await postWithSession(`${API_BASE}/auth/change_password`, {
+  const { data } = await sessionPost("/auth/change_password", {
     current_password,
     new_password,
   });
@@ -256,38 +388,33 @@ export async function changePassword({ current_password, new_password }) {
 }
 
 export async function getOAuthProviders() {
-  const { data } = await getWithSession(`${API_BASE}/oauth/providers`);
+  const { data } = await sessionGet("/oauth/providers");
   return data?.providers || [];
 }
 
-export async function getOAuthLink(
-  provider,
-  next = "/account/security#linked",
-) {
-  const { data } = await getWithSession(`${API_BASE}/oauth/link/${provider}`, {
-    next,
-  });
+export async function getOAuthLink(provider, next = "/account/security#linked") {
+  const { data } = await sessionGet(`/oauth/link/${provider}`, { next });
   return {
-    url: sanitizeUrl(data.authorize_url),
-    method: data.method || "POST",
+    url: sanitizeUrl(data?.authorize_url),
+    method: data?.method || "POST",
   };
 }
 
 export async function listSessionsHeadless() {
-  const { data } = await getWithSession(`${API_BASE}/account/sessions`);
+  const { data } = await sessionGet("/account/sessions");
   return data;
 }
 
 export async function revokeSessionHeadless(session_id, reason = "manual") {
-  const resp = await delWithSession(
-    `${API_BASE}/account/sessions/${encodeURIComponent(session_id)}`,
+  const response = await sessionDelete(
+    `/account/sessions/${encodeURIComponent(session_id)}`,
     { reason },
   );
-  return resp.data;
+  return response.data;
 }
 
 export async function bulkRevokeSessionsHeadless() {
-  const { data } = await postWithSession(`${API_BASE}/account/sessions/_bulk`, {
+  const { data } = await sessionPost("/account/sessions/_bulk", {
     all_except_current: true,
     reason: "bulk_except_current",
   });
@@ -295,54 +422,50 @@ export async function bulkRevokeSessionsHeadless() {
 }
 
 export async function getEmailStatus() {
-  const { data } = await getWithSession(`${API_BASE}/account/email`);
+  const { data } = await sessionGet("/account/email");
   return data;
 }
 
 export async function changeEmail(new_email) {
-  const { data } = await postWithSession(`${API_BASE}/account/email/change`, {
-    new_email,
-  });
+  const { data } = await sessionPost("/account/email/change", { new_email });
   return data;
 }
 
 export async function resendEmailVerification() {
-  const { data } = await postWithSession(
-    `${API_BASE}/account/email/resend`,
-    null,
-  );
+  const { data } = await sessionPost("/account/email/resend", null);
   return data;
 }
 
-async function patchWithSession(url, body) {
-  const st = tokenStore.getSessionToken();
-  try {
-    const resp = await axios.patch(url, body, {
-      ...withSessionHeaders(st),
-      __noGlobal401: true,
-    });
-    const st2 = takeSessionToken(resp);
-    if (st2 && st2 !== st)
-      tokenStore.set({ ...tokenStore.get(), session_token: st2 });
-    return resp;
-  } catch (e) {
-    const r = e?.response;
-    const st3 = takeSessionToken(r);
-    if (r?.status === 401 && st3) {
-      tokenStore.set({ ...tokenStore.get(), session_token: st3 });
-      return await axios.patch(url, body, {
-        ...withSessionHeaders(st3),
-        __noGlobal401: true,
-      });
-    }
-    throw e;
-  }
+export async function getAccountStatus() {
+  const { data } = await sessionGet("/account/status");
+  return data;
 }
 
-export async function updateProfile({ first_name = null, last_name = null }) {
-  const { data } = await patchWithSession(`${API_BASE}/account/profile`, {
+export async function deleteCurrentAccount(current_password) {
+  const { data } = await sessionPost("/account/delete", { current_password });
+  return data;
+}
+
+export async function updateProfile(payload = {}) {
+  const {
+    first_name,
+    last_name,
+    vk_username,
+    minecraft_nick,
+    minecraft_has_license,
+    is_itmo_student,
+    itmo_isu,
+  } = payload;
+
+  const { data } = await sessionPatch("/account/profile", {
     ...(first_name !== undefined ? { first_name } : {}),
     ...(last_name !== undefined ? { last_name } : {}),
+    ...(vk_username !== undefined ? { vk_username } : {}),
+    ...(minecraft_nick !== undefined ? { minecraft_nick } : {}),
+    ...(minecraft_has_license !== undefined ? { minecraft_has_license } : {}),
+    ...(is_itmo_student !== undefined ? { is_itmo_student } : {}),
+    ...(itmo_isu !== undefined ? { itmo_isu } : {}),
   });
+
   return data;
 }

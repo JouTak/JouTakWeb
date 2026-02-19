@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Button, Loader, TextInput, useToaster } from "@gravity-ui/uikit";
+import {
+  Button,
+  Loader,
+  RadioButton,
+  TextInput,
+  useToaster,
+} from "@gravity-ui/uikit";
 import { me, updateProfile } from "../../services/api";
 import { boolToSelect, selectToBool } from "../../utils/profileForm";
 
@@ -286,7 +292,7 @@ export default function ProfileCard({ onUpdated }) {
                   onSubmit={onSave}
                   className="inline-edit"
                   style={{ display: "grid", gap: 12 }}
-                  >
+                >
                   <TextInput
                     size="l"
                     label="Имя"
@@ -321,33 +327,29 @@ export default function ProfileCard({ onUpdated }) {
                   />
                   <label style={{ display: "grid", gap: 6 }}>
                     <span>Есть лицензия Minecraft?</span>
-                    <select
-                      className="form-select"
-                      value={licenseDraft}
-                      onChange={(event) => setLicenseDraft(event.target.value)}
-                      required
-                    >
-                      <option value="" disabled>
-                        Выберите вариант
-                      </option>
-                      <option value="true">Да</option>
-                      <option value="false">Нет</option>
-                    </select>
+                    <RadioButton
+                      size="l"
+                      width="max"
+                      value={licenseDraft || null}
+                      onUpdate={setLicenseDraft}
+                      options={[
+                        { value: "true", content: "Да" },
+                        { value: "false", content: "Нет" },
+                      ]}
+                    />
                   </label>
                   <label style={{ display: "grid", gap: 6 }}>
                     <span>Вы студент ИТМО?</span>
-                    <select
-                      className="form-select"
-                      value={itmoDraft}
-                      onChange={(event) => setItmoDraft(event.target.value)}
-                      required
-                    >
-                      <option value="" disabled>
-                        Выберите вариант
-                      </option>
-                      <option value="true">Да</option>
-                      <option value="false">Нет</option>
-                    </select>
+                    <RadioButton
+                      size="l"
+                      width="max"
+                      value={itmoDraft || null}
+                      onUpdate={setItmoDraft}
+                      options={[
+                        { value: "true", content: "Да" },
+                        { value: "false", content: "Нет" },
+                      ]}
+                    />
                   </label>
                   {isuRequired && (
                     <TextInput

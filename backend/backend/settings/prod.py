@@ -52,14 +52,23 @@ MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = False
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
 )
-EMAIL_HOST = config("EMAIL_HOST", default="smtp")
+EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
-DEFAULT_FROM_EMAIL = config(
-    "DEFAULT_FROM_EMAIL", default="noreply@example.com"
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
+EMAIL_USE_TLS = config(
+    "EMAIL_USE_TLS",
+    cast=bool,
+    default=(not EMAIL_USE_SSL),
 )
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    raise RuntimeError("EMAIL_USE_SSL and EMAIL_USE_TLS cannot both be true")
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL",
+    default=(EMAIL_HOST_USER or "noreply@example.com"),
+)
+SERVER_EMAIL = config("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 
 
 LOGGING = {

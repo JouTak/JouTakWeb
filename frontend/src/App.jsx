@@ -97,7 +97,8 @@ function AppRoutes() {
         <Route path="/session-expired" element={<SessionExpired />} />
 
         <Route path="/login" element={<LoginModalRoute />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/404" element={<NotFound />} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
 
       {background && (

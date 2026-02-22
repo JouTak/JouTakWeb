@@ -27,11 +27,11 @@ export default function NotFound() {
         <h1>404</h1>
         <h2>NOT FOUND</h2>
 
-        <p>Страница не существует или была удалена.</p>
+        <p className="light-font">Страница не существует или была удалена.</p>
 
         <div className="buttons">
-          <button onClick={() => window.history.back()}>Назад</button>
-          <a href="/">На главную</a>
+          <button onClick={() => window.history.back()} className="secondary-btn">Назад</button>
+          <a href="/" className="primary-btn">На главную</a>
         </div>
       </main>
     </div>

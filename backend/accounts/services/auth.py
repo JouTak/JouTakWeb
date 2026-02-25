@@ -18,6 +18,8 @@ from django.contrib.auth import logout as dj_logout
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.http import HttpRequest
+from django.utils import timezone
 from ninja.errors import HttpError
 from ninja_jwt.exceptions import TokenError
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
@@ -29,7 +31,10 @@ User = get_user_model()
 @dataclass(slots=True)
 class AuthService:
     @staticmethod
-    def issue_pair_for_session(request, user: User) -> TokenPairOut:
+    def issue_pair_for_session(
+        request: HttpRequest,
+        user: User,
+    ) -> TokenPairOut:
         if not getattr(user, "is_authenticated", False):
             raise HttpError(401, "Not authenticated")
         token = request.headers.get("X-Session-Token") or ""
@@ -62,7 +67,60 @@ class AuthService:
         return TokenPairOut(access=str(at), refresh=str(rt))
 
     @staticmethod
-    def logout_current(request) -> None:
+    @transaction.atomic
+    def logout_current(request: HttpRequest) -> None:
+        user = getattr(request, "auth", None) or getattr(request, "user", None)
+        if user and getattr(user, "is_authenticated", False):
+            token = request.headers.get("X-Session-Token") or ""
+            dj_key = request.session.session_key or ""
+            meta = (
+                UserSessionMeta.objects.filter(
+                    user=user, session_token=token
+                ).first()
+                if token
+                else None
+            ) or (
+                UserSessionMeta.objects.filter(
+                    user=user, session_key=dj_key
+                ).first()
+                if dj_key
+                else None
+            )
+            session_key = dj_key or (meta.session_key if meta else "")
+            if session_key:
+                now = timezone.now()
+                meta_qs = UserSessionMeta.objects.select_for_update()
+                meta, _ = meta_qs.get_or_create(
+                    user=user,
+                    session_key=session_key,
+                    defaults={"session_token": token or None},
+                )
+                updates: list[str] = []
+                if token and not meta.session_token:
+                    meta.session_token = token
+                    updates.append("session_token")
+                if not meta.revoked_at:
+                    meta.revoked_at = now
+                    updates.append("revoked_at")
+                if not meta.revoked_reason:
+                    meta.revoked_reason = "logout"
+                    updates.append("revoked_reason")
+                if updates:
+                    meta.save(update_fields=sorted(set(updates)))
+
+                mappings = UserSessionToken.objects.select_for_update().filter(
+                    user=user,
+                    session_key=session_key,
+                    revoked_at__isnull=True,
+                )
+                for mapping in mappings:
+                    ot = OutstandingToken.objects.filter(
+                        user=user, jti=mapping.refresh_jti
+                    ).first()
+                    if ot:
+                        BlacklistedToken.objects.get_or_create(token=ot)
+                    mapping.revoked_at = now
+                    mapping.save(update_fields=["revoked_at"])
         dj_logout(request)
 
     @staticmethod
@@ -120,7 +178,10 @@ class AuthService:
 
     @staticmethod
     @transaction.atomic
-    def refresh_pair(request, payload: TokenRefreshIn) -> TokenRefreshOut:
+    def refresh_pair(
+        request: HttpRequest,
+        payload: TokenRefreshIn,
+    ) -> TokenRefreshOut:
         try:
             rt = RefreshToken(payload.refresh)
             rt.check_blacklist()

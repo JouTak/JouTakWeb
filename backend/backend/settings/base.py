@@ -5,6 +5,8 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 from decouple import Csv, config
 
+from backend.settings.env import apply_env_file_overrides
+
 warnings.filterwarnings(
     "ignore",
     message=(
@@ -14,6 +16,20 @@ warnings.filterwarnings(
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+apply_env_file_overrides(
+    (
+        "DJANGO_SECRET_KEY",
+        "DATABASE_URL",
+        "POSTGRES_PASSWORD",
+        "YANDEX_CLIENT_ID",
+        "YANDEX_SECRET",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_SECRET",
+        "EMAIL_HOST_PASSWORD",
+        "SENTRY_DSN",
+    )
+)
 
 
 DEBUG = config("DJANGO_DEBUG", cast=bool, default=False)
@@ -140,9 +156,13 @@ ACCOUNT_SIGNUP_FIELDS = ["email", "username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = config(
     "ACCOUNT_EMAIL_VERIFICATION", default="optional"
 )
+FRONTEND_BASE_URL = config(
+    "FRONTEND_BASE_URL", default="http://localhost:5173"
+)
+_frontend_base = FRONTEND_BASE_URL.rstrip("/")
 HEADLESS_FRONTEND_URLS = {
-    "account_confirm_email": "http://localhost:5173/confirm-email?key={key}",
-    "account_reset_password": "http://localhost:5173/reset-password?key={key}",
+    "account_confirm_email": (f"{_frontend_base}/confirm-email?key={{key}}"),
+    "account_reset_password": (f"{_frontend_base}/reset-password?key={{key}}"),
 }
 ACCOUNT_CHANGE_EMAIL = True
 
@@ -194,7 +214,8 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_HEADERS = list(default_headers) + [
+CORS_ALLOW_HEADERS = [
+    *default_headers,
     "x-session-token",
     "x-refresh-token",
     "x-client",

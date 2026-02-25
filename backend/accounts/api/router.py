@@ -18,15 +18,18 @@ from accounts.transport.schemas import (
 from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.http import HttpRequest
 from ninja import Body, File, Router
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 User = get_user_model()
 account_router = Router(tags=["Account"], auth=[x_session_token_auth])
+BODY_REQUIRED = Body(...)
+AVATAR_REQUIRED = File(...)
 
 
-def _require_authenticated_user(request) -> User:
+def _require_authenticated_user(request: HttpRequest) -> User:
     user = getattr(request, "auth", None)
     if not user or not getattr(user, "is_authenticated", False):
         raise HttpError(401, "Not authenticated")
@@ -40,8 +43,13 @@ def _require_authenticated_user(request) -> User:
     operation_id="account_update_profile",
 )
 @transaction.atomic
-def account_update_profile(request, payload: ProfileUpdateIn = Body(...)):
+def account_update_profile(
+    request: HttpRequest,
+    payload: ProfileUpdateIn = BODY_REQUIRED,
+) -> ProfileUpdateOut:
     user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
     profile = ProfileService.update_profile_fields(
         user,
         first_name=payload.first_name,
@@ -62,8 +70,10 @@ def account_update_profile(request, payload: ProfileUpdateIn = Body(...)):
     summary="Get profile personalization status",
     operation_id="account_get_status",
 )
-def account_status(request):
+def account_status(request: HttpRequest) -> AccountStatusOut:
     user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
     status = AccountStatusService.get_status(user)
     return AccountStatusOut(**status)
 
@@ -75,7 +85,10 @@ def account_status(request):
     operation_id="account_delete_current",
 )
 @transaction.atomic
-def account_delete(request, payload: DeleteAccountIn = Body(...)):
+def account_delete(
+    request: HttpRequest,
+    payload: DeleteAccountIn = BODY_REQUIRED,
+) -> OkOut:
     user = _require_authenticated_user(request)
     SessionService.assert_session_allowed(request)
     if not user.check_password(payload.current_password):
@@ -91,7 +104,10 @@ def account_delete(request, payload: DeleteAccountIn = Body(...)):
     summary="Upload/replace user avatar",
     operation_id="account_upload_avatar",
 )
-def upload_avatar(request, avatar: UploadedFile = File(...)):
+def upload_avatar(
+    request: HttpRequest,
+    avatar: UploadedFile = AVATAR_REQUIRED,
+) -> OkOut:
     user = _require_authenticated_user(request)
     SessionService.assert_session_allowed(request)
     SessionService.touch(request, user)
@@ -109,8 +125,10 @@ def upload_avatar(request, avatar: UploadedFile = File(...)):
     summary="Get primary email & verification state",
     operation_id="account_email_status",
 )
-def account_email_status(request):
+def account_email_status(request: HttpRequest) -> dict[str, object]:
     user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
     return EmailService.status(user)
 
 
@@ -121,8 +139,13 @@ def account_email_status(request):
     operation_id="account_change_email",
 )
 @transaction.atomic
-def account_change_email(request, payload: ChangeEmailIn = Body(...)):
+def account_change_email(
+    request: HttpRequest,
+    payload: ChangeEmailIn = BODY_REQUIRED,
+) -> OkOut:
     user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
     EmailService.request_change(request, user, new_email=payload.new_email)
     return OkOut(
         ok=True, message="Проверьте почту, чтобы подтвердить новый адрес"
@@ -135,10 +158,12 @@ def account_change_email(request, payload: ChangeEmailIn = Body(...)):
     summary="Resend email confirmation",
     operation_id="account_resend_email",
 )
-def account_resend_email_verification(request):
+def account_resend_email_verification(request: HttpRequest) -> OkOut:
     user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
     EmailService.resend_confirmation(request, user)
-    return OkOut(ok=True, message="Письмо с подтверждением отправлено")
+    return OkOut(ok=True, message="Письмо для подтверждения отправлено")
 
 
 @account_router.get(
@@ -147,7 +172,7 @@ def account_resend_email_verification(request):
     summary="List current user sessions",
     operation_id="account_list_sessions",
 )
-def list_sessions(request):
+def list_sessions(request: HttpRequest) -> SessionsOut:
     user = _require_authenticated_user(request)
     SessionService.assert_session_allowed(request)
     SessionService.touch(request, user)
@@ -160,7 +185,10 @@ def list_sessions(request):
     summary="Revoke sessions in bulk",
     operation_id="account_revoke_sessions_bulk",
 )
-def revoke_sessions_bulk(request, payload: RevokeSessionsIn = Body(...)):
+def revoke_sessions_bulk(
+    request: HttpRequest,
+    payload: RevokeSessionsIn = BODY_REQUIRED,
+) -> dict[str, object]:
     _require_authenticated_user(request)
     return SessionService.revoke_bulk(request, payload)
 
@@ -172,8 +200,9 @@ def revoke_sessions_bulk(request, payload: RevokeSessionsIn = Body(...)):
     operation_id="account_revoke_sessions_bulk_compat",
 )
 def revoke_sessions_bulk_compat(
-    request, payload: RevokeSessionsIn = Body(...)
-):
+    request: HttpRequest,
+    payload: RevokeSessionsIn = BODY_REQUIRED,
+) -> dict[str, object]:
     _require_authenticated_user(request)
     return SessionService.revoke_bulk(request, payload)
 
@@ -184,6 +213,14 @@ def revoke_sessions_bulk_compat(
     summary="Revoke single session",
     operation_id="account_revoke_session",
 )
-def revoke_session(request, sid: str, reason: str | None = None):
+def revoke_session(
+    request: HttpRequest,
+    sid: str,
+) -> dict[str, object]:
     _require_authenticated_user(request)
-    return SessionService.revoke_single(request, sid=sid, reason=reason)
+    reason = request.GET.get("reason")
+    return SessionService.revoke_single(
+        request,
+        sid=sid,
+        reason=(reason or None),
+    )

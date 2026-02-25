@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Never
 
 from accounts.services.personalization import personalization_complete
 from core.models import UserProfile
@@ -22,7 +22,9 @@ ITMO_ISU_RE = re.compile(r"^\d{5,20}$")
 @dataclass(slots=True)
 class ProfileService:
     @staticmethod
-    def _raise_field_error(field: str, message: str, code: str = "invalid"):
+    def _raise_field_error(
+        field: str, message: str, code: str = "invalid"
+    ) -> Never:
         raise HttpError(
             400,
             json.dumps(
@@ -64,67 +66,123 @@ class ProfileService:
         return value.strip().lstrip("@").strip().strip("/")
 
     @staticmethod
+    def _apply_vk_username(
+        profile: UserProfile,
+        vk_username: str,
+        to_update: list[str],
+    ) -> None:
+        normalized = ProfileService.normalize_vk_username(vk_username)
+        if normalized and not VK_USERNAME_RE.fullmatch(normalized):
+            ProfileService._raise_field_error(
+                "vk_username", "Некорректный username VK"
+            )
+        profile.vk_username = normalized
+        to_update.append("vk_username")
+
+    @staticmethod
+    def _apply_minecraft_nick(
+        profile: UserProfile,
+        minecraft_nick: str,
+        to_update: list[str],
+    ) -> None:
+        normalized = (minecraft_nick or "").strip()
+        if normalized and not MINECRAFT_NICK_RE.fullmatch(normalized):
+            ProfileService._raise_field_error(
+                "minecraft_nick",
+                (
+                    "Ник Minecraft должен быть 3-16 символов: "
+                    "латиница, цифры, _"
+                ),
+            )
+        profile.minecraft_nick = normalized
+        to_update.append("minecraft_nick")
+
+    @staticmethod
+    def _apply_is_itmo_student(
+        profile: UserProfile,
+        *,
+        is_itmo_student: bool,
+        to_update: list[str],
+    ) -> None:
+        profile.is_itmo_student = bool(is_itmo_student)
+        to_update.append("is_itmo_student")
+        if not profile.is_itmo_student:
+            profile.itmo_isu = None
+            to_update.append("itmo_isu")
+
+    @staticmethod
+    def _apply_itmo_isu(
+        profile: UserProfile,
+        itmo_isu: str,
+        to_update: list[str],
+    ) -> None:
+        normalized = (itmo_isu or "").strip()
+        if profile.is_itmo_student is False:
+            profile.itmo_isu = None
+            to_update.append("itmo_isu")
+            return
+        if normalized and not ITMO_ISU_RE.fullmatch(normalized):
+            ProfileService._raise_field_error(
+                "itmo_isu", "ИСУ должен содержать только цифры (5-20)"
+            )
+        profile.itmo_isu = normalized or None
+        to_update.append("itmo_isu")
+
+    @staticmethod
+    def _normalize_name(
+        user: User,
+        *,
+        field_name: str,
+        raw_value: str | None,
+    ) -> str:
+        normalized = (raw_value or "").strip()
+        max_length = user._meta.get_field(field_name).max_length
+        if max_length is not None and len(normalized) > max_length:
+            ProfileService._raise_field_error(
+                field_name,
+                f"Максимальная длина: {max_length}",
+                code="max_length",
+            )
+        return normalized
+
+    @staticmethod
     @transaction.atomic
     def update_profile_fields(
         user: User,
         *,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        vk_username: Optional[str] = None,
-        minecraft_nick: Optional[str] = None,
-        minecraft_has_license: Optional[bool] = None,
-        is_itmo_student: Optional[bool] = None,
-        itmo_isu: Optional[str] = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        vk_username: str | None = None,
+        minecraft_nick: str | None = None,
+        minecraft_has_license: bool | None = None,
+        is_itmo_student: bool | None = None,
+        itmo_isu: str | None = None,
     ) -> UserProfile:
         ProfileService.update_name(user, first=first_name, last=last_name)
         profile = ProfileService.get_or_create_extended_profile(user)
         to_update: list[str] = []
 
         if vk_username is not None:
-            normalized = ProfileService.normalize_vk_username(vk_username)
-            if normalized and not VK_USERNAME_RE.fullmatch(normalized):
-                ProfileService._raise_field_error(
-                    "vk_username", "Некорректный username VK"
-                )
-            profile.vk_username = normalized
-            to_update.append("vk_username")
+            ProfileService._apply_vk_username(profile, vk_username, to_update)
 
         if minecraft_nick is not None:
-            normalized = (minecraft_nick or "").strip()
-            if normalized and not MINECRAFT_NICK_RE.fullmatch(normalized):
-                ProfileService._raise_field_error(
-                    "minecraft_nick",
-                    (
-                        "Ник Minecraft должен быть 3-16 символов: "
-                        "латиница, цифры, _"
-                    ),
-                )
-            profile.minecraft_nick = normalized
-            to_update.append("minecraft_nick")
+            ProfileService._apply_minecraft_nick(
+                profile, minecraft_nick, to_update
+            )
 
         if minecraft_has_license is not None:
             profile.minecraft_has_license = bool(minecraft_has_license)
             to_update.append("minecraft_has_license")
 
         if is_itmo_student is not None:
-            profile.is_itmo_student = bool(is_itmo_student)
-            to_update.append("is_itmo_student")
-            if not profile.is_itmo_student:
-                profile.itmo_isu = None
-                to_update.append("itmo_isu")
+            ProfileService._apply_is_itmo_student(
+                profile,
+                is_itmo_student=is_itmo_student,
+                to_update=to_update,
+            )
 
         if itmo_isu is not None:
-            normalized = (itmo_isu or "").strip()
-            if profile.is_itmo_student is False:
-                profile.itmo_isu = None
-                to_update.append("itmo_isu")
-            elif normalized and not ITMO_ISU_RE.fullmatch(normalized):
-                ProfileService._raise_field_error(
-                    "itmo_isu", "ИСУ должен содержать только цифры (5-20)"
-                )
-            else:
-                profile.itmo_isu = normalized or None
-                to_update.append("itmo_isu")
+            ProfileService._apply_itmo_isu(profile, itmo_isu, to_update)
 
         complete, _ = personalization_complete(profile)
         if complete and not profile.completed_at:
@@ -132,20 +190,28 @@ class ProfileService:
             to_update.append("completed_at")
 
         if to_update:
-            profile.save(update_fields=sorted(set(to_update + ["updated_at"])))
+            profile.save(update_fields=sorted({*to_update, "updated_at"}))
         return profile
 
     @staticmethod
     @transaction.atomic
     def update_name(
-        user: User, *, first: Optional[str] = None, last: Optional[str] = None
+        user: User, *, first: str | None = None, last: str | None = None
     ) -> None:
         to_update: list[str] = []
         if first is not None:
-            user.first_name = (first or "").strip()
+            user.first_name = ProfileService._normalize_name(
+                user,
+                field_name="first_name",
+                raw_value=first,
+            )
             to_update.append("first_name")
         if last is not None:
-            user.last_name = (last or "").strip()
+            user.last_name = ProfileService._normalize_name(
+                user,
+                field_name="last_name",
+                raw_value=last,
+            )
             to_update.append("last_name")
         if to_update:
             user.save(update_fields=to_update)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from accounts.services.account_status import AccountStatusService
 from accounts.services.personalization import (
     missing_personalization_fields,
@@ -10,22 +12,30 @@ from accounts.services.sessions import SessionService
 from core.models import UserProfile, UserSessionMeta
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.test import RequestFactory, TestCase, override_settings
+from django.db import connection
+from django.http import HttpRequest
+from django.test import (
+    RequestFactory,
+    TestCase,
+    TransactionTestCase,
+    override_settings,
+)
 from django.utils import timezone
 from ninja.errors import HttpError
 
 User = get_user_model()
+TEST_PASSWORD = "StrongPass123!"
 
 
 class PersonalizationServiceTests(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user = User.objects.create_user(
             username="svc_user",
             email="svc_user@example.com",
-            password="StrongPass123!",
+            password=TEST_PASSWORD,
         )
 
-    def test_missing_fields_for_empty_profile(self):
+    def test_missing_fields_for_empty_profile(self) -> None:
         profile = UserProfile.objects.create(user=self.user)
         missing = missing_personalization_fields(profile)
         self.assertEqual(
@@ -38,7 +48,7 @@ class PersonalizationServiceTests(TestCase):
             },
         )
 
-    def test_personalization_complete_for_itmo_student(self):
+    def test_personalization_complete_for_itmo_student(self) -> None:
         profile = UserProfile.objects.create(
             user=self.user,
             vk_username="id42",
@@ -53,20 +63,22 @@ class PersonalizationServiceTests(TestCase):
 
 
 class ProfileServiceTests(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user = User.objects.create_user(
             username="profile_user",
             email="profile_user@example.com",
-            password="StrongPass123!",
+            password=TEST_PASSWORD,
         )
 
-    def test_normalize_vk_username(self):
+    def test_normalize_vk_username(self) -> None:
         normalized = ProfileService.normalize_vk_username(
             " https://vk.com/@my.user/ "
         )
         self.assertEqual(normalized, "my.user")
 
-    def test_update_profile_fields_raises_for_invalid_minecraft_nick(self):
+    def test_update_profile_fields_raises_for_invalid_minecraft_nick(
+        self,
+    ) -> None:
         with self.assertRaises(HttpError) as ctx:
             ProfileService.update_profile_fields(
                 self.user,
@@ -76,7 +88,7 @@ class ProfileServiceTests(TestCase):
         self.assertEqual(ctx.exception.status_code, 400)
         self.assertIn("minecraft_nick", str(ctx.exception.message))
 
-    def test_update_profile_fields_sets_completed_at(self):
+    def test_update_profile_fields_sets_completed_at(self) -> None:
         profile = ProfileService.update_profile_fields(
             self.user,
             vk_username="valid_vk",
@@ -87,18 +99,28 @@ class ProfileServiceTests(TestCase):
         )
         self.assertIsNotNone(profile.completed_at)
 
+    def test_update_profile_fields_rejects_overlong_first_name(self) -> None:
+        max_length = self.user._meta.get_field("first_name").max_length or 1
+        with self.assertRaises(HttpError) as ctx:
+            ProfileService.update_profile_fields(
+                self.user,
+                first_name="x" * (max_length + 1),
+            )
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("first_name", str(ctx.exception.message))
+
 
 class AccountStatusServiceTests(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user = User.objects.create_user(
             username="status_user",
             email="status_user@example.com",
-            password="StrongPass123!",
+            password=TEST_PASSWORD,
         )
         self.profile = UserProfile.objects.create(user=self.user)
 
     @override_settings(FF_PROFILE_PERSONALIZATION_ENFORCE=True)
-    def test_require_personalized_profile_raises_for_incomplete(self):
+    def test_require_personalized_profile_raises_for_incomplete(self) -> None:
         with self.assertRaises(HttpError) as ctx:
             AccountStatusService.require_personalized_profile(self.user)
         self.assertEqual(ctx.exception.status_code, 403)
@@ -108,7 +130,7 @@ class AccountStatusServiceTests(TestCase):
         )
 
     @override_settings(FF_PROFILE_PERSONALIZATION_ENFORCE=True)
-    def test_require_personalized_profile_passes_for_complete(self):
+    def test_require_personalized_profile_passes_for_complete(self) -> None:
         self.profile.vk_username = "id77"
         self.profile.minecraft_nick = "Mine777"
         self.profile.minecraft_has_license = True
@@ -118,24 +140,24 @@ class AccountStatusServiceTests(TestCase):
 
 
 class SessionServiceTests(TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.user = User.objects.create_user(
             username="session_user",
             email="session_user@example.com",
-            password="StrongPass123!",
+            password=TEST_PASSWORD,
         )
         self.factory = RequestFactory()
 
-    def _request_with_session(self, token: str):
+    def _request_with_session(self, token: str) -> HttpRequest:
         request = self.factory.get(
             "/api/account/sessions", HTTP_X_SESSION_TOKEN=token
         )
-        middleware = SessionMiddleware(lambda req: None)
+        middleware = SessionMiddleware(lambda _request: None)
         middleware.process_request(request)
         request.session.save()
         return request
 
-    def test_assert_session_allowed_raises_when_session_revoked(self):
+    def test_assert_session_allowed_raises_when_session_revoked(self) -> None:
         token = "session_token_1"
         UserSessionMeta.objects.create(
             user=self.user,
@@ -150,3 +172,40 @@ class SessionServiceTests(TestCase):
             SessionService.assert_session_allowed(request)
         self.assertEqual(ctx.exception.status_code, 401)
         self.assertEqual(ctx.exception.message, "session revoked")
+
+
+class SessionServiceTransactionTests(TransactionTestCase):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(
+            username="session_tx_user",
+            email="session_tx_user@example.com",
+            password=TEST_PASSWORD,
+        )
+        self.factory = RequestFactory()
+
+    def _request_with_session(self, token: str) -> HttpRequest:
+        request = self.factory.get(
+            "/api/account/sessions", HTTP_X_SESSION_TOKEN=token
+        )
+        middleware = SessionMiddleware(lambda _request: None)
+        middleware.process_request(request)
+        request.session.save()
+        return request
+
+    def test_touch_runs_inside_atomic_block(self) -> None:
+        self.assertFalse(connection.in_atomic_block)
+        request = self._request_with_session("session_token_tx_1")
+        observed: dict[str, bool] = {}
+        original = SessionService._resolve_meta_for_touch
+
+        def wrapped(user: User, token: str, dj_key: str) -> UserSessionMeta:
+            observed["in_atomic"] = connection.in_atomic_block
+            return original(user, token, dj_key)
+
+        with patch.object(
+            SessionService,
+            "_resolve_meta_for_touch",
+            side_effect=wrapped,
+        ):
+            SessionService.touch(request, self.user)
+        self.assertTrue(observed.get("in_atomic", False))

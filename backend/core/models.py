@@ -21,10 +21,10 @@ class UserSessionMeta(models.Model):
 
     class Meta:
         unique_together = (("user", "session_key"),)
-        indexes = [
+        indexes = (
             models.Index(fields=["user", "session_key"]),
             models.Index(fields=["user", "session_token"]),
-        ]
+        )
 
 
 class UserSessionToken(models.Model):
@@ -39,7 +39,7 @@ class UserSessionToken(models.Model):
     revoked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["user", "session_key"])]
+        indexes = (models.Index(fields=["user", "session_key"]),)
 
 
 class UserProfile(models.Model):
@@ -58,7 +58,7 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        indexes = [
+        indexes = (
             models.Index(
                 fields=["user", "updated_at"],
                 name="core_userpr_user_id_557362_idx",
@@ -67,4 +67,4 @@ class UserProfile(models.Model):
                 fields=["is_itmo_student"],
                 name="core_userpr_is_itmo_17f9c2_idx",
             ),
-        ]
+        )

@@ -1,4 +1,5 @@
 from accounts.services.auth import AuthService
+from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
     ChangePasswordIn,
     ErrorOut,
@@ -9,9 +10,28 @@ from accounts.transport.schemas import (
     TokenRefreshOut,
 )
 from allauth.headless.contrib.ninja.security import x_session_token_auth
+from django.contrib.auth import get_user_model
+from django.http import HttpRequest
 from ninja import Body, Router
+from ninja.errors import HttpError
 
 auth_router = Router(tags=["Auth"])
+BODY_REQUIRED = Body(...)
+User = get_user_model()
+
+
+def _require_active_user(
+    request: HttpRequest,
+    *,
+    touch: bool = False,
+) -> User:
+    user = getattr(request, "auth", None)
+    if not user or not getattr(user, "is_authenticated", False):
+        raise HttpError(401, "Not authenticated")
+    SessionService.assert_session_allowed(request)
+    if touch:
+        SessionService.touch(request, user)
+    return user
 
 
 @auth_router.post(
@@ -21,8 +41,9 @@ auth_router = Router(tags=["Auth"])
     summary="Issue JWT pair bound to current session",
     operation_id="auth_jwt_from_session",
 )
-def jwt_from_session(request):
-    return AuthService.issue_pair_for_session(request, request.auth)
+def jwt_from_session(request: HttpRequest) -> TokenPairOut:
+    user = _require_active_user(request, touch=True)
+    return AuthService.issue_pair_for_session(request, user)
 
 
 @auth_router.post(
@@ -32,7 +53,8 @@ def jwt_from_session(request):
     summary="Logout current session",
     operation_id="auth_logout",
 )
-def logout_current(request):
+def logout_current(request: HttpRequest) -> OkOut:
+    _require_active_user(request)
     AuthService.logout_current(request)
     return OkOut(ok=True, message="logged out")
 
@@ -44,8 +66,9 @@ def logout_current(request):
     summary="Get current user profile",
     operation_id="auth_me",
 )
-def me(request):
-    return AuthService.profile(request.auth)
+def me(request: HttpRequest) -> ProfileOut:
+    user = _require_active_user(request, touch=True)
+    return AuthService.profile(user)
 
 
 @auth_router.post(
@@ -55,9 +78,15 @@ def me(request):
     summary="Change password (requires current password)",
     operation_id="auth_change_password",
 )
-def change_password(request, payload: ChangePasswordIn = Body(...)):
+def change_password(
+    request: HttpRequest,
+    payload: ChangePasswordIn = BODY_REQUIRED,
+) -> OkOut:
+    user = _require_active_user(request, touch=True)
     AuthService.change_password(
-        request.auth, payload.current_password, payload.new_password
+        user,
+        payload.current_password,
+        payload.new_password,
     )
     return OkOut(ok=True, message="password changed")
 
@@ -68,5 +97,8 @@ def change_password(request, payload: ChangePasswordIn = Body(...)):
     summary="Refresh JWT pair",
     operation_id="auth_refresh",
 )
-def refresh_pair(request, payload: TokenRefreshIn = Body(...)):
+def refresh_pair(
+    request: HttpRequest,
+    payload: TokenRefreshIn = BODY_REQUIRED,
+) -> TokenRefreshOut:
     return AuthService.refresh_pair(request, payload)

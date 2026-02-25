@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from datetime import datetime
 
 from accounts.transport.schemas import RevokeSessionsIn, SessionRowOut
 from allauth.usersessions.models import UserSession
@@ -9,6 +10,9 @@ from core.models import UserSessionMeta, UserSessionToken
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout as dj_logout
 from django.contrib.sessions.models import Session
+from django.db import transaction
+from django.db.models import QuerySet
+from django.http import HttpRequest
 from django.utils import timezone
 from ninja.errors import HttpError
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
@@ -17,12 +21,13 @@ User = get_user_model()
 
 
 FORWARD_HEADERS = ("HTTP_X_REAL_IP", "HTTP_X_FORWARDED_FOR")
+UNKNOWN_IP_FALLBACK = "127.0.0.1"
 
 
 @dataclass(slots=True)
 class SessionService:
     @staticmethod
-    def _client_ip(request) -> Optional[str]:
+    def _client_ip(request: HttpRequest) -> str | None:
         for h in FORWARD_HEADERS:
             v = request.META.get(h)
             if v:
@@ -30,19 +35,19 @@ class SessionService:
         return request.META.get("REMOTE_ADDR")
 
     @staticmethod
-    def _ua(request) -> str:
+    def _ua(request: HttpRequest) -> str:
         return (request.META.get("HTTP_USER_AGENT", "") or "")[:512]
 
     @staticmethod
-    def _header_token(request) -> str:
+    def _header_token(request: HttpRequest) -> str:
         return request.headers.get("X-Session-Token") or ""
 
     @staticmethod
-    def _session_key(request) -> str:
+    def _session_key(request: HttpRequest) -> str:
         return request.session.session_key or ""
 
     @staticmethod
-    def assert_session_allowed(request) -> None:
+    def assert_session_allowed(request: HttpRequest) -> None:
         token = SessionService._header_token(request)
         if token:
             meta = UserSessionMeta.objects.filter(session_token=token).first()
@@ -55,75 +60,175 @@ class SessionService:
                 raise HttpError(401, "session revoked")
 
     @staticmethod
-    def touch(request, user: User, *, throttle_seconds: int = 15) -> None:
-        token = SessionService._header_token(request)
-        dj_key = SessionService._session_key(request)
-        if not (token or dj_key) or not getattr(
-            user, "is_authenticated", False
-        ):
-            return
-
+    def _resolve_meta_for_touch(
+        user: User,
+        token: str,
+        dj_key: str,
+    ) -> UserSessionMeta:
         key_for_meta = dj_key or token
         meta, _ = UserSessionMeta.objects.select_for_update().get_or_create(
             user=user,
             session_key=key_for_meta,
             defaults={"session_token": token or None},
         )
+        return meta
+
+    @staticmethod
+    def _update_meta_last_seen(
+        meta: UserSessionMeta,
+        request: HttpRequest,
+        *,
+        token: str,
+        now: datetime,
+        throttle_seconds: int,
+    ) -> None:
+        update_fields: list[str] = []
         if token and not meta.session_token:
             meta.session_token = token
+            update_fields.append("session_token")
 
-        now = timezone.now()
-        if (
+        should_refresh = (
             not meta.last_seen
             or (now - meta.last_seen).total_seconds() >= throttle_seconds
-        ):
+        )
+        if should_refresh:
             meta.last_seen = now
+            update_fields.append("last_seen")
             if not meta.user_agent:
                 meta.user_agent = SessionService._ua(request)
+                update_fields.append("user_agent")
             if not meta.ip:
                 meta.ip = SessionService._client_ip(request)
-            meta.save(
-                update_fields=[
-                    "last_seen",
-                    "user_agent",
-                    "ip",
-                    "session_token",
-                ]
-            )
+                update_fields.append("ip")
 
-        if dj_key:
-            us, created = UserSession.objects.get_or_create(
-                user=user, session_key=dj_key
-            )
-            changed = False
-            for field, value in (("last_seen", now), ("updated_at", now)):
+        if update_fields:
+            meta.save(update_fields=sorted(set(update_fields)))
+
+    @staticmethod
+    def _user_session_create_defaults(
+        meta: UserSessionMeta,
+        *,
+        now: datetime,
+    ) -> dict[str, object]:
+        field_names = {field.name for field in UserSession._meta.fields}
+        candidates: dict[str, object] = {
+            "ip": meta.ip or UNKNOWN_IP_FALLBACK,
+            "user_agent": meta.user_agent or "",
+            "data": {},
+            "last_seen_at": now,
+        }
+        return {
+            field: value
+            for field, value in candidates.items()
+            if field in field_names
+        }
+
+    @staticmethod
+    def _apply_user_session_timestamps(
+        us: UserSession,
+        *,
+        now: datetime,
+        created: bool,
+    ) -> bool:
+        changed = False
+        for field, value in (
+            ("last_seen", now),
+            ("updated_at", now),
+            ("last_seen_at", now),
+        ):
+            if hasattr(us, field):
+                setattr(us, field, value)
+                changed = True
+        if created:
+            for field, value in (("started_at", now), ("created", now)):
                 if hasattr(us, field):
                     setattr(us, field, value)
                     changed = True
-            if created:
-                for field, value in (("started_at", now), ("created", now)):
-                    if hasattr(us, field):
-                        setattr(us, field, value)
-                        changed = True
-            if not getattr(us, "user_agent", None) and hasattr(
-                us, "user_agent"
-            ):
-                us.user_agent = meta.user_agent
-                changed = True
-            if hasattr(us, "ip") and not getattr(us, "ip", None):
-                us.ip = meta.ip
-                changed = True
-            elif hasattr(us, "ip_address") and not getattr(
-                us, "ip_address", None
-            ):
-                us.ip_address = meta.ip
-                changed = True
-            if changed:
-                us.save()
+        return changed
+
+    @staticmethod
+    def _apply_user_session_meta(
+        us: UserSession,
+        meta: UserSessionMeta,
+    ) -> bool:
+        changed = False
+        if hasattr(us, "user_agent") and not getattr(us, "user_agent", None):
+            us.user_agent = meta.user_agent or ""
+            changed = True
+        ip_value = meta.ip or UNKNOWN_IP_FALLBACK
+        if hasattr(us, "ip") and not getattr(us, "ip", None):
+            us.ip = ip_value
+            changed = True
+        elif hasattr(us, "ip_address") and not getattr(us, "ip_address", None):
+            us.ip_address = ip_value
+            changed = True
+        return changed
+
+    @staticmethod
+    def _sync_user_session_row(
+        user: User,
+        *,
+        dj_key: str,
+        meta: UserSessionMeta,
+        now: datetime,
+    ) -> None:
+        defaults = SessionService._user_session_create_defaults(
+            meta,
+            now=now,
+        )
+        us, created = UserSession.objects.get_or_create(
+            user=user,
+            session_key=dj_key,
+            defaults=defaults,
+        )
+        changed = SessionService._apply_user_session_timestamps(
+            us,
+            now=now,
+            created=created,
+        )
+        if SessionService._apply_user_session_meta(us, meta):
+            changed = True
+        if changed:
+            us.save()
+
+    @staticmethod
+    @transaction.atomic
+    def touch(
+        request: HttpRequest,
+        user: User,
+        *,
+        throttle_seconds: int = 15,
+    ) -> None:
+        token = SessionService._header_token(request)
+        dj_key = SessionService._session_key(request)
+        if not (token or dj_key):
+            return
+        if not getattr(user, "is_authenticated", False):
+            return
+
+        now = timezone.now()
+        meta = SessionService._resolve_meta_for_touch(user, token, dj_key)
+        SessionService._update_meta_last_seen(
+            meta,
+            request,
+            token=token,
+            now=now,
+            throttle_seconds=throttle_seconds,
+        )
+
+        if dj_key:
+            SessionService._sync_user_session_row(
+                user,
+                dj_key=dj_key,
+                meta=meta,
+                now=now,
+            )
 
     @staticmethod
     def _compose_row(
-        request, us: Optional[UserSession], meta: Optional[UserSessionMeta]
+        request: HttpRequest,
+        us: UserSession | None,
+        meta: UserSessionMeta | None,
     ) -> SessionRowOut:
         s_key = getattr(us, "session_key", None) or getattr(
             meta, "session_key", None
@@ -187,7 +292,7 @@ class SessionService:
 
     @staticmethod
     def _merge_rows(
-        request,
+        request: HttpRequest,
         us_list: Iterable[UserSession],
         meta_list: Iterable[UserSessionMeta],
     ) -> list[SessionRowOut]:
@@ -210,13 +315,17 @@ class SessionService:
         ]
 
     @staticmethod
-    def list(request, user: User) -> list[SessionRowOut]:
+    def list(request: HttpRequest, user: User) -> list[SessionRowOut]:
         us_rows = list(UserSession.objects.filter(user=user))
         meta_rows = list(UserSessionMeta.objects.filter(user=user))
         return SessionService._merge_rows(request, us_rows, meta_rows)
 
     @staticmethod
-    def _blacklist_session_tokens(user: User, session_key: str, when) -> None:
+    def _blacklist_session_tokens(
+        user: User,
+        session_key: str,
+        when: datetime,
+    ) -> None:
         maps = list(
             UserSessionToken.objects.filter(
                 user=user, session_key=session_key, revoked_at__isnull=True
@@ -232,64 +341,114 @@ class SessionService:
             m.save(update_fields=["revoked_at"])
 
     @staticmethod
-    def _kill_django_session(request, session_key: str) -> None:
+    def _kill_django_session(
+        request: HttpRequest,
+        session_key: str,
+    ) -> None:
         Session.objects.filter(session_key=session_key).delete()
         if SessionService._session_key(request) == session_key:
             dj_logout(request)
 
     @staticmethod
-    def revoke_bulk(request, payload: RevokeSessionsIn) -> dict:
-        SessionService.assert_session_allowed(request)
-        user: User = request.auth
-        SessionService.touch(request, user)
-        ids = payload.ids or []
-
-        if ids and payload.all_except_current:
+    def _validate_revoke_bulk_scope(
+        ids: list[str],
+        *,
+        all_except_current: bool,
+    ) -> None:
+        if ids and all_except_current:
             raise HttpError(
                 400, "Use either ids or all_except_current, not both"
             )
-        if not ids and not payload.all_except_current:
+        if not ids and not all_except_current:
             raise HttpError(
                 400, "Either ids or all_except_current=true is required"
             )
 
+    @staticmethod
+    def _resolve_current_session_key(
+        request: HttpRequest,
+        user: User,
+    ) -> str:
         token = SessionService._header_token(request)
         cur_meta = UserSessionMeta.objects.filter(
             user=user, session_token=token
         ).first()
-        cur_key = SessionService._session_key(request) or (
+        return SessionService._session_key(request) or (
             cur_meta.session_key if cur_meta else ""
         )
 
-        reason = (payload.reason or "bulk_except_current").lower()
+    @staticmethod
+    def _bulk_sessions_queryset(
+        user: User,
+        ids: list[str],
+        *,
+        all_except_current: bool,
+        current_key: str,
+    ) -> QuerySet[UserSession]:
         qs = UserSession.objects.filter(user=user)
         if ids:
-            qs = qs.filter(session_key__in=ids)
-        elif cur_key and payload.all_except_current:
-            qs = qs.exclude(session_key=cur_key)
+            return qs.filter(session_key__in=ids)
+        if current_key and all_except_current:
+            return qs.exclude(session_key=current_key)
+        return qs
+
+    @staticmethod
+    def _session_is_revoked(us: UserSession) -> bool:
+        return bool(
+            getattr(us, "ended_at", None) or getattr(us, "revoked_at", None)
+        )
+
+    @staticmethod
+    def _apply_revoke_state(
+        us: UserSession,
+        *,
+        reason: str,
+        now: datetime,
+    ) -> None:
+        for field, value in (("ended_at", now), ("revoked_at", now)):
+            if hasattr(us, field):
+                setattr(us, field, value)
+        for field, value in (
+            ("ended_reason", reason),
+            ("revoked_reason", reason),
+        ):
+            if hasattr(us, field):
+                setattr(us, field, value)
+        if hasattr(us, "ended"):
+            us.ended = True
+        us.save()
+
+    @staticmethod
+    def revoke_bulk(
+        request: HttpRequest,
+        payload: RevokeSessionsIn,
+    ) -> dict[str, object]:
+        SessionService.assert_session_allowed(request)
+        user: User = request.auth
+        SessionService.touch(request, user)
+        ids = payload.ids or []
+        SessionService._validate_revoke_bulk_scope(
+            ids, all_except_current=payload.all_except_current
+        )
+
+        cur_key = SessionService._resolve_current_session_key(request, user)
+        reason = (payload.reason or "bulk_except_current").lower()
+        sessions = SessionService._bulk_sessions_queryset(
+            user,
+            ids,
+            all_except_current=payload.all_except_current,
+            current_key=cur_key,
+        )
 
         now = timezone.now()
         revoked_ids, skipped_ids = [], []
 
-        for us in qs:
-            if getattr(us, "ended_at", None) or getattr(
-                us, "revoked_at", None
-            ):
+        for us in sessions:
+            if SessionService._session_is_revoked(us):
                 skipped_ids.append(us.session_key)
                 continue
 
-            for field, value in (("ended_at", now), ("revoked_at", now)):
-                if hasattr(us, field):
-                    setattr(us, field, value)
-            for field, value in (
-                ("ended_reason", reason),
-                ("revoked_reason", reason),
-            ):
-                if hasattr(us, field):
-                    setattr(us, field, value)
-            if hasattr(us, "ended"):
-                us.ended = True
-            us.save()
+            SessionService._apply_revoke_state(us, reason=reason, now=now)
 
             UserSessionMeta.objects.update_or_create(
                 user=user,
@@ -313,8 +472,11 @@ class SessionService:
 
     @staticmethod
     def revoke_single(
-        request, *, sid: str, reason: Optional[str] = None
-    ) -> dict:
+        request: HttpRequest,
+        *,
+        sid: str,
+        reason: str | None = None,
+    ) -> dict[str, object]:
         SessionService.assert_session_allowed(request)
         user: User = request.auth
         SessionService.touch(request, user)

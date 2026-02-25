@@ -4,27 +4,26 @@ from dataclasses import dataclass
 
 from allauth.account.forms import SignupForm
 from allauth.account.utils import perform_login
-from django.conf import settings
+from allauth.headless import app_settings as allauth_headless_settings
 from django.contrib.auth import authenticate
-from django.utils.module_loading import import_string
+from django.http import HttpRequest
 from ninja.errors import HttpError
 
 
 @dataclass(slots=True)
 class HeadlessService:
     @staticmethod
-    def issue_session_token(request) -> str:
-        strategy_cls = import_string(
-            getattr(
-                settings,
-                "HEADLESS_TOKEN_STRATEGY",
-                "allauth.headless.tokens.strategies.sessions.SessionTokenStrategy",
-            )
+    def issue_session_token(request: HttpRequest) -> str:
+        return allauth_headless_settings.TOKEN_STRATEGY.create_session_token(
+            request
         )
-        return strategy_cls().create_session_token(request)
 
     @staticmethod
-    def login(request, username: str, password: str) -> str:
+    def login(
+        request: HttpRequest,
+        username: str,
+        password: str,
+    ) -> str:
         user = authenticate(
             request, username=username.strip(), password=password
         )
@@ -35,7 +34,10 @@ class HeadlessService:
 
     @staticmethod
     def signup(
-        request, username: str, email: str | None, password: str
+        request: HttpRequest,
+        username: str,
+        email: str | None,
+        password: str,
     ) -> str:
         form = SignupForm(
             data={

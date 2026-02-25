@@ -2,3 +2,7 @@
 exclude = .git,__pycache__,docs/source/conf.py,old,build,dist,.venv,migrations,frontend
 max-line-length = 79
 max-complexity = 10
+extend-ignore = E203,W503
+per-file-ignores =
+    backend/backend/settings/dev.py:F403,F405
+    backend/backend/settings/prod.py:F401,F403

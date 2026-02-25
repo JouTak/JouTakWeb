@@ -5,7 +5,7 @@ from accounts.api.router_headless import headless_router
 from accounts.api.router_oauth import router_oauth
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.urls import path
 from ninja import NinjaAPI
 
@@ -17,7 +17,7 @@ api.add_router("/auth", headless_router)
 api.add_router("/oauth", router_oauth)
 
 
-def health(_request):
+def health(_request: HttpRequest) -> HttpResponse:
     return HttpResponse("Alive", content_type="text/plain", status=200)
 
 

@@ -4,7 +4,7 @@ import sys
 __all__ = "main"
 
 
-def main():
+def main() -> None:
     os.environ.setdefault(
         "DJANGO_SETTINGS_MODULE",
         "backend.settings.dev",

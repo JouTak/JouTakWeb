@@ -9,6 +9,7 @@ import {
   Label,
 } from "@gravity-ui/uikit";
 import { useState, useCallback, useEffect, useMemo } from "react";
+import Offcanvas from "react-bootstrap/Offcanvas";
 import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
 import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
@@ -52,21 +53,12 @@ const Header = () => {
   const location = useLocation();
 
   const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [personalizationModalOpen, setPersonalizationModalOpen] = useState(false);
 
-  const closeOffcanvas = useCallback(() => {
-    const el = document.getElementById("offcanvasDarkNavbar");
-    const bs = window.bootstrap;
-    if (el && bs?.Offcanvas) {
-      let inst = bs.Offcanvas.getInstance(el);
-      if (!inst) inst = new bs.Offcanvas(el);
-      inst.hide();
-    } else {
-      document.querySelector("#offcanvasDarkNavbar .btn-close")?.click();
-    }
-  }, []);
+  const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
 
   const openAuth = useCallback(() => {
     closeOffcanvas();
@@ -74,9 +66,8 @@ const Header = () => {
   }, [closeOffcanvas]);
 
   useEffect(() => {
-    const el = document.getElementById("offcanvasDarkNavbar");
-    if (el && el.classList.contains("show")) closeOffcanvas();
-  }, [location.pathname, closeOffcanvas]);
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   const loadProfileIfTokens = useCallback(async () => {
     if (!hasStoredAuth()) {
@@ -229,8 +220,7 @@ const Header = () => {
               <button
                 className="navbar-toggler ms-2"
                 type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#offcanvasDarkNavbar"
+                onClick={() => setMenuOpen(true)}
                 aria-controls="offcanvasDarkNavbar"
                 aria-label="Toggle navigation"
               >
@@ -241,29 +231,22 @@ const Header = () => {
         </nav>
       </header>
 
-      <div
-        className="offcanvas offcanvas-start text-bg-dark"
-        tabIndex="-1"
+      <Offcanvas
+        show={menuOpen}
+        onHide={closeOffcanvas}
+        placement="start"
         id="offcanvasDarkNavbar"
-        aria-labelledby="offcanvasDarkNavbarLabel"
+        className="text-bg-dark"
       >
-        <div className="offcanvas-header">
-          <h5 className="offcanvas-title" id="offcanvasDarkNavbarLabel">
-            Меню
-          </h5>
-          <button
-            type="button"
-            className="btn-close btn-close-white"
-            data-bs-dismiss="offcanvas"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div className="offcanvas-body">
+        <Offcanvas.Header closeButton closeVariant="white">
+          <Offcanvas.Title id="offcanvasDarkNavbarLabel">Меню</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             <DynamicMenu />
           </ul>
-        </div>
-      </div>
+        </Offcanvas.Body>
+      </Offcanvas>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 

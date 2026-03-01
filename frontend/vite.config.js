@@ -10,7 +10,6 @@ export default defineConfig({
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
           gravity: ["@gravity-ui/uikit", "@gravity-ui/icons"],
-          bootstrap: ["bootstrap/dist/js/bootstrap.bundle.min.js"],
         },
       },
     },

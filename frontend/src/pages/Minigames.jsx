@@ -1,63 +1,24 @@
-import "react";
+import ImageCarousel from "../components/ImageCarousel";
+
+const MINIGAMES_CAROUSEL_ITEMS = [
+  {
+    src: "https://cloud.joutak.ru/s/swb4NibNCmna8gp/preview",
+    alt: "Центральная локация Survival Games",
+  },
+  {
+    src: "https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/preview",
+    alt: "Block Party",
+  },
+  {
+    src: "https://cloud.joutak.ru/s/nWyfRiYDqgow62f/preview",
+    alt: "Ace Race",
+  },
+];
 
 const MiniGames = () => {
   return (
     <div className="text-center">
-      <div
-        id="carouselExampleInterval"
-        className="carousel slide"
-        data-bs-ride="carousel"
-      >
-        <div className="carousel-inner w-100" style={{
-          "aspectRatio": "16 / 9"
-        }}>
-          <div className="carousel-item active" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/swb4NibNCmna8gp/preview"
-              className="d-block w-100"
-              alt="Центральная локация Survival Games"
-            />
-          </div>
-          <div className="carousel-item" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/preview"
-              className="d-block w-100"
-              alt="Block Party"
-            />
-          </div>
-          <div className="carousel-item" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/nWyfRiYDqgow62f/preview"
-              className="d-block w-100"
-              alt="Ace Race"
-            />
-          </div>
-        </div>
-        <button
-          className="carousel-control-prev"
-          type="button"
-          data-bs-target="#carouselExampleInterval"
-          data-bs-slide="prev"
-        >
-          <span
-            className="carousel-control-prev-icon"
-            aria-hidden="true"
-          ></span>
-          <span className="visually-hidden">Previous</span>
-        </button>
-        <button
-          className="carousel-control-next"
-          type="button"
-          data-bs-target="#carouselExampleInterval"
-          data-bs-slide="next"
-        >
-          <span
-            className="carousel-control-next-icon"
-            aria-hidden="true"
-          ></span>
-          <span className="visually-hidden">Next</span>
-        </button>
-      </div>
+      <ImageCarousel items={MINIGAMES_CAROUSEL_ITEMS} />
 
       <div className="container py-3">
         <div className="my-4">

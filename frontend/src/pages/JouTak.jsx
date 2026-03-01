@@ -1,73 +1,33 @@
 import { Link } from "react-router-dom";
+import ImageCarousel from "../components/ImageCarousel";
+
+const JOUTAK_CAROUSEL_ITEMS = [
+  {
+    src: "https://cloud.joutak.ru/s/2oQALeqNkndEQMw/preview",
+    alt: "Центральный район сервера",
+  },
+  {
+    src: "https://cloud.joutak.ru/s/fAn6tq8jn3wcbzy/preview",
+    alt: "Большой гриб на нулевых координатах",
+  },
+  {
+    src: "https://cloud.joutak.ru/s/oD9SmGSnqGCYqLP/preview",
+    alt: "Летучий Голландец в Казахстане",
+  },
+  {
+    src: "https://cloud.joutak.ru/s/D8MH8Bmia4f6Ab5/preview",
+    alt: "Крупная сходка новых игроков 2025",
+  },
+  {
+    src: "https://cloud.joutak.ru/s/3ebFJexTFSntZmL/preview",
+    alt: "Центральный хаб в Нижнем мире",
+  },
+];
 
 const JouTak = () => {
   return (
     <div className="text-center">
-      <div
-        id="carouselExampleInterval"
-        className="carousel slide"
-        data-bs-ride="carousel"
-      >
-        <div className="carousel-inner w-100" style={{
-          "aspectRatio": "16 / 9"
-        }}>
-          <div className="carousel-item active" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/2oQALeqNkndEQMw/preview"
-              className="d-block w-100"
-              alt="Центральный район сервера"
-            />
-          </div>
-          <div className="carousel-item" data-bs-interval="10000">
-            <img src="https://cloud.joutak.ru/s/fAn6tq8jn3wcbzy/preview" className="d-block w-100" alt="Большой гриб на нулевых координатах" />
-          </div>
-          <div className="carousel-item" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/oD9SmGSnqGCYqLP/preview"
-              className="d-block w-100"
-              alt="Летучий Голландец в Казахстане"
-            />
-          </div>
-          <div className="carousel-item" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/D8MH8Bmia4f6Ab5/preview"
-              className="d-block w-100"
-              alt="Крупная сходка новых игроков 2025"
-            />
-          </div>
-          <div className="carousel-item" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/3ebFJexTFSntZmL/preview"
-              className="d-block w-100"
-              alt="Центральный хаб в Нижнем мире"
-            />
-          </div>
-        </div>
-        <button
-          className="carousel-control-prev"
-          type="button"
-          data-bs-target="#carouselExampleInterval"
-          data-bs-slide="prev"
-        >
-          <span
-            className="carousel-control-prev-icon"
-            aria-hidden="true"
-          ></span>
-          <span className="visually-hidden">Previous</span>
-        </button>
-        <button
-          className="carousel-control-next"
-          type="button"
-          data-bs-target="#carouselExampleInterval"
-          data-bs-slide="next"
-        >
-          <span
-            className="carousel-control-next-icon"
-            aria-hidden="true"
-          ></span>
-          <span className="visually-hidden">Next</span>
-        </button>
-      </div>
+      <ImageCarousel items={JOUTAK_CAROUSEL_ITEMS} />
 
       <div className="p-5 mb-4 rounded-3">
         <div className="container pb-5">
@@ -94,7 +54,7 @@ const JouTak = () => {
           >
             Зарегистрироваться на приватном сервере
           </a>
-          <br></br>
+          <br />
           <Link className="btn btn-primary btn-lg mt-3" to="/joutak/pay">
             Оплатить проходку
           </Link>

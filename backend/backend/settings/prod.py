@@ -1,9 +1,18 @@
 import dj_database_url
 from decouple import Csv, config
 
-from .base import *
+from . import base as base_settings
+
+globals().update(base_settings.as_public_settings())
 
 DEBUG = False
+if (
+    not base_settings.SECRET_KEY
+    or base_settings.SECRET_KEY == "VERY_LONG_PASS_>80!TODO_CHANGE_ME!"
+):
+    raise RuntimeError(
+        "A non-default DJANGO_SECRET_KEY is required in production"
+    )
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv(), default="")
@@ -62,6 +71,7 @@ EMAIL_USE_TLS = config(
     cast=bool,
     default=(not EMAIL_USE_SSL),
 )
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", cast=int, default=10)
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise RuntimeError("EMAIL_USE_SSL and EMAIL_USE_TLS cannot both be true")
 DEFAULT_FROM_EMAIL = config(

@@ -15,6 +15,12 @@ function isSafeInternalPath(path) {
 
 function extractErrorMessage(error, fallback) {
   const data = error?.response?.data;
+  if (Array.isArray(data?.errors)) {
+    const firstError = data.errors.find(
+      (entry) => entry && typeof entry.message === "string" && entry.message.trim(),
+    );
+    if (firstError?.message) return firstError.message;
+  }
   if (data?.fields && typeof data.fields === "object") {
     const firstFieldMessage = Object.values(data.fields).find(
       (value) => typeof value === "string" && value.trim(),
@@ -234,6 +240,19 @@ export default function AuthModal({
               onClick={() => setMode("signup")}
             >
               Нет аккаунта? Зарегистрируйтесь
+            </Button>
+
+            <Button
+              view="flat"
+              size="l"
+              width="max"
+              type="button"
+              onClick={() => {
+                close({ notifyParent: false });
+                navigate("/reset-password");
+              }}
+            >
+              Забыли пароль?
             </Button>
 
             <div

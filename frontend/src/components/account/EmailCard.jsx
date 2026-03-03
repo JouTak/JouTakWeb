@@ -30,6 +30,8 @@ const headerStyle = {
 export default function EmailCard() {
   const [email, setEmail] = useState("");
   const [verified, setVerified] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [resendTarget, setResendTarget] = useState("");
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -42,6 +44,8 @@ export default function EmailCard() {
       const s = await getEmailStatus();
       setEmail(s.email || "");
       setVerified(!!s.verified);
+      setPendingEmail(s.pending_email || "");
+      setResendTarget(s.resend_target || "");
       setNewEmail(s.email || "");
     } catch {
       add({
@@ -62,7 +66,7 @@ export default function EmailCard() {
   async function onResend() {
     setBusy(true);
     try {
-      const { message } = await resendEmailVerification();
+      const { message } = await resendEmailVerification(resendTarget);
       add({
         name: "email-resend",
         title: "Подтверждение",
@@ -70,12 +74,18 @@ export default function EmailCard() {
         theme: "success",
       });
     } catch (err) {
+      const errors = err?.response?.data?.errors;
+      const msg =
+        (Array.isArray(errors) &&
+          errors.find(
+            (item) => item && typeof item.message === "string" && item.message.trim(),
+          )?.message) ||
+        err?.response?.data?.detail ||
+        "Не удалось отправить письмо";
       add({
         name: "email-resend-err",
         title: "Ошибка",
-        content: String(
-          err?.response?.data?.detail || "Не удалось отправить письмо",
-        ),
+        content: String(msg),
         theme: "danger",
       });
     } finally {
@@ -91,18 +101,29 @@ export default function EmailCard() {
     }
     setBusy(true);
     try {
-      const { message } = await changeEmail(newEmail);
+      const result = await changeEmail(newEmail);
       add({
         name: "email-change",
         title: "Email",
-        content: message || "Проверьте почту для подтверждения",
+        content: result.message || "Проверьте почту для подтверждения",
         theme: "success",
       });
-      setEmail(newEmail);
-      setVerified(false);
+      setEmail(result.email || email);
+      setVerified(!!result.verified);
+      setPendingEmail(result.pending_email || String(newEmail || "").trim());
+      setResendTarget(
+        result.resend_target || result.pending_email || String(newEmail || "").trim(),
+      );
       setEditMode(false);
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Не удалось изменить email";
+      const errors = err?.response?.data?.errors;
+      const msg =
+        (Array.isArray(errors) &&
+          errors.find(
+            (item) => item && typeof item.message === "string" && item.message.trim(),
+          )?.message) ||
+        err?.response?.data?.detail ||
+        "Не удалось изменить email";
       add({
         name: "email-change-err",
         title: "Ошибка",
@@ -146,11 +167,16 @@ export default function EmailCard() {
               <div>
                 <b>{email || "—"}</b>
               </div>
+              {pendingEmail && (
+                <div style={{ opacity: 0.8 }}>
+                  Ожидает подтверждения: <b>{pendingEmail}</b>
+                </div>
+              )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Button view="outlined" onClick={() => setEditMode(true)}>
                   Изменить email
                 </Button>
-                {!verified && email && (
+                {resendTarget && (
                   <Button view="normal" loading={busy} onClick={onResend}>
                     Отправить письмо повторно
                   </Button>
@@ -187,8 +213,7 @@ export default function EmailCard() {
                 </Button>
               </div>
               <div style={{ opacity: 0.75, fontSize: 12 }}>
-                После изменения мы отправим письмо с подтверждением на новый
-                адрес.
+                После подтверждения новый адрес станет основным для аккаунта.
               </div>
             </form>
           )}

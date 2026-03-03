@@ -27,7 +27,7 @@ class OkOut(Schema):
     message: str | None = None
 
 
-# ---------- Profile / Email ----------
+# ---------- Profile ----------
 class ProfileUpdateIn(Schema):
     first_name: str | None = None
     last_name: str | None = None
@@ -36,16 +36,6 @@ class ProfileUpdateIn(Schema):
     minecraft_has_license: bool | None = None
     is_itmo_student: bool | None = None
     itmo_isu: str | None = None
-
-
-class EmailStatusOut(Schema):
-    email: str | None = None
-    verified: bool = False
-
-
-class ChangeEmailIn(Schema):
-    new_email: str
-
 
 # ---------- Sessions ----------
 class SessionRowOut(Schema):
@@ -103,6 +93,14 @@ class TokenRefreshOut(Schema):
 class ChangePasswordIn(Schema):
     current_password: str
     new_password: str
+    logout_current_session: bool = False
+
+
+class ChangePasswordOut(Schema):
+    ok: bool
+    message: str | None = None
+    logged_out_current_session: bool = False
+    terminated_other_sessions: bool = True
 
 
 class DeleteAccountIn(Schema):
@@ -163,27 +161,6 @@ class ProfileUpdateOut(Schema):
     personalization_interstitial_enabled: bool = True
     personalization_enforce_enabled: bool = False
     missing_fields: list[str]
-
-
-# ---------- Headless (session token) ----------
-class SessionMetaOut(Schema):
-    session_token: str
-
-
-class LoginOut(Schema):
-    meta: SessionMetaOut
-
-
-class LoginIn(Schema):
-    username: str
-    password: str
-
-
-class SignupIn(Schema):
-    username: str
-    email: str | None = None
-    password: str
-
 
 # ---------- OAuth linking ----------
 class ProvidersOut(Schema):

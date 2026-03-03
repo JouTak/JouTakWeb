@@ -35,6 +35,9 @@ apply_env_file_overrides(
 DEBUG = config("DJANGO_DEBUG", cast=bool, default=False)
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="")
 ALLOW_REVERSE = config("DJANGO_ALLOW_REVERSE", cast=bool, default=True)
+SITE_ID = config("DJANGO_SITE_ID", cast=int, default=1)
+SITE_DOMAIN = config("DJANGO_SITE_DOMAIN", default="")
+SITE_NAME = config("DJANGO_SITE_NAME", default="")
 
 ALLOWED_HOSTS = config(
     "DJANGO_ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv()
@@ -45,8 +48,6 @@ CSRF_TRUSTED_ORIGINS = config(
     cast=Csv(),
 )
 INTERNAL_IPS = config("DJANGO_INTERNAL_IPS", default="127.0.0.1", cast=Csv())
-
-SITE_ID = config("DJANGO_SITE_ID", cast=int, default=1)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -133,6 +134,8 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+ACCOUNT_ADAPTER = "accounts.adapters.StrictAccountAdapter"
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = False
 
 NINJA_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
@@ -162,7 +165,10 @@ FRONTEND_BASE_URL = config(
 _frontend_base = FRONTEND_BASE_URL.rstrip("/")
 HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": (f"{_frontend_base}/confirm-email?key={{key}}"),
-    "account_reset_password": (f"{_frontend_base}/reset-password?key={{key}}"),
+    "account_reset_password": (f"{_frontend_base}/reset-password"),
+    "account_reset_password_from_key": (
+        f"{_frontend_base}/reset-password?key={{key}}"
+    ),
 }
 ACCOUNT_CHANGE_EMAIL = True
 
@@ -171,10 +177,11 @@ HEADLESS_CLIENTS = tuple(config("HEADLESS_CLIENTS", default="app", cast=Csv()))
 HEADLESS_SERVE_SPECIFICATION = DEBUG
 HEADLESS_TOKEN_STRATEGY = config(
     "HEADLESS_TOKEN_STRATEGY",
-    default="allauth.headless.tokens.strategies.sessions.SessionTokenStrategy",
+    default="accounts.token_strategy.RevocableSessionTokenStrategy",
 )
 
 MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
+MFA_ADAPTER = "accounts.mfa_adapter.EncryptedMFAAdapter"
 MFA_TOTP_ISSUER = config("MFA_TOTP_ISSUER", default="JouTak")
 MFA_TOTP_PERIOD = config("MFA_TOTP_PERIOD", cast=int, default=30)
 MFA_TOTP_TOLERANCE = config("MFA_TOTP_TOLERANCE", cast=int, default=1)
@@ -182,6 +189,36 @@ MFA_PASSKEY_LOGIN_ENABLED = config(
     "MFA_PASSKEY_LOGIN_ENABLED", cast=bool, default=True
 )
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
+MFA_ENCRYPTION_KEYS = tuple(
+    value.strip()
+    for value in config(
+        "MFA_ENCRYPTION_KEYS",
+        default=config("MFA_ENCRYPTION_KEY", default=""),
+        cast=Csv(),
+    )
+    if value and value.strip()
+)
+MFA_ENCRYPTION_INCLUDE_LEGACY_SECRET_KEY = config(
+    "MFA_ENCRYPTION_INCLUDE_LEGACY_SECRET_KEY",
+    cast=bool,
+    default=True,
+)
+MFA_ENCRYPTION_PREFIX = "fernet:"
+
+ACCOUNT_TRUST_PROXY_HEADERS = config(
+    "ACCOUNT_TRUST_PROXY_HEADERS", cast=bool, default=False
+)
+ACCOUNT_TRUSTED_PROXY_CIDRS = tuple(
+    value.strip()
+    for value in config("ACCOUNT_TRUSTED_PROXY_CIDRS", default="", cast=Csv())
+    if value and value.strip()
+)
+AUTH_SESSION_RETENTION_DAYS = config(
+    "AUTH_SESSION_RETENTION_DAYS", cast=int, default=30
+)
+AUTH_TOKEN_RETENTION_DAYS = config(
+    "AUTH_TOKEN_RETENTION_DAYS", cast=int, default=30
+)
 
 LANGUAGE_CODE = "ru-RU"
 TIME_ZONE = config("DJANGO_TIME_ZONE", default="UTC")
@@ -220,6 +257,8 @@ CORS_ALLOW_HEADERS = [
     "x-refresh-token",
     "x-client",
     "x-allauth-client",
+    "x-email-verification-key",
+    "x-password-reset-key",
     "authorization",
     "content-type",
 ]
@@ -238,3 +277,11 @@ FF_PROFILE_PERSONALIZATION_INTERSTITIAL = config(
 FF_PROFILE_PERSONALIZATION_ENFORCE = config(
     "FF_PROFILE_PERSONALIZATION_ENFORCE", cast=bool, default=False
 )
+
+
+def as_public_settings() -> dict[str, object]:
+    return {
+        name: value
+        for name, value in globals().items()
+        if name.isupper()
+    }

@@ -1,6 +1,10 @@
-from .base import *
+from . import base as base_settings
+
+globals().update(base_settings.as_public_settings())
 
 DEBUG = True
+if not base_settings.SECRET_KEY:
+    SECRET_KEY = "dev-only-insecure-secret-key-change-me"
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 CSRF_TRUSTED_ORIGINS = [
@@ -12,7 +16,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": base_settings.BASE_DIR / "db.sqlite3",
     }
 }
 

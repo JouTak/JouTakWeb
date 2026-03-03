@@ -1,12 +1,9 @@
 from accounts.services.account_status import AccountStatusService
-from accounts.services.emailing import EmailService
 from accounts.services.profile import ProfileService
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
     AccountStatusOut,
-    ChangeEmailIn,
     DeleteAccountIn,
-    EmailStatusOut,
     ErrorOut,
     OkOut,
     ProfileUpdateIn,
@@ -117,53 +114,6 @@ def upload_avatar(
     return OkOut(
         ok=True, message="Поле avatar отсутствует в модели пользователя"
     )
-
-
-@account_router.get(
-    "/email",
-    response={200: EmailStatusOut, 401: ErrorOut},
-    summary="Get primary email & verification state",
-    operation_id="account_email_status",
-)
-def account_email_status(request: HttpRequest) -> dict[str, object]:
-    user = _require_authenticated_user(request)
-    SessionService.assert_session_allowed(request)
-    SessionService.touch(request, user)
-    return EmailService.status(user)
-
-
-@account_router.post(
-    "/email/change",
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
-    summary="Request email change (sends confirmation)",
-    operation_id="account_change_email",
-)
-@transaction.atomic
-def account_change_email(
-    request: HttpRequest,
-    payload: ChangeEmailIn = BODY_REQUIRED,
-) -> OkOut:
-    user = _require_authenticated_user(request)
-    SessionService.assert_session_allowed(request)
-    SessionService.touch(request, user)
-    EmailService.request_change(request, user, new_email=payload.new_email)
-    return OkOut(
-        ok=True, message="Проверьте почту, чтобы подтвердить новый адрес"
-    )
-
-
-@account_router.post(
-    "/email/resend",
-    response={200: OkOut, 401: ErrorOut},
-    summary="Resend email confirmation",
-    operation_id="account_resend_email",
-)
-def account_resend_email_verification(request: HttpRequest) -> OkOut:
-    user = _require_authenticated_user(request)
-    SessionService.assert_session_allowed(request)
-    SessionService.touch(request, user)
-    EmailService.resend_confirmation(request, user)
-    return OkOut(ok=True, message="Письмо для подтверждения отправлено")
 
 
 @account_router.get(

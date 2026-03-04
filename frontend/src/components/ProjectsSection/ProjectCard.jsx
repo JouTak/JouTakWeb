@@ -17,7 +17,7 @@ export default function ProjectCard({
             <img src={image} alt={title} />
         </div>
 
-        <div styles={styles.projectInfo}>
+        <div className={styles.projectInfo}>
             <h3>{title}</h3>
             <p>{description}</p>
         </div>

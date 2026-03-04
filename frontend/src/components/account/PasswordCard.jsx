@@ -1,8 +1,9 @@
 import { useMemo, useState, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Button, TextInput } from "@gravity-ui/uikit";
+import { useNavigate } from "react-router-dom";
+import { Button, Switch, TextInput } from "@gravity-ui/uikit";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
-import { changePassword } from "../../services/api";
+import { changePassword, clearAuthState } from "../../services/api";
 
 const cardStyle = {
   border: "1px solid rgba(255,255,255,0.12)",
@@ -116,12 +117,14 @@ export default function PasswordCard({
   defaultOpen = false,
   autoCloseOnSuccess = true,
 }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(!!defaultOpen);
   const [busy, setBusy] = useState(false);
 
   const [curPwd, setCurPwd] = useState("");
   const [new1, setNew1] = useState("");
   const [new2, setNew2] = useState("");
+  const [logoutCurrentSession, setLogoutCurrentSession] = useState(false);
 
   const [touched, setTouched] = useState({ cur: false, n1: false, n2: false });
   const [capsCur, setCapsCur] = useState(false);
@@ -175,6 +178,7 @@ export default function PasswordCard({
     setBackendErr({ cur: "", n1: "" });
     setCapsCur(false);
     setCapsNew(false);
+    setLogoutCurrentSession(false);
   }, []);
 
   const onCancel = useCallback(() => {
@@ -185,12 +189,25 @@ export default function PasswordCard({
   function mapBackendErrors(data) {
     let cur = "";
     let n1 = "";
+    const flatFields =
+      data?.fields && typeof data.fields === "object" ? data.fields : {};
+    const nestedErrors =
+      data?.errors && typeof data.errors === "object" ? data.errors : {};
     const fieldMsgs = (k) =>
-      Array.isArray(data?.[k])
-        ? data[k].join("\n")
-        : typeof data?.[k] === "string"
-          ? data[k]
-          : "";
+      typeof flatFields?.[k] === "string"
+        ? flatFields[k]
+        : Array.isArray(nestedErrors?.[k])
+          ? nestedErrors[k]
+              .map((entry) =>
+                typeof entry?.message === "string" ? entry.message : "",
+              )
+              .filter(Boolean)
+              .join("\n")
+          : Array.isArray(data?.[k])
+            ? data[k].join("\n")
+            : typeof data?.[k] === "string"
+              ? data[k]
+              : "";
     n1 = fieldMsgs("new_password") || fieldMsgs("password") || "";
     cur = fieldMsgs("current_password") || "";
     if (/too short/i.test(n1))
@@ -203,6 +220,39 @@ export default function PasswordCard({
     if (cur || n1) touchAll();
   }
 
+  function firstBackendMessage(data) {
+    if (data?.fields && typeof data.fields === "object") {
+      const firstFieldMessage = Object.values(data.fields).find(
+        (value) => typeof value === "string" && value.trim(),
+      );
+      if (firstFieldMessage) return firstFieldMessage;
+    }
+    if (data?.errors && typeof data.errors === "object" && !Array.isArray(data.errors)) {
+      for (const entries of Object.values(data.errors)) {
+        if (!Array.isArray(entries)) continue;
+        const firstEntry = entries.find(
+          (entry) =>
+            entry && typeof entry.message === "string" && entry.message.trim(),
+        );
+        if (firstEntry?.message) return firstEntry.message;
+      }
+    }
+    if (Array.isArray(data?.errors)) {
+      const firstError = data.errors.find(
+        (entry) => entry && typeof entry.message === "string" && entry.message.trim(),
+      );
+      if (firstError?.message) return firstError.message;
+    }
+    return (
+      (typeof data?.detail === "string" &&
+        data.detail !== "validation_error" &&
+        data.detail) ||
+      (Array.isArray(data?.non_field_errors) &&
+        data.non_field_errors.join("\n")) ||
+      null
+    );
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     touchAll();
@@ -211,12 +261,18 @@ export default function PasswordCard({
 
     setBusy(true);
     try {
-      await changePassword({ current_password: curPwd, new_password: new1 });
+      const result = await changePassword({
+        current_password: curPwd,
+        new_password: new1,
+        logout_current_session: logoutCurrentSession,
+      });
 
       toaster.add({
         name: "pwd-ok",
         title: "Пароль обновлён",
-        content: "Новый пароль уже доступен для авторизации.",
+        content: result?.logged_out_current_session
+          ? "Пароль обновлён. Для продолжения нужно войти снова."
+          : "Пароль обновлён. Другие сессии завершены по правилам безопасности Django.",
         type: "success",
       });
 
@@ -236,6 +292,16 @@ export default function PasswordCard({
         void err;
       }
 
+      if (result?.logged_out_current_session) {
+        clearAuthState();
+        const params = new URLSearchParams({
+          reason: "PASSWORD_CHANGED",
+          next: "/account/security",
+        });
+        navigate(`/session-expired?${params.toString()}`, { replace: true });
+        return;
+      }
+
       if (autoCloseOnSuccess) {
         onCancel();
       } else {
@@ -243,15 +309,10 @@ export default function PasswordCard({
       }
     } catch (ex) {
       const data = ex?.response?.data;
-      const detail =
-        (typeof data?.detail === "string" && data.detail) ||
-        (Array.isArray(data?.non_field_errors) &&
-          data.non_field_errors.join("\n")) ||
-        null;
       toaster.add({
         name: "pwd-err",
         title: "Ошибка",
-        content: detail || "Не удалось изменить пароль.",
+        content: firstBackendMessage(data) || "Не удалось изменить пароль.",
         type: "error",
       });
       if (data && typeof data === "object") mapBackendErrors(data);
@@ -368,6 +429,19 @@ export default function PasswordCard({
           />
 
           <StrengthBar score={strength.score} label={strength.label} />
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <Switch
+              size="m"
+              checked={logoutCurrentSession}
+              onUpdate={setLogoutCurrentSession}
+              content="Выйти и на этом устройстве после смены пароля"
+            />
+            <div style={{ opacity: 0.75, fontSize: 12 }}>
+              Другие сессии завершаются автоматически при смене пароля. Этот
+              переключатель управляет только текущим устройством.
+            </div>
+          </div>
 
           <div style={{ opacity: 0.8, fontSize: 12, display: "grid", gap: 4 }}>
             <div>

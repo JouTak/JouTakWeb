@@ -4,19 +4,25 @@ from dataclasses import dataclass
 
 from accounts.services.account_status import AccountStatusService
 from accounts.services.profile import ProfileService
+from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
+    ChangePasswordOut,
     ProfileOut,
+    RevokeSessionsIn,
     TokenPairOut,
     TokenRefreshIn,
     TokenRefreshOut,
 )
+from allauth.account.internal.flows import (
+    password_change as password_change_flow,
+)
+from allauth.core import context
+from allauth.headless.account.inputs import ChangePasswordInput
 from allauth.mfa.adapter import get_adapter as get_mfa_adapter
 from allauth.socialaccount.models import SocialAccount
 from core.models import UserSessionMeta, UserSessionToken
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout as dj_logout
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
@@ -162,19 +168,52 @@ class AuthService:
         )
 
     @staticmethod
-    def change_password(user: User, current: str, new: str) -> None:
-        if not user.check_password(current):
-            raise HttpError(400, "wrong current password")
-        if not (new and new.strip()):
-            raise HttpError(400, "new password cannot be empty")
+    @transaction.atomic
+    def change_password(
+        request: HttpRequest,
+        user: User,
+        current: str,
+        new: str,
+        *,
+        logout_current_session: bool = False,
+    ) -> ChangePasswordOut:
         if current == new:
             raise HttpError(400, "new password must differ from current")
-        try:
-            validate_password(new, user=user)
-        except ValidationError as e:
-            raise HttpError(400, "; ".join(e.messages)) from e
-        user.set_password(new)
-        user.save(update_fields=["password"])
+        payload = {
+            "current_password": current,
+            "new_password": new,
+        }
+        with context.request_context(request):
+            form = ChangePasswordInput(payload, user=user)
+            if not form.is_valid():
+                raise HttpError(400, form.errors.as_json())
+
+        password_change_flow.change_password(
+            user, form.cleaned_data["new_password"]
+        )
+        request.user = user
+        password_change_flow.finalize_password_change(request, user)
+        SessionService.revoke_bulk(
+            request,
+            payload=RevokeSessionsIn(
+                all_except_current=True,
+                reason="password_changed",
+            ),
+        )
+        if logout_current_session:
+            AuthService.logout_current(request)
+            return ChangePasswordOut(
+                ok=True,
+                message="password changed; current session logged out",
+                logged_out_current_session=True,
+                terminated_other_sessions=True,
+            )
+        return ChangePasswordOut(
+            ok=True,
+            message="password changed",
+            logged_out_current_session=False,
+            terminated_other_sessions=True,
+        )
 
     @staticmethod
     @transaction.atomic
@@ -194,6 +233,45 @@ class AuthService:
         if not user:
             raise HttpError(401, "invalid user")
 
+        mapping = (
+            UserSessionToken.objects.select_for_update()
+            .filter(user=user, refresh_jti=old_jti, revoked_at__isnull=True)
+            .first()
+        )
+        if not mapping:
+            raise HttpError(401, "invalid refresh")
+
+        request_token = request.headers.get("X-Session-Token") or ""
+        request_session_key = request.session.session_key or ""
+        request_meta = (
+            UserSessionMeta.objects.filter(
+                user=user, session_token=request_token
+            ).first()
+            if request_token
+            else None
+        ) or (
+            UserSessionMeta.objects.filter(
+                user=user, session_key=request_session_key
+            ).first()
+            if request_session_key
+            else None
+        )
+        current_session_key = request_session_key or (
+            request_meta.session_key if request_meta else ""
+        )
+        if (
+            not current_session_key
+            or mapping.session_key != current_session_key
+        ):
+            raise HttpError(401, "invalid refresh")
+
+        current_meta = UserSessionMeta.objects.filter(
+            user=user,
+            session_key=mapping.session_key,
+        ).first()
+        if current_meta and current_meta.revoked_at:
+            raise HttpError(401, "invalid refresh")
+
         new_refresh = RefreshToken.for_user(user)
         new_jti = str(new_refresh.get("jti") or "")
 
@@ -201,29 +279,8 @@ class AuthService:
         if old_ot:
             BlacklistedToken.objects.get_or_create(token=old_ot)
 
-        token = request.headers.get("X-Session-Token") or ""
-        dj_key = request.session.session_key or ""
-        meta = (
-            UserSessionMeta.objects.filter(
-                user=user, session_token=token
-            ).first()
-            or UserSessionMeta.objects.filter(
-                user=user, session_key=dj_key
-            ).first()
-        )
-
-        mapping = (
-            UserSessionToken.objects.select_for_update()
-            .filter(user=user, refresh_jti=old_jti, revoked_at__isnull=True)
-            .first()
-        )
-        if mapping:
-            mapping.refresh_jti = new_jti
-            mapping.save(update_fields=["refresh_jti"])
-        elif meta:
-            UserSessionToken.objects.get_or_create(
-                user=user, session_key=meta.session_key, refresh_jti=new_jti
-            )
+        mapping.refresh_jti = new_jti
+        mapping.save(update_fields=["refresh_jti"])
 
         return TokenRefreshOut(
             refresh=str(new_refresh), access=str(new_refresh.access_token)

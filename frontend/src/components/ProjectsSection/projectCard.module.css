@@ -1,0 +1,76 @@
+:root {
+    --big-title-color: #3C9BF9;
+    --big-title-shadow: #003E7CB0;
+    --small-title-color: #3C9BF9;
+    --description-color: #ECF7FF;
+    --background-color: #070E14;
+
+}
+
+@font-face {
+    font-family: 'MinecraftFont';
+    src: url('img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'GeologicaFont';
+    src: url('img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
+}
+
+.section {
+  background-color: var(--background-color);
+  padding: 100px 40px ;
+}
+
+.title {
+  font-family: 'MinecraftFont', sans-serif;
+  color: var(--big-title-color);
+  text-shadow: 5px 5px 0 var(--big-title-shadow);
+  font-size: 64px;
+  font-weight: 400;
+  margin-bottom: 60px;
+}
+
+.card {
+  text-decoration: none;
+}
+
+.card:not(.extended) .imageWrapper img {
+  width: 440px;
+  height: 440px;
+  object-fit: cover;
+}
+
+.card.extended .imageWrapper img {
+  width: 1360px;
+  height: 440px;
+  object-fit: cover;
+}
+
+.projectInfo {
+  margin-top: 30px;
+  font-family: 'GeologicaFont', sans-serif;
+}
+
+.projectInfo h3 {
+    color: var(--small-title-color);
+    font-size: 40px;
+    font-weight: 500;
+}
+
+.projectInfo p {
+    color: var(--description-color);
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1.2;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.card.extended {
+  grid-column: span 3;
+}

@@ -2,6 +2,7 @@ from accounts.services.auth import AuthService
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
     ChangePasswordIn,
+    ChangePasswordOut,
     ErrorOut,
     OkOut,
     ProfileOut,
@@ -74,21 +75,22 @@ def me(request: HttpRequest) -> ProfileOut:
 @auth_router.post(
     "/change_password",
     auth=[x_session_token_auth],
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
+    response={200: ChangePasswordOut, 400: ErrorOut, 401: ErrorOut},
     summary="Change password (requires current password)",
     operation_id="auth_change_password",
 )
 def change_password(
     request: HttpRequest,
     payload: ChangePasswordIn = BODY_REQUIRED,
-) -> OkOut:
+) -> ChangePasswordOut:
     user = _require_active_user(request, touch=True)
-    AuthService.change_password(
+    return AuthService.change_password(
+        request,
         user,
         payload.current_password,
         payload.new_password,
+        logout_current_session=payload.logout_current_session,
     )
-    return OkOut(ok=True, message="password changed")
 
 
 @auth_router.post(

@@ -1,4 +1,4 @@
-export default projects = [
+const projects = [
     {
       title: "JouTak",
       description: "Наш основной сервер. Выживание, строительство и дружба",
@@ -25,3 +25,5 @@ export default projects = [
       extended: true,
     },
   ]
+
+export default projects 

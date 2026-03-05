@@ -5,34 +5,27 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from accounts.transport.schemas import RevokeSessionsIn, SessionRowOut
+from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.usersessions.models import UserSession
 from core.models import UserSessionMeta, UserSessionToken
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout as dj_logout
 from django.contrib.sessions.models import Session
 from django.db import transaction
-from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja.errors import HttpError
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 User = get_user_model()
-
-
-FORWARD_HEADERS = ("HTTP_X_REAL_IP", "HTTP_X_FORWARDED_FOR")
-UNKNOWN_IP_FALLBACK = "127.0.0.1"
+UNKNOWN_IP_FALLBACK = "0.0.0.0"
 
 
 @dataclass(slots=True)
 class SessionService:
     @staticmethod
     def _client_ip(request: HttpRequest) -> str | None:
-        for h in FORWARD_HEADERS:
-            v = request.META.get(h)
-            if v:
-                return v.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR")
+        return get_account_adapter().get_client_ip(request)
 
     @staticmethod
     def _ua(request: HttpRequest) -> str:
@@ -316,7 +309,7 @@ class SessionService:
 
     @staticmethod
     def list(request: HttpRequest, user: User) -> list[SessionRowOut]:
-        us_rows = list(UserSession.objects.filter(user=user))
+        us_rows = list(UserSession.objects.purge_and_list(user))
         meta_rows = list(UserSessionMeta.objects.filter(user=user))
         return SessionService._merge_rows(request, us_rows, meta_rows)
 
@@ -378,45 +371,54 @@ class SessionService:
         )
 
     @staticmethod
-    def _bulk_sessions_queryset(
+    def _candidate_session_keys(
         user: User,
         ids: list[str],
         *,
         all_except_current: bool,
         current_key: str,
-    ) -> QuerySet[UserSession]:
-        qs = UserSession.objects.filter(user=user)
-        if ids:
-            return qs.filter(session_key__in=ids)
-        if current_key and all_except_current:
-            return qs.exclude(session_key=current_key)
-        return qs
-
-    @staticmethod
-    def _session_is_revoked(us: UserSession) -> bool:
-        return bool(
-            getattr(us, "ended_at", None) or getattr(us, "revoked_at", None)
+    ) -> list[str]:
+        keys = set(
+            UserSession.objects.filter(user=user).values_list(
+                "session_key", flat=True
+            )
         )
+        keys.update(
+            UserSessionMeta.objects.filter(user=user).values_list(
+                "session_key", flat=True
+            )
+        )
+        if ids:
+            keys &= set(ids)
+        elif all_except_current and current_key:
+            keys.discard(current_key)
+        return sorted(key for key in keys if key)
 
     @staticmethod
-    def _apply_revoke_state(
-        us: UserSession,
+    def _revoke_session_key(
+        request: HttpRequest,
         *,
+        user: User,
+        session_key: str,
         reason: str,
         now: datetime,
     ) -> None:
-        for field, value in (("ended_at", now), ("revoked_at", now)):
-            if hasattr(us, field):
-                setattr(us, field, value)
-        for field, value in (
-            ("ended_reason", reason),
-            ("revoked_reason", reason),
-        ):
-            if hasattr(us, field):
-                setattr(us, field, value)
-        if hasattr(us, "ended"):
-            us.ended = True
-        us.save()
+        us = UserSession.objects.filter(
+            user=user, session_key=session_key
+        ).first()
+        if us:
+            us.end()
+
+        UserSessionMeta.objects.update_or_create(
+            user=user,
+            session_key=session_key,
+            defaults={"revoked_at": now, "revoked_reason": reason},
+        )
+        SessionService._blacklist_session_tokens(user, session_key, now)
+        if SessionService._session_key(request) == session_key:
+            dj_logout(request)
+        elif not us:
+            SessionService._kill_django_session(request, session_key)
 
     @staticmethod
     def revoke_bulk(
@@ -433,7 +435,7 @@ class SessionService:
 
         cur_key = SessionService._resolve_current_session_key(request, user)
         reason = (payload.reason or "bulk_except_current").lower()
-        sessions = SessionService._bulk_sessions_queryset(
+        session_keys = SessionService._candidate_session_keys(
             user,
             ids,
             all_except_current=payload.all_except_current,
@@ -443,23 +445,24 @@ class SessionService:
         now = timezone.now()
         revoked_ids, skipped_ids = [], []
 
-        for us in sessions:
-            if SessionService._session_is_revoked(us):
-                skipped_ids.append(us.session_key)
+        for session_key in session_keys:
+            meta = UserSessionMeta.objects.filter(
+                user=user, session_key=session_key
+            ).first()
+            us = UserSession.objects.filter(
+                user=user, session_key=session_key
+            ).first()
+            if bool(meta and meta.revoked_at) and not (us and us.exists()):
+                skipped_ids.append(session_key)
                 continue
-
-            SessionService._apply_revoke_state(us, reason=reason, now=now)
-
-            UserSessionMeta.objects.update_or_create(
+            SessionService._revoke_session_key(
+                request,
                 user=user,
-                session_key=us.session_key,
-                defaults={"revoked_at": now, "revoked_reason": reason},
+                session_key=session_key,
+                reason=reason,
+                now=now,
             )
-
-            SessionService._blacklist_session_tokens(user, us.session_key, now)
-            SessionService._kill_django_session(request, us.session_key)
-
-            revoked_ids.append(us.session_key)
+            revoked_ids.append(session_key)
 
         return {
             "ok": True,
@@ -483,39 +486,29 @@ class SessionService:
         reason = (reason or "manual").lower()
 
         us = UserSession.objects.filter(user=user, session_key=sid).first()
-        if not us:
+        meta = UserSessionMeta.objects.filter(
+            user=user, session_key=sid
+        ).first()
+        if not us and not meta:
             raise HttpError(404, "session not found")
 
         now = timezone.now()
-        for field, value in (("ended_at", now), ("revoked_at", now)):
-            if hasattr(us, field):
-                setattr(us, field, value)
-        for field, value in (
-            ("ended_reason", reason),
-            ("revoked_reason", reason),
-        ):
-            if hasattr(us, field):
-                setattr(us, field, value)
-        if hasattr(us, "ended") and not getattr(us, "ended", False):
-            us.ended = True
-        us.save()
-
-        UserSessionMeta.objects.update_or_create(
+        SessionService._revoke_session_key(
+            request,
             user=user,
-            session_key=us.session_key,
-            defaults={"revoked_at": now, "revoked_reason": reason},
+            session_key=sid,
+            reason=reason,
+            now=now,
         )
 
-        SessionService._blacklist_session_tokens(user, us.session_key, now)
-        SessionService._kill_django_session(request, us.session_key)
-
-        revoked_at = getattr(us, "ended_at", None) or getattr(
-            us, "revoked_at", now
-        )
         return {
             "ok": True,
-            "id": us.session_key,
-            "revoked_reason": getattr(us, "ended_reason", None)
-            or getattr(us, "revoked_reason", reason),
-            "revoked_at": revoked_at,
+            "id": sid,
+            "revoked_reason": (
+                (getattr(us, "ended_reason", None) if us else None)
+                or (getattr(us, "revoked_reason", None) if us else None)
+                or (meta.revoked_reason if meta else None)
+                or reason
+            ),
+            "revoked_at": now,
         }

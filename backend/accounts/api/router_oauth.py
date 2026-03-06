@@ -18,7 +18,7 @@ router_oauth = Router(tags=["OAuth"], auth=[x_session_token_auth])
 def list_providers(request: HttpRequest) -> ProvidersOut:
     SessionService.assert_session_allowed(request)
     SessionService.touch(request, request.auth)
-    return ProvidersOut(providers=OAuthService.list_providers())
+    return ProvidersOut(providers=OAuthService.list_providers(request))
 
 
 @router_oauth.get(
@@ -35,5 +35,9 @@ def link_provider(
     SessionService.touch(request, request.auth)
     AccountStatusService.require_personalized_profile(request.auth)
     next_path = OAuthService.sanitize_next_path(request.GET.get("next"))
-    data = OAuthService.link_provider(provider, next_path=next_path)
+    data = OAuthService.link_provider(
+        request,
+        provider,
+        next_path=next_path,
+    )
     return OAuthLinkOut(**data)

@@ -1,0 +1,10 @@
+{% extends "account/email/base_message.txt" %}
+{% load account %}
+
+{% block content %}{% autoescape off %}{% user_display user as user_display %}Вы получили это письмо, потому что пользователь {{ user_display }} указал этот адрес электронной почты для аккаунта на сайте {{ current_site.name|default:current_site.domain }}.
+
+{% if code %}Код подтверждения:
+{{ code }}{% else %}Чтобы подтвердить адрес электронной почты, перейдите по ссылке:
+{{ activate_url }}{% endif %}
+
+Если вы не запрашивали это действие, просто проигнорируйте письмо.{% endautoescape %}{% endblock content %}

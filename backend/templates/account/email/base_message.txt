@@ -1,0 +1,7 @@
+{% autoescape off %}Здравствуйте!
+
+{% block content %}{% endblock content %}
+
+С уважением,
+Команда {{ current_site.name|default:current_site.domain }}
+{{ current_site.domain }}{% endautoescape %}

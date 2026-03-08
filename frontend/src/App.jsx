@@ -22,9 +22,6 @@ import RequireAuth from "./components/RequireAuth.jsx";
 import Pay from "./pages/joutak/Pay.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
 
-// демо версии секций
-import ProjectsSection from "./components/ProjectsSection/ProjectsSection.jsx";
-
 function safeInternalPath(path) {
   if (typeof path !== "string") return "/joutak";
   if (!path.startsWith("/")) return "/joutak";
@@ -63,8 +60,6 @@ function AppRoutes() {
         <Route path="/legacy" element={<Legacy />} />
         <Route path="/itmocraft" element={<ItmoCraft />} />
         <Route path="/minigames" element={<MiniGames />} />
-        {/* демо-версия */}
-        <Route path="/projects-preview" element={<ProjectsSection />} /> 
         <Route path="/contact" element={<Contact />} />
         <Route
           path="/account/security"

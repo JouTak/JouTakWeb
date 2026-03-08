@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import ProjectsSection from '../components/ProjectsSection/ProjectsSection'
+import EventsSection from '../components/EventsSection/EventsSection'
 
 const JouTak = () => {
   return (
@@ -112,6 +113,7 @@ const JouTak = () => {
       </div>
 
       <ProjectsSection />
+      <EventsSection />
     </div>
   );
 };

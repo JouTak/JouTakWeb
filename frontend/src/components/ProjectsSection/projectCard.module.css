@@ -19,7 +19,14 @@
 
 .section {
   background-color: var(--background-color);
-  padding: 100px 40px ;
+  padding: 100px 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inner {
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
 .title {
@@ -33,23 +40,28 @@
 
 .card {
   text-decoration: none;
+  display: block;
+  flex: 0 0 calc((100% - 40px) / 3);
 }
 
 .card:not(.extended) .imageWrapper img {
-  width: 440px;
-  height: 440px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
   object-fit: cover;
 }
 
 .card.extended .imageWrapper img {
-  width: 1360px;
-  height: 440px;
+  width: 100%;
+  aspect-ratio: 1360 / 440;
+  height: auto;
   object-fit: cover;
 }
 
 .projectInfo {
   margin-top: 30px;
   font-family: 'GeologicaFont', sans-serif;
+  text-align: left;
 }
 
 .projectInfo h3 {
@@ -66,11 +78,56 @@
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
 }
 
 .card.extended {
-  grid-column: span 3;
+  flex: 0 0 100%;
+}
+
+@media (max-width: 1024px) {
+  .section {
+    padding: 80px 30px;
+  }
+
+  .card {
+    flex: 0 0 calc((100% - 20px) / 2);
+  }
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 60px 20px;
+  }
+
+  .title {
+    font-size: 42px;
+    margin-bottom: 40px;
+  }
+
+  .card,
+  .card.extended {
+    flex: 0 0 calc((100% - 20px) / 2);
+  }
+
+  .projectInfo h3 {
+    font-size: 28px;
+  }
+
+  .projectInfo p {
+    font-size: 16px;
+  }
+
+  .card.extended .imageWrapper img {
+    aspect-ratio: 1 / 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .card,
+  .card.extended {
+    flex: 0 0 100%;
+  }
 }

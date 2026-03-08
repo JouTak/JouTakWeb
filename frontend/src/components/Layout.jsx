@@ -9,10 +9,8 @@ const Layout = ({ children }) => {
   return (
     <>
       <Header />
-      <main className="container my-4">{children}</main>
-      <FeatureGate flag="site_footer_v2" fallback={<Footer />}>
-        <FooterV2 />
-      </FeatureGate>
+      <main className="my-4 w-100">{children}</main>
+      <Footer />
     </>
   );
 };

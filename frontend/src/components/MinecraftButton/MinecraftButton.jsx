@@ -1,11 +1,9 @@
+import styles from "./MinecraftButton.module.css";
+
 export default function MinecraftButton({ children, onClick }) {
-    const styles = {
-
-    }
-
-    return(
-        <button style={styles} onClick={onClick}>
-            {children}
-        </button>
-    )
+  return (
+    <button className={styles.button} onClick={onClick}>
+      {children}
+    </button>
+  );
 }

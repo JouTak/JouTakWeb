@@ -1,3 +1,16 @@
+x-backend-environment: &backend-environment
+  DJANGO_SETTINGS_MODULE: backend.settings.prod
+  USE_X_FORWARDED_PROTO: "true"
+  SECURE_SSL_REDIRECT: "true"
+  SECURE_HSTS_SECONDS: "31536000"
+  DJANGO_MIGRATE: "1"
+  DJANGO_COLLECTSTATIC: "1"
+  DJANGO_CHECK_DEPLOY: "1"
+  DJANGO_CHECK_DEPLOY_STRICT: "1"
+  DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+  DATABASE_URL_FILE: /run/secrets/database_url
+  SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+
 services:
   traefik:
     image: traefik:v3.1
@@ -45,22 +58,7 @@ services:
     image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
     env_file:
       - ./.env.production
-    environment:
-      DJANGO_SETTINGS_MODULE: backend.settings.prod
-      USE_X_FORWARDED_PROTO: "true"
-      SECURE_SSL_REDIRECT: "true"
-      SECURE_HSTS_SECONDS: "31536000"
-      DJANGO_MIGRATE: "1"
-      DJANGO_COLLECTSTATIC: "1"
-      DJANGO_CHECK_DEPLOY: "1"
-      DJANGO_CHECK_DEPLOY_STRICT: "1"
-      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
-      DATABASE_URL_FILE: /run/secrets/database_url
-      #      YANDEX_CLIENT_ID_FILE: /run/secrets/yandex_client_id
-      #      YANDEX_SECRET_FILE: /run/secrets/yandex_secret
-      #      GITHUB_CLIENT_ID_FILE: /run/secrets/github_client_id
-      #      GITHUB_SECRET_FILE: /run/secrets/github_secret
-      SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+    environment: *backend-environment
     secrets:
       - django_secret_key
       - database_url
@@ -85,6 +83,23 @@ services:
         - traefik.http.routers.backend-sec.tls=true
         - traefik.http.routers.backend-sec.tls.certresolver=le
         - traefik.http.services.backend.loadbalancer.server.port=8000
+
+  backend-maintenance:
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    env_file:
+      - ./.env.production
+    working_dir: /app/backend
+    entrypoint: ["/usr/bin/tini", "--"]
+    command: ["python", "manage.py", "run_auth_maintenance"]
+    environment: *backend-environment
+    secrets:
+      - django_secret_key
+      - database_url
+      - sentry_dsn
+    networks:
+      - joutak_net
+    deploy:
+      replicas: 1
 
   frontend:
     image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}

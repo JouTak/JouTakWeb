@@ -57,6 +57,19 @@ django_bootstrap() {
     python manage.py migrate --noinput
   fi
 
+  if [ "${DJANGO_SYNC_SITE:-1}" = "1" ]; then
+    log "Ensuring django.contrib.sites is configured ..."
+    python manage.py sync_site
+  fi
+
+  if [ "${DJANGO_REENCRYPT_MFA_AUTHENTICATORS:-1}" = "1" ]; then
+    log "Encrypting legacy MFA secrets ..."
+    python manage.py reencrypt_mfa_authenticators
+  fi
+
+  log "Running auth/session maintenance bootstrap ..."
+  python manage.py run_auth_maintenance --once --db-wait-seconds 0
+
   if [ "${DJANGO_COLLECTSTATIC:-1}" = "1" ]; then
     log "Collecting static ..."
     python manage.py collectstatic --noinput

@@ -10,6 +10,17 @@ import {
 } from "../services/api";
 import { needsPersonalization } from "../utils/profileState";
 
+const fieldBlockStyle = {
+  display: "grid",
+  gap: 6,
+};
+
+const fieldLabelStyle = {
+  fontSize: 13,
+  lineHeight: 1.25,
+  opacity: 0.85,
+};
+
 function isSafeInternalPath(path) {
   return (
     typeof path === "string" &&
@@ -251,26 +262,32 @@ export default function AuthModal({
 
         {isLogin ? (
           <form onSubmit={onLoginSubmit} style={{ display: "grid", gap: 12 }}>
-            <TextInput
-              size="l"
-              label="Никнейм"
-              value={username}
-              onUpdate={setUsername}
-              name="joutak__username"
-              autoComplete="username"
-              autoFocus
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="password"
-              label="Пароль"
-              value={password}
-              onUpdate={setPassword}
-              name="joutak__password"
-              autoComplete="current-password"
-              disabled={busy}
-            />
+            <label style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Никнейм</span>
+              <TextInput
+                size="l"
+                value={username}
+                onUpdate={setUsername}
+                name="joutak__username"
+                autoComplete="username"
+                autoFocus
+                disabled={busy}
+                aria-label="Никнейм"
+              />
+            </label>
+            <label style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Пароль</span>
+              <TextInput
+                size="l"
+                type="password"
+                value={password}
+                onUpdate={setPassword}
+                name="joutak__password"
+                autoComplete="current-password"
+                disabled={busy}
+                aria-label="Пароль"
+              />
+            </label>
             <Button
               view="action"
               size="l"
@@ -347,16 +364,19 @@ export default function AuthModal({
                 onSubmit={onResetRequestSubmit}
                 style={{ display: "grid", gap: 12 }}
               >
-                <TextInput
-                  size="l"
-                  type="email"
-                  label="Email"
-                  value={resetEmail}
-                  onUpdate={setResetEmail}
-                  autoComplete="email"
-                  autoFocus
-                  disabled={busy}
-                />
+                <label style={fieldBlockStyle}>
+                  <span style={fieldLabelStyle}>Email</span>
+                  <TextInput
+                    size="l"
+                    type="email"
+                    value={resetEmail}
+                    onUpdate={setResetEmail}
+                    autoComplete="email"
+                    autoFocus
+                    disabled={busy}
+                    aria-label="Email"
+                  />
+                </label>
                 {resetError && (
                   <p style={{ margin: 0, color: "#ff8e8e" }}>{resetError}</p>
                 )}
@@ -392,45 +412,57 @@ export default function AuthModal({
           </div>
         ) : (
           <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
-            <TextInput
-              size="l"
-              label="Никнейм"
-              value={suUsername}
-              onUpdate={setSuUsername}
-              name="joutak__username"
-              autoComplete="username"
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="email"
-              label="Email"
-              value={suEmail}
-              onUpdate={setSuEmail}
-              name="joutak__email"
-              autoComplete="email"
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="password"
-              label="Пароль"
-              value={suPassword}
-              onUpdate={setSuPassword}
-              name="joutak__password"
-              autoComplete="new-password"
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="password"
-              label="Повторите пароль"
-              value={suPassword2}
-              onUpdate={setSuPassword2}
-              name="joutak__password"
-              autoComplete="new-password"
-              disabled={busy}
-            />
+            <label style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Никнейм</span>
+              <TextInput
+                size="l"
+                value={suUsername}
+                onUpdate={setSuUsername}
+                name="joutak__username"
+                autoComplete="username"
+                disabled={busy}
+                aria-label="Никнейм"
+              />
+            </label>
+            <label style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Email</span>
+              <TextInput
+                size="l"
+                type="email"
+                value={suEmail}
+                onUpdate={setSuEmail}
+                name="joutak__email"
+                autoComplete="email"
+                disabled={busy}
+                aria-label="Email"
+              />
+            </label>
+            <label style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Пароль</span>
+              <TextInput
+                size="l"
+                type="password"
+                value={suPassword}
+                onUpdate={setSuPassword}
+                name="joutak__password"
+                autoComplete="new-password"
+                disabled={busy}
+                aria-label="Пароль"
+              />
+            </label>
+            <label style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Повторите пароль</span>
+              <TextInput
+                size="l"
+                type="password"
+                value={suPassword2}
+                onUpdate={setSuPassword2}
+                name="joutak__password"
+                autoComplete="new-password"
+                disabled={busy}
+                aria-label="Повторите пароль"
+              />
+            </label>
             <Button
               view="action"
               size="l"

@@ -36,8 +36,7 @@ export default function SessionExpired() {
     };
   }, [location.search]);
 
-  const message =
-    reasonText[reason] || reasonText.SESSION_UNAUTHORIZED;
+  const message = reasonText[reason] || reasonText.SESSION_UNAUTHORIZED;
 
   return (
     <section

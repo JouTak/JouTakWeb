@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Label, Loader, TextInput, useToaster } from "@gravity-ui/uikit";
+import {
+  Button,
+  Label,
+  Loader,
+  TextInput,
+  useToaster,
+} from "@gravity-ui/uikit";
 import { me, updateProfile } from "../services/api";
 import { isPersonalizedProfile } from "../utils/profileState";
 import {
@@ -60,13 +66,7 @@ export default function AccountOnboarding() {
       done += 1;
     }
     return { done, total };
-  }, [
-    vkUsername,
-    minecraftNick,
-    minecraftHasLicense,
-    isItmoStudent,
-    itmoIsu,
-  ]);
+  }, [vkUsername, minecraftNick, minecraftHasLicense, isItmoStudent, itmoIsu]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,7 +185,14 @@ export default function AccountOnboarding() {
 
   return (
     <section style={cardStyle}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
         <div>
           <h2 style={{ margin: 0 }}>Обязательная персонализация профиля</h2>
           <p style={{ margin: "8px 0 0", opacity: 0.85 }}>
@@ -216,8 +223,8 @@ export default function AccountOnboarding() {
         >
           <b>Что будет, если не заполнить?</b>
           <div style={{ marginTop: 6, opacity: 0.9 }}>
-            Аккаунт останется в базовом режиме: часть функций будет
-            недоступна, пока персонализация не завершена.
+            Аккаунт останется в базовом режиме: часть функций будет недоступна,
+            пока персонализация не завершена.
           </div>
         </div>
       )}
@@ -305,8 +312,19 @@ export default function AccountOnboarding() {
           />
         )}
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "space-between", flexWrap: "wrap" }}>
-          <Button view="outlined" onClick={() => navigate("/account/security")} type="button">
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+          }}
+        >
+          <Button
+            view="outlined"
+            onClick={() => navigate("/account/security")}
+            type="button"
+          >
             Аккаунт и безопасность
           </Button>
           <Button view="action" type="submit" loading={saving}>

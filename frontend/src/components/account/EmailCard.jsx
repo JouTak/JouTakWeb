@@ -92,7 +92,8 @@ export default function EmailCard({ initialStatus }) {
       const msg =
         (Array.isArray(errors) &&
           errors.find(
-            (item) => item && typeof item.message === "string" && item.message.trim(),
+            (item) =>
+              item && typeof item.message === "string" && item.message.trim(),
           )?.message) ||
         err?.response?.data?.detail ||
         "Не удалось отправить письмо";
@@ -126,7 +127,9 @@ export default function EmailCard({ initialStatus }) {
       setVerified(!!result.verified);
       setPendingEmail(result.pending_email || String(newEmail || "").trim());
       setResendTarget(
-        result.resend_target || result.pending_email || String(newEmail || "").trim(),
+        result.resend_target ||
+          result.pending_email ||
+          String(newEmail || "").trim(),
       );
       setEditMode(false);
     } catch (err) {
@@ -134,7 +137,8 @@ export default function EmailCard({ initialStatus }) {
       const msg =
         (Array.isArray(errors) &&
           errors.find(
-            (item) => item && typeof item.message === "string" && item.message.trim(),
+            (item) =>
+              item && typeof item.message === "string" && item.message.trim(),
           )?.message) ||
         err?.response?.data?.detail ||
         "Не удалось изменить email";

@@ -23,9 +23,7 @@ const fieldLabelStyle = {
 
 function isSafeInternalPath(path) {
   return (
-    typeof path === "string" &&
-    path.startsWith("/") &&
-    !path.startsWith("//")
+    typeof path === "string" && path.startsWith("/") && !path.startsWith("//")
   );
 }
 
@@ -33,7 +31,8 @@ function extractErrorMessage(error, fallback) {
   const data = error?.response?.data;
   if (Array.isArray(data?.errors)) {
     const firstError = data.errors.find(
-      (entry) => entry && typeof entry.message === "string" && entry.message.trim(),
+      (entry) =>
+        entry && typeof entry.message === "string" && entry.message.trim(),
     );
     if (firstError?.message) return firstError.message;
   }

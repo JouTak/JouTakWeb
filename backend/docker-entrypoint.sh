@@ -76,8 +76,8 @@ django_bootstrap() {
   fi
 
   if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL:-}" ] ; then
-  log "Ensuring superuser ${DJANGO_SUPERUSER_USERNAME} exists ..."
-  python manage.py shell -c "
+    log "Ensuring superuser ${DJANGO_SUPERUSER_USERNAME} exists ..."
+    python manage.py shell -c "
 import os
 from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldDoesNotExist
@@ -109,7 +109,10 @@ if created:
 else:
     print('Superuser already exists:', getattr(user, username_field))
 "
-fi
+  fi
+
+  log "Ensuring allauth email addresses are in sync ..."
+  python manage.py sync_email_addresses
 }
 
 wait_for_db

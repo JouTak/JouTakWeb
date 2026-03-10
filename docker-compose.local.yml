@@ -22,6 +22,7 @@ x-backend-environment: &backend-environment
   DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
   CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
+  DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL: "true"
   DJANGO_SITE_DOMAIN: ${DJANGO_SITE_DOMAIN:-}
   DJANGO_SITE_NAME: ${DJANGO_SITE_NAME:-}
   ACCOUNT_TRUST_PROXY_HEADERS: ${ACCOUNT_TRUST_PROXY_HEADERS:-false}

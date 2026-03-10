@@ -11,7 +11,7 @@ x-backend-environment: &backend-environment
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
   DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?DJANGO_CSRF_TRUSTED_ORIGINS is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
-  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
+  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
   DJANGO_SITE_DOMAIN: ${DJANGO_SITE_DOMAIN:-}
   DJANGO_SITE_NAME: ${DJANGO_SITE_NAME:-}
   ACCOUNT_TRUST_PROXY_HEADERS: ${ACCOUNT_TRUST_PROXY_HEADERS:-false}
@@ -56,7 +56,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=2)",
         ]
       interval: 10s
       timeout: 3s

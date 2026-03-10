@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import PropTypes from "prop-types";
 import {
   Button,
   Label,
@@ -27,26 +28,34 @@ const headerStyle = {
   gap: 12,
 };
 
-export default function EmailCard() {
-  const [email, setEmail] = useState("");
-  const [verified, setVerified] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
-  const [resendTarget, setResendTarget] = useState("");
-  const [loading, setLoading] = useState(true);
+export default function EmailCard({ initialStatus }) {
+  const [email, setEmail] = useState(() => initialStatus?.email || "");
+  const [verified, setVerified] = useState(() => !!initialStatus?.verified);
+  const [pendingEmail, setPendingEmail] = useState(
+    () => initialStatus?.pending_email || "",
+  );
+  const [resendTarget, setResendTarget] = useState(
+    () => initialStatus?.resend_target || "",
+  );
+  const [loading, setLoading] = useState(initialStatus === undefined);
   const [editMode, setEditMode] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
+  const [newEmail, setNewEmail] = useState(() => initialStatus?.email || "");
   const [busy, setBusy] = useState(false);
   const { add } = useToaster();
+
+  const applyStatus = useCallback((status = {}) => {
+    setEmail(status.email || "");
+    setVerified(!!status.verified);
+    setPendingEmail(status.pending_email || "");
+    setResendTarget(status.resend_target || "");
+    setNewEmail(status.email || "");
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const s = await getEmailStatus();
-      setEmail(s.email || "");
-      setVerified(!!s.verified);
-      setPendingEmail(s.pending_email || "");
-      setResendTarget(s.resend_target || "");
-      setNewEmail(s.email || "");
+      const status = await getEmailStatus();
+      applyStatus(status);
     } catch {
       add({
         name: "email-load-error",
@@ -57,11 +66,16 @@ export default function EmailCard() {
     } finally {
       setLoading(false);
     }
-  }, [add]);
+  }, [add, applyStatus]);
 
   useEffect(() => {
+    if (initialStatus !== undefined) {
+      applyStatus(initialStatus);
+      setLoading(false);
+      return;
+    }
     load();
-  }, [load]);
+  }, [applyStatus, initialStatus, load]);
 
   async function onResend() {
     setBusy(true);
@@ -222,3 +236,12 @@ export default function EmailCard() {
     </section>
   );
 }
+
+EmailCard.propTypes = {
+  initialStatus: PropTypes.shape({
+    email: PropTypes.string,
+    verified: PropTypes.bool,
+    pending_email: PropTypes.string,
+    resend_target: PropTypes.string,
+  }),
+};

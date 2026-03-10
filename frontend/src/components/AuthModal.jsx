@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button, TextInput, useToaster } from "@gravity-ui/uikit";
 import { useNavigate } from "react-router-dom";
-import { doLogin, doSignupAndLogin, me } from "../services/api";
+import {
+  doLogin,
+  doSignupAndLogin,
+  me,
+  requestPasswordReset,
+} from "../services/api";
 import { needsPersonalization } from "../utils/profileState";
 
 function isSafeInternalPath(path) {
@@ -59,10 +64,18 @@ export default function AuthModal({
   const [suEmail, setSuEmail] = useState("");
   const [suPassword, setSuPassword] = useState("");
   const [suPassword2, setSuPassword2] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
 
   const toaster = useToaster();
   const isLogin = mode === "login";
-  const title = useMemo(() => (isLogin ? "Вход" : "Регистрация"), [isLogin]);
+  const isResetPassword = mode === "reset-password";
+  const title = useMemo(() => {
+    if (isResetPassword) return "Сброс пароля";
+    if (isLogin) return "Вход";
+    return "Регистрация";
+  }, [isLogin, isResetPassword]);
   const safeSuccessRedirectTo = useMemo(() => {
     if (isSafeInternalPath(successRedirectTo)) return successRedirectTo;
     return null;
@@ -75,6 +88,9 @@ export default function AuthModal({
     setSuEmail("");
     setSuPassword("");
     setSuPassword2("");
+    setResetEmail("");
+    setResetError("");
+    setResetSuccess("");
   }
 
   function close({ notifyParent = true } = {}) {
@@ -107,6 +123,37 @@ export default function AuthModal({
     if (suPassword.length < 8) return "Минимальная длина пароля — 8 символов.";
     if (suPassword2 !== suPassword) return "Пароли не совпадают.";
     return null;
+  }
+
+  async function onResetRequestSubmit(e) {
+    e.preventDefault();
+    const trimmedEmail = String(resetEmail || "").trim();
+    if (!trimmedEmail) {
+      setResetError("Укажите email.");
+      return;
+    }
+    if (!emailOk(trimmedEmail)) {
+      setResetError("Неверный формат email.");
+      return;
+    }
+
+    setBusy(true);
+    setResetError("");
+    try {
+      await requestPasswordReset(trimmedEmail);
+      setResetSuccess(
+        "Если аккаунт с таким email существует, мы отправили письмо со ссылкой для сброса пароля.",
+      );
+    } catch (ex) {
+      setResetError(
+        extractErrorMessage(
+          ex,
+          "Не удалось отправить письмо для сброса пароля.",
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onLoginSubmit(e) {
@@ -249,8 +296,10 @@ export default function AuthModal({
               width="max"
               type="button"
               onClick={() => {
-                close({ notifyParent: false });
-                navigate("/reset-password");
+                setResetError("");
+                setResetSuccess("");
+                setResetEmail("");
+                setMode("reset-password");
               }}
             >
               Забыли пароль?
@@ -268,6 +317,79 @@ export default function AuthModal({
               </Button>
             </div>
           </form>
+        ) : isResetPassword ? (
+          <div style={{ display: "grid", gap: 12 }}>
+            <p style={{ margin: 0, opacity: 0.9 }}>
+              Укажите email, и мы отправим письмо со ссылкой для сброса пароля.
+            </p>
+
+            {resetSuccess ? (
+              <>
+                <p style={{ margin: 0, opacity: 0.9 }}>{resetSuccess}</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button view="action" onClick={() => setMode("login")}>
+                    Вернуться ко входу
+                  </Button>
+                  <Button
+                    view="outlined"
+                    type="button"
+                    onClick={() => {
+                      setResetSuccess("");
+                      setResetError("");
+                    }}
+                  >
+                    Отправить ещё раз
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <form
+                onSubmit={onResetRequestSubmit}
+                style={{ display: "grid", gap: 12 }}
+              >
+                <TextInput
+                  size="l"
+                  type="email"
+                  label="Email"
+                  value={resetEmail}
+                  onUpdate={setResetEmail}
+                  autoComplete="email"
+                  autoFocus
+                  disabled={busy}
+                />
+                {resetError && (
+                  <p style={{ margin: 0, color: "#ff8e8e" }}>{resetError}</p>
+                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button view="action" type="submit" loading={busy}>
+                    Отправить письмо
+                  </Button>
+                  <Button
+                    view="outlined"
+                    type="button"
+                    onClick={() => {
+                      setResetError("");
+                      setMode("login");
+                    }}
+                  >
+                    Назад ко входу
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: 4,
+              }}
+            >
+              <Button view="flat" onClick={close}>
+                Закрыть
+              </Button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
             <TextInput

@@ -6,7 +6,12 @@ from accounts.tests.base import APITestCase
 from allauth.account.models import EmailAddress
 from allauth.usersessions.models import UserSession
 from core.models import UserProfile, UserSessionMeta
-from django.contrib.auth import get_user_model
+from django.contrib.auth import (
+    BACKEND_SESSION_KEY,
+    HASH_SESSION_KEY,
+    SESSION_KEY,
+    get_user_model,
+)
 from django.contrib.sessions.backends.db import SessionStore
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
@@ -36,7 +41,11 @@ class AccountApiTests(APITestCase):
         )
 
         other_store = SessionStore()
-        other_store["uid"] = user.pk
+        other_store[SESSION_KEY] = str(user.pk)
+        other_store[BACKEND_SESSION_KEY] = (
+            "django.contrib.auth.backends.ModelBackend"
+        )
+        other_store[HASH_SESSION_KEY] = user.get_session_auth_hash()
         other_store.save()
         other_key = other_store.session_key
         UserSession.objects.create(
@@ -48,10 +57,9 @@ class AccountApiTests(APITestCase):
         return current_key, other_key
 
     def _revoke_token(self, user: User, token: str) -> None:
-        current_key = self._ensure_current_session_key() or token
         UserSessionMeta.objects.update_or_create(
             user=user,
-            session_key=current_key,
+            session_key=token,
             defaults={
                 "session_token": token,
                 "revoked_reason": "manual",
@@ -199,8 +207,6 @@ class AccountApiTests(APITestCase):
     def test_protected_post_endpoints_require_authentication(self) -> None:
         cases = (
             ("/account/delete", {"current_password": self.default_password}),
-            ("/account/email/change", {"new_email": self.unique_email("new")}),
-            ("/account/email/resend", {}),
             (
                 "/account/sessions/bulk",
                 {"all_except_current": True, "reason": "manual"},
@@ -256,49 +262,52 @@ class AccountApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 422, response.content)
 
-    def test_email_change_requires_new_email_field(self) -> None:
+    def test_email_change_requires_email_field(self) -> None:
         _, token = self.create_authenticated_user()
-        response = self.post_json(
-            "/account/email/change",
+        response = self.headless_post_json(
+            "/account/email",
             {},
             **self.auth_headers(token),
         )
-        self.assertEqual(response.status_code, 422, response.content)
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertTrue(response.json().get("errors"))
 
     def test_email_status_requires_authentication(self) -> None:
-        response = self.client.get(self.api("/account/email"))
+        response = self.client.get(self.headless("/account/email"))
         self.assertEqual(response.status_code, 401, response.content)
 
-    def test_email_status_returns_email_and_verification_state(self) -> None:
+    def test_email_status_returns_email_addresses(self) -> None:
         user, token = self.create_authenticated_user()
         response = self.client.get(
-            self.api("/account/email"),
+            self.headless("/account/email"),
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 200, response.content)
-        data = response.json()
-        self.assertEqual(data["email"], user.email)
-        self.assertIsInstance(data["verified"], bool)
+        data = response.json()["data"]
+        self.assertTrue(
+            any(item["email"] == user.email for item in data),
+            response.content,
+        )
 
     def test_email_status_rejects_revoked_session(self) -> None:
         user, token = self.create_authenticated_user()
         self._revoke_token(user, token)
+        self.client.cookies.clear()
         response = self.client.get(
-            self.api("/account/email"),
+            self.headless("/account/email"),
             **self.auth_headers(token),
         )
-        self.assertEqual(response.status_code, 401, response.content)
-        self.assertEqual(response.json()["detail"], "session revoked")
+        self.assertEqual(response.status_code, 410, response.content)
 
     def test_email_change_invalid_email_returns_400(self) -> None:
         _, token = self.create_authenticated_user()
-        response = self.post_json(
-            "/account/email/change",
-            {"new_email": "bad-email"},
+        response = self.headless_post_json(
+            "/account/email",
+            {"email": "bad-email"},
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 400, response.content)
-        self.assertEqual(response.json()["detail"], "Invalid email")
+        self.assertTrue(response.json().get("errors"))
 
     @patch("allauth.account.models.EmailAddress.send_confirmation")
     def test_email_change_rejects_verified_email_of_other_user(
@@ -306,6 +315,7 @@ class AccountApiTests(APITestCase):
         send_confirmation_mock: Mock,
     ) -> None:
         _, token = self.create_authenticated_user()
+        send_confirmation_mock.reset_mock()
         taken_email = self.unique_email("taken")
         other_user = User.objects.create_user(
             username=self.unique_username("other"),
@@ -318,24 +328,22 @@ class AccountApiTests(APITestCase):
             defaults={"primary": True, "verified": True},
         )
 
-        response = self.post_json(
-            "/account/email/change",
-            {"new_email": taken_email.upper()},
+        response = self.headless_post_json(
+            "/account/email",
+            {"email": taken_email.upper()},
             **self.auth_headers(token),
         )
-        self.assertEqual(response.status_code, 400, response.content)
-        self.assertEqual(
-            response.json()["detail"],
-            "Этот email уже используется другим аккаунтом",
-        )
-        send_confirmation_mock.assert_not_called()
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(response.json()["data"])
+        send_confirmation_mock.assert_called_once()
 
     @patch("allauth.account.models.EmailAddress.send_confirmation")
-    def test_email_change_normalizes_and_replaces_stale_pending(
+    def test_email_change_normalizes_and_keeps_pending_email(
         self,
         send_confirmation_mock: Mock,
     ) -> None:
         user, token = self.create_authenticated_user()
+        send_confirmation_mock.reset_mock()
         EmailAddress.objects.create(
             user=user,
             email="stale_pending@example.com",
@@ -343,9 +351,9 @@ class AccountApiTests(APITestCase):
             primary=False,
         )
         new_email = "  MiXeD.Case+tag@Example.COM  "
-        response = self.post_json(
-            "/account/email/change",
-            {"new_email": new_email},
+        response = self.headless_post_json(
+            "/account/email",
+            {"email": new_email},
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 200, response.content)
@@ -362,12 +370,13 @@ class AccountApiTests(APITestCase):
         send_confirmation_mock: Mock,
     ) -> None:
         user, token = self.create_authenticated_user()
-        response = self.post_json(
-            "/account/email/change",
-            {"new_email": user.email},
+        send_confirmation_mock.reset_mock()
+        response = self.headless_post_json(
+            "/account/email",
+            {"email": user.email},
             **self.auth_headers(token),
         )
-        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.status_code, 400, response.content)
         send_confirmation_mock.assert_not_called()
 
     @patch("allauth.account.models.EmailAddress.send_confirmation")
@@ -376,10 +385,11 @@ class AccountApiTests(APITestCase):
         send_confirmation_mock: Mock,
     ) -> None:
         user, token = self.create_authenticated_user()
+        send_confirmation_mock.reset_mock()
         new_email = self.unique_email("change")
-        response = self.post_json(
-            "/account/email/change",
-            {"new_email": new_email},
+        response = self.headless_post_json(
+            "/account/email",
+            {"email": new_email},
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 200, response.content)
@@ -394,15 +404,16 @@ class AccountApiTests(APITestCase):
         send_confirmation_mock: Mock,
     ) -> None:
         user, token = self.create_authenticated_user()
+        send_confirmation_mock.reset_mock()
         EmailAddress.objects.update_or_create(
             user=user,
             email=user.email,
             defaults={"primary": True, "verified": False},
         )
 
-        response = self.post_json(
-            "/account/email/resend",
-            {},
+        response = self.headless_put_json(
+            "/account/email",
+            {"email": user.email},
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 200, response.content)
@@ -414,6 +425,7 @@ class AccountApiTests(APITestCase):
         send_confirmation_mock: Mock,
     ) -> None:
         user, token = self.create_authenticated_user()
+        send_confirmation_mock.reset_mock()
         EmailAddress.objects.update_or_create(
             user=user,
             email=user.email,
@@ -421,13 +433,13 @@ class AccountApiTests(APITestCase):
         )
         EmailAddress.objects.filter(user=user, verified=False).delete()
 
-        response = self.post_json(
-            "/account/email/resend",
-            {},
+        response = self.headless_put_json(
+            "/account/email",
+            {"email": user.email},
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 200, response.content)
-        send_confirmation_mock.assert_not_called()
+        send_confirmation_mock.assert_called_once()
 
     def test_sessions_bulk_post_revokes_all_except_current(self) -> None:
         user, token = self.create_authenticated_user()

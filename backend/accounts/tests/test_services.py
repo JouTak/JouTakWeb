@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from accounts.adapters import StrictAccountAdapter
+from accounts.mfa_adapter import EncryptedMFAAdapter
 from accounts.services.account_status import AccountStatusService
 from accounts.services.personalization import (
     missing_personalization_fields,
@@ -172,6 +174,54 @@ class SessionServiceTests(TestCase):
             SessionService.assert_session_allowed(request)
         self.assertEqual(ctx.exception.status_code, 401)
         self.assertEqual(ctx.exception.message, "session revoked")
+
+
+class StrictAccountAdapterTests(TestCase):
+    def setUp(self) -> None:
+        self.factory = RequestFactory()
+        self.adapter = StrictAccountAdapter()
+
+    @override_settings(
+        ACCOUNT_TRUST_PROXY_HEADERS=True,
+        ACCOUNT_TRUSTED_PROXY_CIDRS=("10.0.0.0/8",),
+    )
+    def test_get_client_ip_prefers_proxy_overwritten_x_real_ip(self) -> None:
+        request = self.factory.get(
+            "/login",
+            REMOTE_ADDR="10.1.2.3",
+            HTTP_X_REAL_IP="203.0.113.42",
+            HTTP_X_FORWARDED_FOR="198.51.100.1, 203.0.113.42",
+        )
+
+        self.assertEqual(self.adapter.get_client_ip(request), "203.0.113.42")
+
+    @override_settings(
+        ACCOUNT_TRUST_PROXY_HEADERS=True,
+        ACCOUNT_TRUSTED_PROXY_CIDRS=("10.0.0.0/8",),
+    )
+    def test_get_client_ip_uses_rightmost_untrusted_forwarded_ip(self) -> None:
+        request = self.factory.get(
+            "/login",
+            REMOTE_ADDR="10.1.2.3",
+            HTTP_X_FORWARDED_FOR="198.51.100.7, 203.0.113.9",
+        )
+
+        self.assertEqual(self.adapter.get_client_ip(request), "203.0.113.9")
+
+
+class EncryptedMFAAdapterTests(TestCase):
+    @override_settings(SECRET_KEY="legacy-secret-key")
+    def test_decrypts_legacy_secret_after_dedicated_key_is_added(self) -> None:
+        legacy_adapter = EncryptedMFAAdapter()
+        ciphertext = legacy_adapter.encrypt("otp-secret")
+
+        with override_settings(
+            SECRET_KEY="legacy-secret-key",
+            MFA_ENCRYPTION_KEYS=("new-dedicated-key",),
+            MFA_ENCRYPTION_INCLUDE_LEGACY_SECRET_KEY=True,
+        ):
+            rotated_adapter = EncryptedMFAAdapter()
+            self.assertEqual(rotated_adapter.decrypt(ciphertext), "otp-secret")
 
 
 class SessionServiceTransactionTests(TransactionTestCase):

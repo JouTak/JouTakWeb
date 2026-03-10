@@ -5,10 +5,13 @@ from uuid import uuid4
 
 from django.http import HttpResponse
 from django.test import TestCase
+from django.test.utils import override_settings
 
 
+@override_settings(ACCOUNT_RATE_LIMITS=False)
 class APITestCase(TestCase):
     api_root = "/api"
+    headless_root = "/api/auth/flow/app/v1"
     default_password = "StrongPass123!"
 
     def setUp(self) -> None:
@@ -18,6 +21,9 @@ class APITestCase(TestCase):
 
     def api(self, path: str) -> str:
         return f"{self.api_root}{path}"
+
+    def headless(self, path: str) -> str:
+        return f"{self.headless_root}{path}"
 
     def post_json(
         self,
@@ -58,6 +64,32 @@ class APITestCase(TestCase):
             **headers,
         )
 
+    def headless_post_json(
+        self,
+        path: str,
+        payload: dict[str, object] | None = None,
+        **headers: str,
+    ) -> HttpResponse:
+        return self.client.post(
+            self.headless(path),
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+            **headers,
+        )
+
+    def headless_put_json(
+        self,
+        path: str,
+        payload: dict[str, object] | None = None,
+        **headers: str,
+    ) -> HttpResponse:
+        return self.client.put(
+            self.headless(path),
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+            **headers,
+        )
+
     def unique_username(self, prefix: str = "user") -> str:
         return f"{prefix}_{uuid4().hex[:8]}"
 
@@ -68,7 +100,7 @@ class APITestCase(TestCase):
         self, *, username: str, email: str, password: str | None = None
     ) -> HttpResponse:
         password = password or self.default_password
-        return self.post_json(
+        return self.headless_post_json(
             "/auth/signup",
             {"username": username, "email": email, "password": password},
         )
@@ -80,7 +112,7 @@ class APITestCase(TestCase):
         password: str | None = None,
     ) -> HttpResponse:
         password = password or self.default_password
-        return self.post_json(
+        return self.headless_post_json(
             "/auth/login",
             {"username": username, "password": password},
         )

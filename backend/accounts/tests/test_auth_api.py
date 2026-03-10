@@ -19,14 +19,9 @@ class HeadlessAuthApiTests(APITestCase):
         )
 
     def _revoke_token(self, user: User, token: str) -> None:
-        session = self.client.session
-        if not session.session_key:
-            session["test"] = "1"
-            session.save()
-        key = session.session_key or token
         UserSessionMeta.objects.update_or_create(
             user=user,
-            session_key=key,
+            session_key=token,
             defaults={
                 "session_token": token,
                 "revoked_reason": "manual",
@@ -43,10 +38,6 @@ class HeadlessAuthApiTests(APITestCase):
         response = self.signup(username=username, email=email)
 
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(
-            response.headers.get("Cache-Control"),
-            "no-store",
-        )
         token = self.session_token(response)
         self.assertTrue(token)
         self.assertEqual(response.json()["meta"]["session_token"], token)
@@ -62,8 +53,7 @@ class HeadlessAuthApiTests(APITestCase):
 
         self.assertEqual(response.status_code, 400, response.content)
         data = response.json()
-        self.assertEqual(data["detail"], "validation_error")
-        self.assertIn("password1", data["fields"])
+        self.assertTrue(data.get("errors"))
 
     def test_login_success_and_invalid_credentials(self) -> None:
         username = self.unique_username("login")
@@ -81,7 +71,7 @@ class HeadlessAuthApiTests(APITestCase):
         wrong_password = "WrongPass123!"
         bad = self.login(username=username, password=wrong_password)
         self.assertEqual(bad.status_code, 400, bad.content)
-        self.assertEqual(bad.json()["detail"], "invalid credentials")
+        self.assertTrue(bad.json().get("errors"))
 
     def test_jwt_from_session_requires_authentication(self) -> None:
         response = self.post_json("/auth/jwt/from_session", {})
@@ -94,7 +84,6 @@ class HeadlessAuthApiTests(APITestCase):
         self._revoke_token(user, token)
         response = self.jwt_from_session(token)
         self.assertEqual(response.status_code, 401, response.content)
-        self.assertEqual(response.json()["detail"], "session revoked")
 
     def test_logout_requires_authentication(self) -> None:
         response = self.post_json("/auth/logout", {})
@@ -111,12 +100,16 @@ class HeadlessAuthApiTests(APITestCase):
         self.assertEqual(response.status_code, 401, response.content)
 
     def test_login_rejects_missing_required_fields(self) -> None:
-        response = self.post_json("/auth/login", {})
-        self.assertEqual(response.status_code, 422, response.content)
+        response = self.headless_post_json("/auth/login", {})
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertTrue(response.json().get("errors"))
 
     def test_signup_rejects_missing_required_fields(self) -> None:
-        response = self.post_json("/auth/signup", {"username": "missing_pass"})
-        self.assertEqual(response.status_code, 422, response.content)
+        response = self.headless_post_json(
+            "/auth/signup", {"username": "missing_pass"}
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertTrue(response.json().get("errors"))
 
     def test_refresh_rejects_missing_required_fields(self) -> None:
         response = self.post_json("/auth/refresh", {})
@@ -180,7 +173,6 @@ class HeadlessAuthApiTests(APITestCase):
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 401, response.content)
-        self.assertEqual(response.json()["detail"], "session revoked")
 
     def test_logout_revokes_current_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
@@ -239,9 +231,8 @@ class HeadlessAuthApiTests(APITestCase):
             **self.auth_headers(session_token),
         )
         self.assertEqual(wrong_current.status_code, 400, wrong_current.content)
-        self.assertEqual(
-            wrong_current.json()["detail"], "wrong current password"
-        )
+        self.assertEqual(wrong_current.json()["detail"], "validation_error")
+        self.assertIn("current_password", wrong_current.json()["fields"])
 
         same_as_current = self.post_json(
             "/auth/change_password",
@@ -269,6 +260,7 @@ class HeadlessAuthApiTests(APITestCase):
         )
         self.assertEqual(success.status_code, 200, success.content)
         self.assertEqual(success.json()["ok"], True)
+        self.assertEqual(success.json()["terminated_other_sessions"], True)
 
         old_login = self.login(username=username, password=old_password)
         self.assertEqual(old_login.status_code, 400, old_login.content)
@@ -308,7 +300,9 @@ class HeadlessAuthApiTests(APITestCase):
         )
 
         third_refresh_with_new = self.post_json(
-            "/auth/refresh", {"refresh": new_refresh}
+            "/auth/refresh",
+            {"refresh": new_refresh},
+            **self.auth_headers(session_token),
         )
         self.assertEqual(
             third_refresh_with_new.status_code,

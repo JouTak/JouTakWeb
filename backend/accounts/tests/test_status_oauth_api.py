@@ -125,7 +125,9 @@ class AccountStatusAndOAuthApiTests(APITestCase):
         )
         self.assertEqual(response.json()["method"], "POST")
         link_provider_mock.assert_called_once_with(
-            "yandex", next_path="/account/security"
+            response.wsgi_request,
+            "yandex",
+            next_path="/account/security",
         )
 
     @override_settings(FF_PROFILE_PERSONALIZATION_ENFORCE=False)
@@ -147,7 +149,9 @@ class AccountStatusAndOAuthApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         link_provider_mock.assert_called_once_with(
-            "yandex", next_path="/account/security"
+            response.wsgi_request,
+            "yandex",
+            next_path="/account/security",
         )
 
     @override_settings(FF_PROFILE_PERSONALIZATION_ENFORCE=False)

@@ -67,3 +67,26 @@ class SyncSiteCommandTests(TestCase):
             "Site(id=1, domain=joutak.ru, name=JouTak)",
             stdout.getvalue(),
         )
+
+
+class SyncEmailAddressesCommandTests(TestCase):
+    def test_sync_email_addresses_creates_primary_allauth_email(self) -> None:
+        from allauth.account.models import EmailAddress
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="email_sync_user",
+            email="Email.Sync@Example.com",
+            password="StrongPass123!",
+        )
+
+        self.assertFalse(EmailAddress.objects.filter(user=user).exists())
+
+        stdout = StringIO()
+        call_command("sync_email_addresses", stdout=stdout)
+
+        address = EmailAddress.objects.get(user=user)
+        self.assertEqual(address.email, "email.sync@example.com")
+        self.assertTrue(address.primary)
+        self.assertFalse(address.verified)
+        self.assertIn("created=1", stdout.getvalue())

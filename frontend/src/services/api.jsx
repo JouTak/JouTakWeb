@@ -319,6 +319,21 @@ function normalizeEmailStatus(addresses) {
   };
 }
 
+function getAnonymousCompletionPayload(error) {
+  const response = error?.response;
+  const payload = response?.data;
+  if (response?.status !== 401 || !payload || payload.errors) {
+    return null;
+  }
+  if (payload?.meta?.is_authenticated !== false) {
+    return null;
+  }
+  if (!Array.isArray(payload?.data?.flows)) {
+    return null;
+  }
+  return payload;
+}
+
 export function setupAxiosInterceptors(onHardLogout = () => {}) {
   hardLogoutHandler = typeof onHardLogout === "function" ? onHardLogout : () => {};
 }
@@ -457,11 +472,19 @@ export async function inspectEmailVerification(key) {
 }
 
 export async function confirmEmailVerification(key) {
-  const { data } = await allauthAppRequest("post", "/auth/email/verify", {
-    data: { key },
-    headers: { "X-Email-Verification-Key": key },
-  });
-  return data;
+  try {
+    const { data } = await allauthAppRequest("post", "/auth/email/verify", {
+      data: { key },
+      headers: { "X-Email-Verification-Key": key },
+    });
+    return data;
+  } catch (error) {
+    const completion = getAnonymousCompletionPayload(error);
+    if (completion) {
+      return completion;
+    }
+    throw error;
+  }
 }
 
 export async function requestPasswordReset(email) {
@@ -479,14 +502,22 @@ export async function inspectPasswordResetKey(key) {
 }
 
 export async function resetPasswordByKey({ key, password }) {
-  const { data } = await allauthAppRequest("post", "/auth/password/reset", {
-    data: {
-      key,
-      password,
-    },
-    headers: { "X-Password-Reset-Key": key },
-  });
-  return data;
+  try {
+    const { data } = await allauthAppRequest("post", "/auth/password/reset", {
+      data: {
+        key,
+        password,
+      },
+      headers: { "X-Password-Reset-Key": key },
+    });
+    return data;
+  } catch (error) {
+    const completion = getAnonymousCompletionPayload(error);
+    if (completion) {
+      return completion;
+    }
+    throw error;
+  }
 }
 
 export async function getOAuthProviders() {

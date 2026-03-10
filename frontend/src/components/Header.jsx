@@ -15,6 +15,10 @@ import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
 import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
 import { isPersonalizedProfile, needsPersonalization } from "../utils/profileState";
+import {
+  getProfileDisplayName,
+  getProfileIdentityKey,
+} from "../utils/accountIdentity";
 
 const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 
@@ -121,18 +125,17 @@ const Header = () => {
   );
 
   const personalizationNoticeKey = useMemo(() => {
-    const username = profile?.username || "";
-    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${username}`;
-  }, [profile?.username]);
+    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${getProfileIdentityKey(profile)}`;
+  }, [profile]);
 
   const closePersonalizationModal = useCallback(
     ({ markSeen = true } = {}) => {
-      if (markSeen && profile?.username) {
+      if (markSeen && getProfileIdentityKey(profile) !== "guest") {
         localStorage.setItem(personalizationNoticeKey, "1");
       }
       setPersonalizationModalOpen(false);
     },
-    [personalizationNoticeKey, profile?.username],
+    [personalizationNoticeKey, profile],
   );
 
   const openPersonalizationFlow = useCallback(() => {
@@ -163,10 +166,10 @@ const Header = () => {
     >
       <Avatar
         size="m"
-        text={profile?.username || "?"}
+        text={getProfileDisplayName(profile)}
         imgUrl={profile?.avatar_url}
         view="outlined"
-        title={profile?.username || "Гость"}
+        title={getProfileDisplayName(profile)}
       />
     </Button>
   );

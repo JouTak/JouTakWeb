@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 from uuid import uuid4
 
+from accounts.services.email_addresses import sync_user_email_address
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.test import TestCase
 from django.test.utils import override_settings
+
+User = get_user_model()
 
 
 @override_settings(ACCOUNT_RATE_LIMITS=False)
@@ -97,24 +101,35 @@ class APITestCase(TestCase):
         return f"{prefix}_{uuid4().hex[:8]}@example.com"
 
     def signup(
-        self, *, username: str, email: str, password: str | None = None
+        self,
+        *,
+        email: str,
+        password: str | None = None,
+        username: str | None = None,
     ) -> HttpResponse:
         password = password or self.default_password
         return self.headless_post_json(
             "/auth/signup",
-            {"username": username, "email": email, "password": password},
+            {"email": email, "password": password},
         )
 
     def login(
         self,
         *,
-        username: str,
+        identifier: str | None = None,
+        username: str | None = None,
+        email: str | None = None,
         password: str | None = None,
     ) -> HttpResponse:
         password = password or self.default_password
+        login_value = (
+            str(identifier or "").strip()
+            or str(email or "").strip()
+            or str(username or "").strip()
+        )
         return self.headless_post_json(
             "/auth/login",
-            {"username": username, "password": password},
+            {"username": login_value, "password": password},
         )
 
     @staticmethod
@@ -130,15 +145,30 @@ class APITestCase(TestCase):
     def signup_and_auth(
         self, *, username: str | None = None, email: str | None = None
     ) -> dict[str, str]:
-        username = username or self.unique_username("signup")
         email = email or self.unique_email("signup")
-        response = self.signup(username=username, email=email)
+        response = self.signup(email=email, username=username)
         self.assertEqual(response.status_code, 200, response.content)
         token = self.session_token(response)
         self.assertTrue(token)
+        user = User.objects.get(email=email.lower())
         token_value = token or ""
         return {
-            "username": username,
+            "username": user.username,
             "email": email,
             "session_token": token_value,
         }
+
+    def create_legacy_user(
+        self,
+        *,
+        username: str | None = None,
+        email: str | None = None,
+        password: str | None = None,
+    ):
+        user = User.objects.create_user(
+            username=username or self.unique_username("legacy"),
+            email=(email or self.unique_email("legacy")).lower(),
+            password=password or self.default_password,
+        )
+        sync_user_email_address(user)
+        return user

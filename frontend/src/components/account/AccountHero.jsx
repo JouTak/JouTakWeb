@@ -1,13 +1,10 @@
 import PropTypes from "prop-types";
 import { Avatar, Label } from "@gravity-ui/uikit";
 import { isPersonalizedProfile } from "../../utils/profileState";
+import { getProfileDisplayName } from "../../utils/accountIdentity";
 
 function AccountHero({ profile }) {
-  const first = profile?.first_name || "";
-  const last = profile?.last_name || "";
-  const fullName = [first, last].filter(Boolean).join(" ").trim();
-  const displayName =
-    fullName || profile?.username || profile?.nickname || "Anonymous";
+  const displayName = getProfileDisplayName(profile);
   const avatarUrl = profile?.avatar_url || "";
   const email = profile?.email || "";
   const isBasicAccount = !isPersonalizedProfile(profile);
@@ -65,7 +62,7 @@ AccountHero.propTypes = {
     first_name: PropTypes.string,
     last_name: PropTypes.string,
     username: PropTypes.string,
-    nickname: PropTypes.string,
+    minecraft_nick: PropTypes.string,
     avatar_url: PropTypes.string,
     email: PropTypes.string,
     email_verified: PropTypes.bool,

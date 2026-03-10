@@ -464,7 +464,12 @@ export default function SessionsCard() {
         </div>
       )}
 
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} size="s">
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        disableBodyScrollLock
+        size="s"
+      >
         <div style={{ padding: 16, display: "grid", gap: 12 }}>
           <h4 style={{ margin: 0 }}>Подтвердите действие</h4>
           <Text>

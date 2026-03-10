@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 import dj_database_url
 from decouple import Csv, config
 
@@ -12,6 +14,21 @@ if (
 ):
     raise RuntimeError(
         "A non-default DJANGO_SECRET_KEY is required in production"
+    )
+
+frontend_base_url = (base_settings.FRONTEND_BASE_URL or "").strip()
+if not frontend_base_url:
+    raise RuntimeError("FRONTEND_BASE_URL is required in production")
+
+parsed_frontend = urlparse(
+    frontend_base_url
+    if "://" in frontend_base_url
+    else f"https://{frontend_base_url}"
+)
+if parsed_frontend.hostname in {"localhost", "127.0.0.1"}:
+    raise RuntimeError(
+        "FRONTEND_BASE_URL must point to a non-localhost frontend "
+        "in production"
     )
 
 CORS_ALLOW_ALL_ORIGINS = False

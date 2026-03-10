@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from io import StringIO
 
+from allauth.account.models import EmailAddress
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -71,9 +73,6 @@ class SyncSiteCommandTests(TestCase):
 
 class SyncEmailAddressesCommandTests(TestCase):
     def test_sync_email_addresses_creates_primary_allauth_email(self) -> None:
-        from allauth.account.models import EmailAddress
-        from django.contrib.auth import get_user_model
-
         user = get_user_model().objects.create_user(
             username="email_sync_user",
             email="Email.Sync@Example.com",
@@ -90,3 +89,60 @@ class SyncEmailAddressesCommandTests(TestCase):
         self.assertTrue(address.primary)
         self.assertFalse(address.verified)
         self.assertIn("created=1", stdout.getvalue())
+
+
+class EnsureSuperuserCommandTests(TestCase):
+    def test_ensure_superuser_creates_user_and_syncs_allauth_email(
+        self,
+    ) -> None:
+        stdout = StringIO()
+        call_command(
+            "ensure_superuser",
+            "--username",
+            "deploy_admin",
+            "--email",
+            "Deploy.Admin@Example.com",
+            "--password",
+            "StrongPass123!",
+            stdout=stdout,
+        )
+
+        user = get_user_model().objects.get(username="deploy_admin")
+        address = EmailAddress.objects.get(user=user)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.check_password("StrongPass123!"))
+        self.assertEqual(user.email, "deploy.admin@example.com")
+        self.assertEqual(address.email, "deploy.admin@example.com")
+        self.assertTrue(address.primary)
+        self.assertIn("Created superuser", stdout.getvalue())
+
+    def test_ensure_superuser_updates_existing_flags_password_and_email(
+        self,
+    ) -> None:
+        user = get_user_model().objects.create_user(
+            username="deploy_admin_existing",
+            email="old@example.com",
+            password="OldPass123!",
+        )
+
+        stdout = StringIO()
+        call_command(
+            "ensure_superuser",
+            "--username",
+            "deploy_admin_existing",
+            "--email",
+            "new@example.com",
+            "--password",
+            "NewStrongPass123!",
+            stdout=stdout,
+        )
+
+        user.refresh_from_db()
+        address = EmailAddress.objects.get(user=user, primary=True)
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.check_password("NewStrongPass123!"))
+        self.assertEqual(user.email, "new@example.com")
+        self.assertEqual(address.email, "new@example.com")
+        self.assertIn("Updated superuser", stdout.getvalue())

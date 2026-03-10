@@ -452,7 +452,7 @@ class SessionService:
             us = UserSession.objects.filter(
                 user=user, session_key=session_key
             ).first()
-            if bool(meta and meta.revoked_at) and not (us and us.exists()):
+            if bool(meta and meta.revoked_at) and not us:
                 skipped_ids.append(session_key)
                 continue
             SessionService._revoke_session_key(

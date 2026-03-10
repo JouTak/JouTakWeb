@@ -22,7 +22,7 @@ User = get_user_model()
 class AccountApiTests(APITestCase):
     def create_authenticated_user(self) -> tuple[User, str]:
         payload = self.signup_and_auth()
-        user = User.objects.get(username=payload["username"])
+        user = User.objects.get(email=payload["email"].lower())
         return user, payload["session_token"]
 
     def _ensure_current_session_key(self) -> str:
@@ -489,6 +489,28 @@ class AccountApiTests(APITestCase):
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 400, response.content)
+
+    def test_sessions_bulk_skips_already_revoked_session_without_crashing(
+        self,
+    ) -> None:
+        user, token = self.create_authenticated_user()
+        _, other_key = self._prepare_sessions(user)
+        UserSessionMeta.objects.update_or_create(
+            user=user,
+            session_key=other_key,
+            defaults={
+                "revoked_reason": "manual",
+                "revoked_at": timezone.now(),
+            },
+        )
+
+        response = self.post_json(
+            "/account/sessions/bulk",
+            {"all_except_current": True, "reason": "manual"},
+            **self.auth_headers(token),
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIn(other_key, response.json()["revoked_ids"])
 
     def test_sessions_bulk_rejects_conflicting_scope(self) -> None:
         user, token = self.create_authenticated_user()

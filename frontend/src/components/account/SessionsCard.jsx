@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
 import {
   Button,
   Label,
@@ -203,10 +204,19 @@ function normalizeSession(raw) {
   };
 }
 
-export default function SessionsCard() {
+function normalizeSessionList(payload) {
+  const source = Array.isArray(payload)
+    ? payload
+    : payload?.results || payload?.sessions || [];
+  return source.map(normalizeSession);
+}
+
+export default function SessionsCard({ initialSessions }) {
   const navigate = useNavigate();
-  const [allSessions, setAllSessions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [allSessions, setAllSessions] = useState(() =>
+    initialSessions === undefined ? [] : normalizeSessionList(initialSessions),
+  );
+  const [loading, setLoading] = useState(initialSessions === undefined);
   const [msg, setMsg] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -226,10 +236,7 @@ export default function SessionsCard() {
     setMsg("");
     try {
       const raw = await listSessionsHeadless();
-      const norm = (
-        Array.isArray(raw) ? raw : raw?.results || raw?.sessions || []
-      ).map(normalizeSession);
-      setAllSessions(norm);
+      setAllSessions(normalizeSessionList(raw));
     } catch (error) {
       if (error?.response?.status === 401) {
         redirectToSessionExpired();
@@ -242,8 +249,14 @@ export default function SessionsCard() {
   }, [redirectToSessionExpired]);
 
   useEffect(() => {
+    if (initialSessions !== undefined) {
+      setAllSessions(normalizeSessionList(initialSessions));
+      setLoading(false);
+      setMsg("");
+      return;
+    }
     load();
-  }, [load]);
+  }, [initialSessions, load]);
 
   const sessions = useMemo(() => {
     const cutoff = Date.now() - WINDOW_HOURS * 3600 * 1000;
@@ -492,3 +505,13 @@ export default function SessionsCard() {
     </section>
   );
 }
+
+SessionsCard.propTypes = {
+  initialSessions: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.object),
+    PropTypes.shape({
+      results: PropTypes.arrayOf(PropTypes.object),
+      sessions: PropTypes.arrayOf(PropTypes.object),
+    }),
+  ]),
+};

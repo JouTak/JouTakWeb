@@ -81,8 +81,12 @@ function SessionsCardSkeleton() {
       }}
       aria-hidden="true"
     >
-      <div style={{ ...rowBetween, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ display: "grid", gap: 10, minWidth: 220, flex: "1 1 280px" }}>
+      <div
+        style={{ ...rowBetween, alignItems: "flex-start", flexWrap: "wrap" }}
+      >
+        <div
+          style={{ display: "grid", gap: 10, minWidth: 220, flex: "1 1 280px" }}
+        >
           <div className="skeleton-line" style={{ width: 110, height: 18 }} />
           <div className="skeleton-line" style={{ width: "70%" }} />
         </div>
@@ -111,8 +115,21 @@ function SessionsCardSkeleton() {
             gap: 10,
           }}
         >
-          <div style={{ ...rowBetween, alignItems: "flex-start", flexWrap: "wrap" }}>
-            <div style={{ display: "grid", gap: 8, minWidth: 240, flex: "1 1 320px" }}>
+          <div
+            style={{
+              ...rowBetween,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gap: 8,
+                minWidth: 240,
+                flex: "1 1 320px",
+              }}
+            >
               <div
                 style={{
                   display: "flex",
@@ -121,8 +138,14 @@ function SessionsCardSkeleton() {
                   flexWrap: "wrap",
                 }}
               >
-                <div className="skeleton-line" style={{ width: 118, height: 16 }} />
-                <div className="skeleton-line" style={{ width: 72, height: 20 }} />
+                <div
+                  className="skeleton-line"
+                  style={{ width: 118, height: 16 }}
+                />
+                <div
+                  className="skeleton-line"
+                  style={{ width: 72, height: 20 }}
+                />
               </div>
               <div className="skeleton-line" style={{ width: "84%" }} />
               <div className="skeleton-line" style={{ width: "62%" }} />
@@ -136,8 +159,14 @@ function SessionsCardSkeleton() {
                 justifyContent: "flex-end",
               }}
             >
-              <div className="skeleton-line" style={{ width: 108, height: 32 }} />
-              <div className="skeleton-line" style={{ width: 100, height: 32 }} />
+              <div
+                className="skeleton-line"
+                style={{ width: 108, height: 32 }}
+              />
+              <div
+                className="skeleton-line"
+                style={{ width: 100, height: 32 }}
+              />
             </div>
           </div>
         </div>

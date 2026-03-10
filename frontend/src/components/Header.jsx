@@ -14,7 +14,10 @@ import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
 import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
 import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
-import { isPersonalizedProfile, needsPersonalization } from "../utils/profileState";
+import {
+  isPersonalizedProfile,
+  needsPersonalization,
+} from "../utils/profileState";
 import {
   getProfileDisplayName,
   getProfileIdentityKey,
@@ -60,7 +63,8 @@ const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [personalizationModalOpen, setPersonalizationModalOpen] = useState(false);
+  const [personalizationModalOpen, setPersonalizationModalOpen] =
+    useState(false);
 
   const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
 
@@ -202,12 +206,14 @@ const Header = () => {
                   renderSwitcher={renderAccountSwitcher}
                   items={[
                     ...(!registrationCompleted
-                      ? [[
-                          {
-                            text: "Завершить профиль",
-                            action: goOnboarding,
-                          },
-                        ]]
+                      ? [
+                          [
+                            {
+                              text: "Завершить профиль",
+                              action: goOnboarding,
+                            },
+                          ],
+                        ]
                       : []),
                     [{ text: "Аккаунт и безопасность", action: goSecurity }],
                     { text: "Выйти", action: onLogout, theme: "danger" },

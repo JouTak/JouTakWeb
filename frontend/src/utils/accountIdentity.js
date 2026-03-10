@@ -21,7 +21,9 @@ export function getProfileDisplayName(profile) {
 
 export function getProfileIdentityKey(profile) {
   return (
-    String(profile?.email || "").trim().toLowerCase() ||
+    String(profile?.email || "")
+      .trim()
+      .toLowerCase() ||
     String(profile?.username || "").trim() ||
     "guest"
   );

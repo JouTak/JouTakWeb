@@ -125,11 +125,9 @@ export default function EmailCard({ initialStatus }) {
       });
       setEmail(result.email || email);
       setVerified(!!result.verified);
-      setPendingEmail(result.pending_email || String(newEmail || "").trim());
+      setPendingEmail(result.pending_email || String(newEmail).trim());
       setResendTarget(
-        result.resend_target ||
-          result.pending_email ||
-          String(newEmail || "").trim(),
+        result.resend_target || result.pending_email || String(newEmail).trim(),
       );
       setEditMode(false);
     } catch (err) {

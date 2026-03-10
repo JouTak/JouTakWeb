@@ -294,7 +294,7 @@ export default function AccountSecurity() {
       <AccountHero profile={profile} />
       <ProfileCard profile={profile} onUpdated={handleProfileUpdated} />
       <EmailCard initialStatus={emailStatus || fallbackEmailStatus(profile)} />
-      <PasswordCard username={profile?.username || profile?.email || ""} />
+      <PasswordCard identityHint={profile?.email || profile?.username || ""} />
       {/*<MfaCard profile={profile} />*/}
       {/*<PasskeysCard />*/}
       {/*<OauthCard />*/}

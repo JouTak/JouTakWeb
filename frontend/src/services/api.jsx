@@ -346,10 +346,10 @@ export function clearAuthState() {
   clearAuthStorage({ emit: true });
 }
 
-export async function loginApp({ username, password }) {
+export async function loginApp({ login, password }) {
   const response = await allauthAppRequest("post", "/auth/login", {
     data: {
-      username: String(username || "").trim(),
+      username: String(login || "").trim(),
       password,
     },
   });
@@ -363,10 +363,9 @@ export async function loginApp({ username, password }) {
   return sessionToken;
 }
 
-export async function signupApp({ username, email, password }) {
+export async function signupApp({ email, password }) {
   const response = await allauthAppRequest("post", "/auth/signup", {
     data: {
-      username: String(username || "").trim(),
       email: String(email || "").trim(),
       password,
     },
@@ -398,8 +397,8 @@ export async function jwtFromSession() {
   return pair;
 }
 
-export async function doLogin({ username, password }) {
-  await loginApp({ username, password });
+export async function doLogin({ login, password }) {
+  await loginApp({ login, password });
   try {
     await jwtFromSession();
   } catch {
@@ -408,8 +407,8 @@ export async function doLogin({ username, password }) {
   return tokenStore.get();
 }
 
-export async function doSignupAndLogin({ username, email, password }) {
-  await signupApp({ username, email, password });
+export async function doSignupAndLogin({ email, password }) {
+  await signupApp({ email, password });
   try {
     await jwtFromSession();
   } catch {

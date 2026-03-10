@@ -36,7 +36,7 @@ const COMMON_PASSWORDS = new Set([
   "princess",
 ]);
 
-function computeStrength(pwd, { minLength, username }) {
+function computeStrength(pwd, { minLength, identityHint }) {
   if (!pwd) return { score: 0, label: "Пусто" };
   const lenOK = pwd.length >= minLength;
   const hasLower = /[a-zа-я]/.test(pwd);
@@ -45,7 +45,7 @@ function computeStrength(pwd, { minLength, username }) {
   const hasSpec = /[^A-Za-zА-Яа-я0-9\s]/.test(pwd);
   const notOnlyDigits = !/^\d+$/.test(pwd);
   const notCommon = !COMMON_PASSWORDS.has(pwd.toLowerCase());
-  const uname = (username || "").toLowerCase();
+  const uname = (identityHint || "").toLowerCase();
   const unameLocal = uname.includes("@") ? uname.split("@")[0] : uname;
   const notSimilar = !(uname && pwd.toLowerCase().includes(unameLocal));
   let score = 0;
@@ -112,7 +112,7 @@ StrengthBar.propTypes = {
 };
 
 export default function PasswordCard({
-  username,
+  identityHint,
   minLength = 8,
   defaultOpen = false,
   autoCloseOnSuccess = true,
@@ -134,9 +134,9 @@ export default function PasswordCard({
   const strength = useMemo(
     () =>
       editing
-        ? computeStrength(new1, { minLength, username })
+        ? computeStrength(new1, { minLength, identityHint })
         : { score: 0, label: "Пусто" },
-    [editing, new1, minLength, username],
+    [editing, new1, minLength, identityHint],
   );
 
   const { curErr, n1Err, n2Err, hasErrors } = useMemo(() => {
@@ -150,8 +150,8 @@ export default function PasswordCard({
         n1Err = `Минимум ${minLength} символов.`;
       else if (/^\d+$/.test(new1))
         n1Err = "Пароль не должен состоять только из цифр.";
-      else if (username) {
-        const uname = username.toLowerCase();
+      else if (identityHint) {
+        const uname = identityHint.toLowerCase();
         const unameLocal = uname.includes("@") ? uname.split("@")[0] : uname;
         if (unameLocal && new1.toLowerCase().includes(unameLocal))
           n1Err = "Пароль слишком похож на логин/почту.";
@@ -166,7 +166,7 @@ export default function PasswordCard({
     if (!curErr && backendErr.cur) curErr = backendErr.cur;
     if (!n1Err && backendErr.n1) n1Err = backendErr.n1;
     return { curErr, n1Err, n2Err, hasErrors: !!(curErr || n1Err || n2Err) };
-  }, [curPwd, new1, new2, touched, backendErr, minLength, username]);
+  }, [curPwd, new1, new2, touched, backendErr, minLength, identityHint]);
 
   const touchAll = () => setTouched({ cur: true, n1: true, n2: true });
 
@@ -273,17 +273,17 @@ export default function PasswordCard({
         content: result?.logged_out_current_session
           ? "Пароль обновлён. Для продолжения нужно войти снова."
           : "Пароль обновлён. Другие сессии завершены по правилам безопасности Django.",
-        type: "success",
+        theme: "success",
       });
 
       try {
         if (
-          username &&
+          identityHint &&
           "credentials" in navigator &&
           "PasswordCredential" in window
         ) {
           const cred = new window.PasswordCredential({
-            id: String(username),
+            id: String(identityHint),
             password: new1,
           });
           navigator.credentials.store(cred).catch(() => {});
@@ -313,7 +313,7 @@ export default function PasswordCard({
         name: "pwd-err",
         title: "Ошибка",
         content: firstBackendMessage(data) || "Не удалось изменить пароль.",
-        type: "error",
+        theme: "danger",
       });
       if (data && typeof data === "object") mapBackendErrors(data);
     } finally {
@@ -352,12 +352,12 @@ export default function PasswordCard({
             if (e.key === "Escape" && !busy) onCancel();
           }}
         >
-          {username ? (
+          {identityHint ? (
             <input
               type="text"
               name="username"
               autoComplete="username"
-              value={username}
+              value={identityHint}
               readOnly
               hidden
             />
@@ -477,7 +477,7 @@ export default function PasswordCard({
 }
 
 PasswordCard.propTypes = {
-  username: PropTypes.string,
+  identityHint: PropTypes.string,
   minLength: PropTypes.number,
   defaultOpen: PropTypes.bool,
   autoCloseOnSuccess: PropTypes.bool,

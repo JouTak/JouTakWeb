@@ -29,24 +29,24 @@ class HeadlessAuthApiTests(APITestCase):
             },
         )
 
-    def test_signup_success_returns_session_token_in_header_and_body(
+    def test_signup_success_returns_session_token_and_generates_username(
         self,
     ) -> None:
-        username = self.unique_username("signup")
         email = self.unique_email("signup")
 
-        response = self.signup(username=username, email=email)
+        response = self.signup(email=email)
 
         self.assertEqual(response.status_code, 200, response.content)
         token = self.session_token(response)
         self.assertTrue(token)
         self.assertEqual(response.json()["meta"]["session_token"], token)
-        self.assertTrue(User.objects.filter(username=username).exists())
+
+        user = User.objects.get(email=email.lower())
+        self.assertTrue(user.username)
 
     def test_signup_invalid_returns_structured_validation_error(self) -> None:
         weak_password = "123"
         response = self.signup(
-            username=self.unique_username("bad"),
             email=self.unique_email("bad"),
             password=weak_password,
         )
@@ -55,23 +55,40 @@ class HeadlessAuthApiTests(APITestCase):
         data = response.json()
         self.assertTrue(data.get("errors"))
 
-    def test_login_success_and_invalid_credentials(self) -> None:
-        username = self.unique_username("login")
+    def test_login_success_and_invalid_credentials_by_email(self) -> None:
+        email = self.unique_email("login")
         password = self.default_password
         self.signup(
-            username=username,
-            email=self.unique_email("login"),
+            email=email,
             password=password,
         )
 
-        ok = self.login(username=username, password=password)
+        ok = self.login(email=email, password=password)
         self.assertEqual(ok.status_code, 200, ok.content)
         self.assertTrue(self.session_token(ok))
 
         wrong_password = "WrongPass123!"
-        bad = self.login(username=username, password=wrong_password)
+        bad = self.login(email=email, password=wrong_password)
         self.assertEqual(bad.status_code, 400, bad.content)
         self.assertTrue(bad.json().get("errors"))
+
+    def test_legacy_user_can_login_with_username_or_email(self) -> None:
+        username = self.unique_username("legacy")
+        email = self.unique_email("legacy")
+        password = self.default_password
+        self.create_legacy_user(
+            username=username,
+            email=email,
+            password=password,
+        )
+
+        by_username = self.login(username=username, password=password)
+        self.assertEqual(by_username.status_code, 200, by_username.content)
+        self.assertTrue(self.session_token(by_username))
+
+        by_email = self.login(email=email, password=password)
+        self.assertEqual(by_email.status_code, 200, by_email.content)
+        self.assertTrue(self.session_token(by_email))
 
     def test_jwt_from_session_requires_authentication(self) -> None:
         response = self.post_json("/auth/jwt/from_session", {})
@@ -79,7 +96,7 @@ class HeadlessAuthApiTests(APITestCase):
 
     def test_jwt_from_session_rejects_revoked_session_token(self) -> None:
         payload = self.signup_and_auth()
-        user = User.objects.get(username=payload["username"])
+        user = User.objects.get(email=payload["email"].lower())
         token = payload["session_token"]
         self._revoke_token(user, token)
         response = self.jwt_from_session(token)
@@ -105,9 +122,7 @@ class HeadlessAuthApiTests(APITestCase):
         self.assertTrue(response.json().get("errors"))
 
     def test_signup_rejects_missing_required_fields(self) -> None:
-        response = self.headless_post_json(
-            "/auth/signup", {"username": "missing_pass"}
-        )
+        response = self.headless_post_json("/auth/signup", {})
         self.assertEqual(response.status_code, 400, response.content)
         self.assertTrue(response.json().get("errors"))
 
@@ -119,7 +134,6 @@ class HeadlessAuthApiTests(APITestCase):
         self,
     ) -> None:
         payload = self.signup_and_auth()
-        username = payload["username"]
         session_token = payload["session_token"]
 
         response = self.jwt_from_session(session_token)
@@ -129,7 +143,7 @@ class HeadlessAuthApiTests(APITestCase):
         self.assertTrue(data.get("access"))
         self.assertTrue(data.get("refresh"))
 
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=payload["email"].lower())
         meta = UserSessionMeta.objects.filter(
             user=user, session_token=session_token
         ).first()
@@ -165,7 +179,7 @@ class HeadlessAuthApiTests(APITestCase):
 
     def test_auth_me_rejects_revoked_session_token(self) -> None:
         payload = self.signup_and_auth()
-        user = User.objects.get(username=payload["username"])
+        user = User.objects.get(email=payload["email"].lower())
         token = payload["session_token"]
         self._revoke_token(user, token)
         response = self.client.get(
@@ -176,13 +190,12 @@ class HeadlessAuthApiTests(APITestCase):
 
     def test_logout_revokes_current_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
-        username = payload["username"]
         session_token = payload["session_token"]
         pair = self.jwt_from_session(session_token).json()
         refresh = pair["refresh"]
         refresh_jti = str(RefreshToken(refresh).get("jti"))
 
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=payload["email"].lower())
         mapping = UserSessionToken.objects.filter(
             user=user, refresh_jti=refresh_jti
         ).first()
@@ -211,13 +224,12 @@ class HeadlessAuthApiTests(APITestCase):
         )
 
     def test_change_password_post_conditions(self) -> None:
-        username = self.unique_username("pwd")
+        email = self.unique_email("pwd")
         old_password = "OldStrongPass123!"
         new_password = "NewStrongPass456!"
 
         signup = self.signup(
-            username=username,
-            email=self.unique_email("pwd"),
+            email=email,
             password=old_password,
         )
         session_token = self.session_token(signup)
@@ -262,10 +274,10 @@ class HeadlessAuthApiTests(APITestCase):
         self.assertEqual(success.json()["ok"], True)
         self.assertEqual(success.json()["terminated_other_sessions"], True)
 
-        old_login = self.login(username=username, password=old_password)
+        old_login = self.login(email=email, password=old_password)
         self.assertEqual(old_login.status_code, 400, old_login.content)
 
-        new_login = self.login(username=username, password=new_password)
+        new_login = self.login(email=email, password=new_password)
         self.assertEqual(new_login.status_code, 200, new_login.content)
 
     def test_refresh_rejects_invalid_refresh(self) -> None:
@@ -312,13 +324,12 @@ class HeadlessAuthApiTests(APITestCase):
 
     def test_refresh_updates_existing_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
-        username = payload["username"]
         session_token = payload["session_token"]
 
         pair = self.jwt_from_session(session_token).json()
         refresh_1 = pair["refresh"]
         jti_1 = str(RefreshToken(refresh_1).get("jti"))
-        user = User.objects.get(username=username)
+        user = User.objects.get(email=payload["email"].lower())
         mapping = UserSessionToken.objects.filter(
             user=user, refresh_jti=jti_1
         ).first()

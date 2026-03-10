@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from allauth.account.models import EmailAddress
 from accounts.adapters import StrictAccountAdapter
 from accounts.mfa_adapter import EncryptedMFAAdapter
 from accounts.services.account_status import AccountStatusService
@@ -13,6 +12,7 @@ from accounts.services.personalization import (
 )
 from accounts.services.profile import ProfileService
 from accounts.services.sessions import SessionService
+from allauth.account.models import EmailAddress
 from core.models import UserProfile, UserSessionMeta
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -144,7 +144,9 @@ class AccountStatusServiceTests(TestCase):
 
 
 class EmailAddressServiceTests(TestCase):
-    def test_sync_user_email_address_creates_primary_email_address(self) -> None:
+    def test_sync_user_email_address_creates_primary_email_address(
+        self,
+    ) -> None:
         user = User.objects.create_user(
             username="email_service_user",
             email="Email.Service@Example.com",
@@ -180,7 +182,10 @@ class EmailAddressServiceTests(TestCase):
         result = sync_user_email_address(user)
 
         old_address.refresh_from_db()
-        new_address = EmailAddress.objects.get(user=user, email="new@example.com")
+        new_address = EmailAddress.objects.get(
+            user=user,
+            email="new@example.com",
+        )
         user.refresh_from_db()
         self.assertTrue(result.created)
         self.assertTrue(result.promoted_primary)

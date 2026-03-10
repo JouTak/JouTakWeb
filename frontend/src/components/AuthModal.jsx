@@ -68,10 +68,9 @@ export default function AuthModal({
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
 
-  const [username, setUsername] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
 
-  const [suUsername, setSuUsername] = useState("");
   const [suEmail, setSuEmail] = useState("");
   const [suPassword, setSuPassword] = useState("");
   const [suPassword2, setSuPassword2] = useState("");
@@ -93,9 +92,8 @@ export default function AuthModal({
   }, [successRedirectTo]);
 
   function resetForms() {
-    setUsername("");
+    setLogin("");
     setPassword("");
-    setSuUsername("");
     setSuEmail("");
     setSuPassword("");
     setSuPassword2("");
@@ -121,13 +119,12 @@ export default function AuthModal({
   const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
   function validateLogin() {
-    if (!username.trim()) return "Укажите логин.";
+    if (!login.trim()) return "Укажите email или старый логин.";
     if (!password) return "Введите пароль.";
     return null;
   }
 
   function validateSignup() {
-    if (!suUsername.trim()) return "Укажите имя пользователя.";
     if (!suEmail.trim()) return "Укажите email.";
     if (!emailOk(suEmail)) return "Неверный формат email.";
     if (!suPassword) return "Введите пароль.";
@@ -173,11 +170,11 @@ export default function AuthModal({
     if (err) return toaster.add({ title: err, theme: "warning" });
     setBusy(true);
     try {
-      await doLogin({ username, password });
+      await doLogin({ login, password });
       const p = await me();
       toaster.add({
         title: "Готово!",
-        content: `Здравствуйте, ${p.username}.`,
+        content: "Вы вошли в аккаунт.",
         theme: "success",
       });
       if (needsPersonalization(p)) {
@@ -215,16 +212,15 @@ export default function AuthModal({
     setBusy(true);
     try {
       await doSignupAndLogin({
-        username: suUsername.trim(),
         email: suEmail.trim(),
         password: suPassword,
       });
-      const p = await me();
       toaster.add({
         title: "Аккаунт создан",
-        content: `Добро пожаловать, ${p.username}!`,
+        content: "Аккаунт создан. Теперь можно продолжить настройку профиля.",
         theme: "success",
       });
+      const p = await me();
       if (needsPersonalization(p)) {
         close({ notifyParent: !safeSuccessRedirectTo });
         navigate("/account/complete-profile", { replace: true });
@@ -263,16 +259,16 @@ export default function AuthModal({
         {isLogin ? (
           <form onSubmit={onLoginSubmit} style={{ display: "grid", gap: 12 }}>
             <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Никнейм</span>
+              <span style={fieldLabelStyle}>Email или старый логин</span>
               <TextInput
                 size="l"
-                value={username}
-                onUpdate={setUsername}
-                name="joutak__username"
+                value={login}
+                onUpdate={setLogin}
+                name="joutak__login"
                 autoComplete="username"
                 autoFocus
                 disabled={busy}
-                aria-label="Никнейм"
+                aria-label="Email или старый логин"
               />
             </div>
             <div style={fieldBlockStyle}>
@@ -412,18 +408,6 @@ export default function AuthModal({
           </div>
         ) : (
           <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Никнейм</span>
-              <TextInput
-                size="l"
-                value={suUsername}
-                onUpdate={setSuUsername}
-                name="joutak__username"
-                autoComplete="username"
-                disabled={busy}
-                aria-label="Никнейм"
-              />
-            </div>
             <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Email</span>
               <TextInput

@@ -103,10 +103,17 @@ const Header = () => {
 
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
-  const onLogout = () => {
-    logout();
-    setProfile(null);
-  };
+  const onLogout = useCallback(async () => {
+    closeOffcanvas();
+    setAuthOpen(false);
+    setPersonalizationModalOpen(false);
+    try {
+      await logout();
+    } finally {
+      setProfile(null);
+      navigate("/joutak", { replace: true });
+    }
+  }, [closeOffcanvas, navigate]);
 
   const registrationCompleted = useMemo(
     () => isPersonalizedProfile(profile),

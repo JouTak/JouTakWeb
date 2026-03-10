@@ -33,7 +33,9 @@ function boolIcon(value) {
 export default function ProfileCard({ profile, onUpdated }) {
   const [firstName, setFirstName] = useState(() => profile?.first_name || "");
   const [lastName, setLastName] = useState(() => profile?.last_name || "");
-  const [vkUsername, setVkUsername] = useState(() => profile?.vk_username || "");
+  const [vkUsername, setVkUsername] = useState(
+    () => profile?.vk_username || "",
+  );
   const [minecraftNick, setMinecraftNick] = useState(
     () => profile?.minecraft_nick || "",
   );
@@ -152,7 +154,16 @@ export default function ProfileCard({ profile, onUpdated }) {
       (!isuRequired || isu.length > 0) &&
       isuOk
     );
-  }, [fDraft, lDraft, vkDraft, mcDraft, licenseDraft, itmoDraft, isuDraft, isuRequired]);
+  }, [
+    fDraft,
+    lDraft,
+    vkDraft,
+    mcDraft,
+    licenseDraft,
+    itmoDraft,
+    isuDraft,
+    isuRequired,
+  ]);
 
   async function onSave(e) {
     e.preventDefault();
@@ -166,7 +177,9 @@ export default function ProfileCard({ profile, onUpdated }) {
         minecraft_nick: (mcDraft || "").trim(),
         minecraft_has_license: selectToBool(licenseDraft),
         is_itmo_student: selectToBool(itmoDraft),
-        ...(isuRequired ? { itmo_isu: (isuDraft || "").trim() } : { itmo_isu: "" }),
+        ...(isuRequired
+          ? { itmo_isu: (isuDraft || "").trim() }
+          : { itmo_isu: "" }),
       };
       const result = await updateProfile(payload);
       applyProfileData(payload);
@@ -182,7 +195,8 @@ export default function ProfileCard({ profile, onUpdated }) {
         personalization_ui_enabled: result?.personalization_ui_enabled,
         personalization_interstitial_enabled:
           result?.personalization_interstitial_enabled,
-        personalization_enforce_enabled: result?.personalization_enforce_enabled,
+        personalization_enforce_enabled:
+          result?.personalization_enforce_enabled,
         missing_fields: result?.missing_fields,
       });
       add({
@@ -239,7 +253,11 @@ export default function ProfileCard({ profile, onUpdated }) {
       ) : (
         <>
           <div style={{ display: "grid", gap: 8 }}>
-            {fullName ? <div><b>{fullName}</b></div> : null}
+            {fullName ? (
+              <div>
+                <b>{fullName}</b>
+              </div>
+            ) : null}
 
             {vkUsername ? (
               <a

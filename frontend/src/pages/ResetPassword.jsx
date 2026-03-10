@@ -178,7 +178,10 @@ export default function ResetPassword() {
             <>
               <p style={{ margin: 0, opacity: 0.9 }}>{error}</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Button view="action" onClick={() => navigate("/reset-password")}>
+                <Button
+                  view="action"
+                  onClick={() => navigate("/reset-password")}
+                >
                   Запросить новое письмо
                 </Button>
                 <Button
@@ -236,7 +239,9 @@ export default function ResetPassword() {
                     autoComplete="new-password"
                     disabled={busy}
                   />
-                  {error && <p style={{ margin: 0, color: "#ff8e8e" }}>{error}</p>}
+                  {error && (
+                    <p style={{ margin: 0, color: "#ff8e8e" }}>{error}</p>
+                  )}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <Button view="action" type="submit" loading={busy}>
                       Сохранить пароль
@@ -276,7 +281,10 @@ export default function ResetPassword() {
               </div>
             </>
           ) : (
-            <form onSubmit={onRequestReset} style={{ display: "grid", gap: 12 }}>
+            <form
+              onSubmit={onRequestReset}
+              style={{ display: "grid", gap: 12 }}
+            >
               <TextInput
                 size="l"
                 type="email"

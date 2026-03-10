@@ -93,28 +93,40 @@ function AccountSecuritySkeleton() {
             }}
           />
           <div style={{ display: "grid", gap: 10 }}>
-            <div className="skeleton-line" style={{ width: "32%", height: 22 }} />
+            <div
+              className="skeleton-line"
+              style={{ width: "32%", height: 22 }}
+            />
             <div className="skeleton-line" style={{ width: "44%" }} />
           </div>
         </div>
       </SkeletonCard>
 
       <SkeletonCard minHeight={220}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
           <div className="skeleton-line" style={{ width: 118, height: 20 }} />
           <div className="skeleton-line" style={{ width: 96, height: 32 }} />
         </div>
-        <div className="skeleton-line" style={{ width: 92, height: 32, borderRadius: 999 }} />
+        <div
+          className="skeleton-line"
+          style={{ width: 92, height: 32, borderRadius: 999 }}
+        />
         <SkeletonLine width="26%" />
         <SkeletonLine width="18%" />
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
           <SkeletonLine width="24%" />
           <div className="skeleton-line" style={{ width: 18, height: 18 }} />
         </div>
       </SkeletonCard>
 
       <SkeletonCard minHeight={140}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
           <div className="skeleton-line" style={{ width: 82, height: 20 }} />
           <div className="skeleton-line" style={{ width: 108, height: 24 }} />
         </div>
@@ -123,7 +135,9 @@ function AccountSecuritySkeleton() {
       </SkeletonCard>
 
       <SkeletonCard minHeight={140}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
           <div className="skeleton-line" style={{ width: 94, height: 20 }} />
           <div className="skeleton-line" style={{ width: 148, height: 32 }} />
         </div>
@@ -131,7 +145,9 @@ function AccountSecuritySkeleton() {
       </SkeletonCard>
 
       <SkeletonCard minHeight={220}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
           <div style={{ display: "grid", gap: 10, flex: "1 1 auto" }}>
             <div className="skeleton-line" style={{ width: 108, height: 20 }} />
             <SkeletonLine width="42%" />
@@ -152,24 +168,41 @@ function AccountSecuritySkeleton() {
               gap: 10,
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
               <div style={{ display: "grid", gap: 8, flex: "1 1 auto" }}>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <div className="skeleton-line" style={{ width: 126, height: 18 }} />
-                  <div className="skeleton-line" style={{ width: 68, height: 20 }} />
+                  <div
+                    className="skeleton-line"
+                    style={{ width: 126, height: 18 }}
+                  />
+                  <div
+                    className="skeleton-line"
+                    style={{ width: 68, height: 20 }}
+                  />
                 </div>
                 <SkeletonLine width="76%" />
                 <SkeletonLine width="60%" />
                 <SkeletonLine width="34%" />
               </div>
-              <div className="skeleton-line" style={{ width: 96, height: 32 }} />
+              <div
+                className="skeleton-line"
+                style={{ width: 96, height: 32 }}
+              />
             </div>
           </div>
         ))}
       </SkeletonCard>
 
       <SkeletonCard minHeight={140}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
           <div className="skeleton-line" style={{ width: 180, height: 20 }} />
           <div className="skeleton-line" style={{ width: 136, height: 32 }} />
         </div>
@@ -189,7 +222,9 @@ function fallbackEmailStatus(profile) {
 }
 
 function isUnauthorizedResult(result) {
-  return result?.status === "rejected" && result.reason?.response?.status === 401;
+  return (
+    result?.status === "rejected" && result.reason?.response?.status === 401
+  );
 }
 
 export default function AccountSecurity() {
@@ -215,11 +250,12 @@ export default function AccountSecurity() {
     let cancelled = false;
     (async () => {
       try {
-        const [profileResult, emailResult, sessionsResult] = await Promise.allSettled([
-          me(),
-          getEmailStatus(),
-          listSessionsHeadless(),
-        ]);
+        const [profileResult, emailResult, sessionsResult] =
+          await Promise.allSettled([
+            me(),
+            getEmailStatus(),
+            listSessionsHeadless(),
+          ]);
 
         if (
           profileResult.status !== "fulfilled" ||
@@ -278,8 +314,7 @@ export default function AccountSecurity() {
         >
           <b>Базовый аккаунт: персонализация профиля не завершена</b>
           <span>
-            Заполни обязательные поля профиля, чтобы открыть полный
-            функционал.
+            Заполни обязательные поля профиля, чтобы открыть полный функционал.
           </span>
           <div>
             <Button

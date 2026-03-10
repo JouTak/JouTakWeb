@@ -227,7 +227,11 @@ export default function PasswordCard({
       );
       if (firstFieldMessage) return firstFieldMessage;
     }
-    if (data?.errors && typeof data.errors === "object" && !Array.isArray(data.errors)) {
+    if (
+      data?.errors &&
+      typeof data.errors === "object" &&
+      !Array.isArray(data.errors)
+    ) {
       for (const entries of Object.values(data.errors)) {
         if (!Array.isArray(entries)) continue;
         const firstEntry = entries.find(
@@ -239,7 +243,8 @@ export default function PasswordCard({
     }
     if (Array.isArray(data?.errors)) {
       const firstError = data.errors.find(
-        (entry) => entry && typeof entry.message === "string" && entry.message.trim(),
+        (entry) =>
+          entry && typeof entry.message === "string" && entry.message.trim(),
       );
       if (firstError?.message) return firstError.message;
     }

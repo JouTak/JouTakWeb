@@ -82,7 +82,9 @@ function isUnauthorized(error) {
 
 function extractSessionToken(respOrErrResp) {
   const meta = respOrErrResp?.data?.meta || {};
-  return meta.session_token || respOrErrResp?.headers?.["x-session-token"] || null;
+  return (
+    meta.session_token || respOrErrResp?.headers?.["x-session-token"] || null
+  );
 }
 
 function setSessionToken(sessionToken, { emit = false } = {}) {
@@ -166,7 +168,11 @@ function sanitizeUrl(u) {
   return `${base}${path}`;
 }
 
-async function executeSessionRequest(method, url, { data = null, params, sessionToken } = {}) {
+async function executeSessionRequest(
+  method,
+  url,
+  { data = null, params, sessionToken } = {},
+) {
   const response = await bareClient.request({
     method,
     url,
@@ -308,7 +314,9 @@ function normalizeEmailStatus(addresses) {
   const pending =
     items.find((item) => item && !item.primary && !item.verified) || null;
   const resendTarget =
-    pending?.email || (primary && !primary.verified ? primary.email : null) || null;
+    pending?.email ||
+    (primary && !primary.verified ? primary.email : null) ||
+    null;
 
   return {
     email: primary?.email || "",
@@ -335,7 +343,8 @@ function getAnonymousCompletionPayload(error) {
 }
 
 export function setupAxiosInterceptors(onHardLogout = () => {}) {
-  hardLogoutHandler = typeof onHardLogout === "function" ? onHardLogout : () => {};
+  hardLogoutHandler =
+    typeof onHardLogout === "function" ? onHardLogout : () => {};
 }
 
 export const tokenStore = {
@@ -525,7 +534,10 @@ export async function getOAuthProviders() {
   return data?.providers || [];
 }
 
-export async function getOAuthLink(provider, next = "/account/security#linked") {
+export async function getOAuthLink(
+  provider,
+  next = "/account/security#linked",
+) {
   const { data } = await sessionGet(`/oauth/link/${provider}`, { next });
   return {
     url: sanitizeUrl(data?.authorize_url),
@@ -572,7 +584,9 @@ export async function changeEmail(new_email) {
 
 export async function resendEmailVerification(target_email = null) {
   const target =
-    String(target_email || "").trim() || (await getEmailStatus()).resend_target || "";
+    String(target_email || "").trim() ||
+    (await getEmailStatus()).resend_target ||
+    "";
   if (!target) {
     return {
       ok: true,

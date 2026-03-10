@@ -117,9 +117,7 @@ export default function ConfirmEmail() {
         <Loader size="m" />
       ) : success ? (
         <>
-          <p style={{ margin: 0, opacity: 0.9 }}>
-            Email успешно подтверждён.
-          </p>
+          <p style={{ margin: 0, opacity: 0.9 }}>Email успешно подтверждён.</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Button view="action" onClick={() => navigate(accountPath)}>
               {isAuthenticated ? "Перейти в аккаунт" : "Войти"}

@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, TextInput, useToaster } from "@gravity-ui/uikit";
-import {
-  clearAuthState,
-  deleteCurrentAccount,
-} from "../../services/api";
+import { clearAuthState, deleteCurrentAccount } from "../../services/api";
 
 const cardStyle = {
   border: "1px solid rgba(255,120,120,0.35)",
@@ -44,7 +41,8 @@ export default function DeleteAccountCard() {
       });
       navigate("/joutak", { replace: true });
     } catch (err) {
-      const message = err?.response?.data?.detail || "Не удалось удалить аккаунт";
+      const message =
+        err?.response?.data?.detail || "Не удалось удалить аккаунт";
       add({
         name: "account-delete-error",
         title: "Ошибка",
@@ -75,7 +73,8 @@ export default function DeleteAccountCard() {
       </div>
 
       <div style={{ opacity: 0.9 }}>
-        Вы можете запросить удаление аккаунта. При удалении ваш профиль пропадает из системы,
+        Вы можете запросить удаление аккаунта. При удалении ваш профиль
+        пропадает из системы,
       </div>
 
       {open && (

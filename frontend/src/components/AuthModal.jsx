@@ -262,7 +262,7 @@ export default function AuthModal({
 
         {isLogin ? (
           <form onSubmit={onLoginSubmit} style={{ display: "grid", gap: 12 }}>
-            <label style={fieldBlockStyle}>
+            <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Никнейм</span>
               <TextInput
                 size="l"
@@ -274,8 +274,8 @@ export default function AuthModal({
                 disabled={busy}
                 aria-label="Никнейм"
               />
-            </label>
-            <label style={fieldBlockStyle}>
+            </div>
+            <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Пароль</span>
               <TextInput
                 size="l"
@@ -287,7 +287,7 @@ export default function AuthModal({
                 disabled={busy}
                 aria-label="Пароль"
               />
-            </label>
+            </div>
             <Button
               view="action"
               size="l"
@@ -364,7 +364,7 @@ export default function AuthModal({
                 onSubmit={onResetRequestSubmit}
                 style={{ display: "grid", gap: 12 }}
               >
-                <label style={fieldBlockStyle}>
+                <div style={fieldBlockStyle}>
                   <span style={fieldLabelStyle}>Email</span>
                   <TextInput
                     size="l"
@@ -376,7 +376,7 @@ export default function AuthModal({
                     disabled={busy}
                     aria-label="Email"
                   />
-                </label>
+                </div>
                 {resetError && (
                   <p style={{ margin: 0, color: "#ff8e8e" }}>{resetError}</p>
                 )}
@@ -412,7 +412,7 @@ export default function AuthModal({
           </div>
         ) : (
           <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
-            <label style={fieldBlockStyle}>
+            <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Никнейм</span>
               <TextInput
                 size="l"
@@ -423,8 +423,8 @@ export default function AuthModal({
                 disabled={busy}
                 aria-label="Никнейм"
               />
-            </label>
-            <label style={fieldBlockStyle}>
+            </div>
+            <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Email</span>
               <TextInput
                 size="l"
@@ -436,8 +436,8 @@ export default function AuthModal({
                 disabled={busy}
                 aria-label="Email"
               />
-            </label>
-            <label style={fieldBlockStyle}>
+            </div>
+            <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Пароль</span>
               <TextInput
                 size="l"
@@ -449,8 +449,8 @@ export default function AuthModal({
                 disabled={busy}
                 aria-label="Пароль"
               />
-            </label>
-            <label style={fieldBlockStyle}>
+            </div>
+            <div style={fieldBlockStyle}>
               <span style={fieldLabelStyle}>Повторите пароль</span>
               <TextInput
                 size="l"
@@ -462,7 +462,7 @@ export default function AuthModal({
                 disabled={busy}
                 aria-label="Повторите пароль"
               />
-            </label>
+            </div>
             <Button
               view="action"
               size="l"

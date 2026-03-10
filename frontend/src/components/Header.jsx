@@ -175,7 +175,7 @@ const Header = () => {
     <>
       <header>
         <nav className="navbar navbar-dark bg-dark">
-          <div className="container container-fluid d-flex justify-content-between align-items-center">
+          <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
             <a className="navbar-brand" href="https://joutak.ru">
               <img
                 src="/img/icons/logo.png"
@@ -260,6 +260,7 @@ const Header = () => {
       <Modal
         open={personalizationModalOpen}
         onClose={() => closePersonalizationModal({ markSeen: true })}
+        disableBodyScrollLock
         aria-labelledby="personalization-modal-title"
         style={{ "--g-modal-width": "620px" }}
       >

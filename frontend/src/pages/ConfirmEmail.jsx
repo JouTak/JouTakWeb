@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Loader } from "@gravity-ui/uikit";
 import {
   confirmEmailVerification,
+  hasStoredAuth,
   inspectEmailVerification,
 } from "../services/api";
 
@@ -46,6 +47,8 @@ export default function ConfirmEmail() {
     const params = new URLSearchParams(location.search);
     return (params.get("key") || "").trim();
   }, [location.search]);
+  const isAuthenticated = hasStoredAuth();
+  const accountPath = isAuthenticated ? "/account/security" : "/login";
 
   useEffect(() => {
     let active = true;
@@ -118,11 +121,8 @@ export default function ConfirmEmail() {
             Email успешно подтверждён.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Button
-              view="action"
-              onClick={() => navigate("/account/security")}
-            >
-              Перейти в аккаунт
+            <Button view="action" onClick={() => navigate(accountPath)}>
+              {isAuthenticated ? "Перейти в аккаунт" : "Войти"}
             </Button>
             <Button view="outlined" onClick={() => navigate("/joutak")}>
               На главную
@@ -133,8 +133,8 @@ export default function ConfirmEmail() {
         <>
           <p style={{ margin: 0, opacity: 0.9 }}>{error}</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Button view="outlined" onClick={() => navigate("/account/security")}>
-              Вернуться в аккаунт
+            <Button view="outlined" onClick={() => navigate(accountPath)}>
+              {isAuthenticated ? "Вернуться в аккаунт" : "Ко входу"}
             </Button>
             <Button view="flat" onClick={() => navigate("/joutak")}>
               На главную

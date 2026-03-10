@@ -25,7 +25,15 @@ parsed_frontend = urlparse(
     if "://" in frontend_base_url
     else f"https://{frontend_base_url}"
 )
-if parsed_frontend.hostname in {"localhost", "127.0.0.1"}:
+allow_localhost_frontend_base_url = config(
+    "DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL",
+    cast=bool,
+    default=False,
+)
+if (
+    parsed_frontend.hostname in {"localhost", "127.0.0.1"}
+    and not allow_localhost_frontend_base_url
+):
     raise RuntimeError(
         "FRONTEND_BASE_URL must point to a non-localhost frontend "
         "in production"

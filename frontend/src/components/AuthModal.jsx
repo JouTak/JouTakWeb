@@ -194,6 +194,7 @@ export default function AuthModal({
       open={open}
       onClose={close}
       aria-labelledby="auth-modal-title"
+      disableBodyScrollLock
       style={{ "--g-modal-width": "520px" }}
     >
       <div style={{ padding: 24, display: "grid", gap: 16 }}>

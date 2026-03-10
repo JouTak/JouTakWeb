@@ -242,6 +242,7 @@ const Header = () => {
         show={menuOpen}
         onHide={closeOffcanvas}
         placement="start"
+        scroll
         id="offcanvasDarkNavbar"
         className="text-bg-dark"
       >

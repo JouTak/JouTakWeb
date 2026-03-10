@@ -32,6 +32,7 @@ x-backend-environment: &backend-environment
 
   DB_SSL_REQUIRED: "False"
   DJANGO_CHECK_DEPLOY_STRICT: "0"
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
 
 services:
   db:

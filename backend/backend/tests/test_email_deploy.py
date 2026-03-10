@@ -11,9 +11,11 @@ from django.test import SimpleTestCase, TestCase, override_settings
 class EmailDeploySettingsTests(SimpleTestCase):
     def test_headless_frontend_urls_cover_confirmation_and_reset(self) -> None:
         urls = settings.HEADLESS_FRONTEND_URLS
+        self.assertIn("account_signup", urls)
         self.assertIn("account_confirm_email", urls)
         self.assertIn("account_reset_password", urls)
         self.assertIn("account_reset_password_from_key", urls)
+        self.assertTrue(urls["account_signup"].endswith("/login"))
         self.assertIn(
             "/confirm-email?key={key}",
             urls["account_confirm_email"],

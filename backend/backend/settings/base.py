@@ -164,6 +164,7 @@ FRONTEND_BASE_URL = config(
 )
 _frontend_base = FRONTEND_BASE_URL.rstrip("/")
 HEADLESS_FRONTEND_URLS = {
+    "account_signup": (f"{_frontend_base}/login"),
     "account_confirm_email": (f"{_frontend_base}/confirm-email?key={{key}}"),
     "account_reset_password": (f"{_frontend_base}/reset-password"),
     "account_reset_password_from_key": (

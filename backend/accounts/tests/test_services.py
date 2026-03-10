@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from allauth.account.models import EmailAddress
 from accounts.adapters import StrictAccountAdapter
 from accounts.mfa_adapter import EncryptedMFAAdapter
 from accounts.services.account_status import AccountStatusService
+from accounts.services.email_addresses import sync_user_email_address
 from accounts.services.personalization import (
     missing_personalization_fields,
     personalization_complete,
@@ -139,6 +141,52 @@ class AccountStatusServiceTests(TestCase):
         self.profile.is_itmo_student = False
         self.profile.save()
         AccountStatusService.require_personalized_profile(self.user)
+
+
+class EmailAddressServiceTests(TestCase):
+    def test_sync_user_email_address_creates_primary_email_address(self) -> None:
+        user = User.objects.create_user(
+            username="email_service_user",
+            email="Email.Service@Example.com",
+            password=TEST_PASSWORD,
+        )
+
+        result = sync_user_email_address(user)
+
+        address = EmailAddress.objects.get(user=user)
+        self.assertTrue(result.created)
+        self.assertTrue(result.promoted_primary)
+        self.assertEqual(address.email, "email.service@example.com")
+        self.assertTrue(address.primary)
+        self.assertFalse(address.verified)
+
+    def test_sync_user_email_address_promotes_updated_user_email(self) -> None:
+        user = User.objects.create_user(
+            username="email_service_switch",
+            email="old@example.com",
+            password=TEST_PASSWORD,
+        )
+        old_address = EmailAddress.objects.add_email(
+            request=None,
+            user=user,
+            email="old@example.com",
+            confirm=False,
+        )
+        old_address.set_as_primary()
+
+        user.email = "new@example.com"
+        user.save(update_fields=["email"])
+
+        result = sync_user_email_address(user)
+
+        old_address.refresh_from_db()
+        new_address = EmailAddress.objects.get(user=user, email="new@example.com")
+        user.refresh_from_db()
+        self.assertTrue(result.created)
+        self.assertTrue(result.promoted_primary)
+        self.assertFalse(old_address.primary)
+        self.assertTrue(new_address.primary)
+        self.assertEqual(user.email, "new@example.com")
 
 
 class SessionServiceTests(TestCase):

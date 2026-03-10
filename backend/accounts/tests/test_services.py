@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from unittest.mock import patch
 
 from accounts.adapters import StrictAccountAdapter
@@ -12,9 +13,11 @@ from accounts.services.personalization import (
 )
 from accounts.services.profile import ProfileService
 from accounts.services.sessions import SessionService
+from accounts.token_strategy import RevocableSessionTokenStrategy
 from allauth.account.models import EmailAddress
 from core.models import UserProfile, UserSessionMeta
-from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.contrib.auth import SESSION_KEY, get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import connection
 from django.http import HttpRequest
@@ -227,6 +230,37 @@ class SessionServiceTests(TestCase):
             SessionService.assert_session_allowed(request)
         self.assertEqual(ctx.exception.status_code, 401)
         self.assertEqual(ctx.exception.message, "session revoked")
+
+
+class RevocableSessionTokenStrategyTests(TestCase):
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(
+            username="token_strategy_user",
+            email="token_strategy_user@example.com",
+            password=TEST_PASSWORD,
+        )
+        self.strategy = RevocableSessionTokenStrategy()
+
+    def _create_session(self) -> str:
+        engine = import_module(settings.SESSION_ENGINE)
+        session = engine.SessionStore()
+        session[SESSION_KEY] = str(self.user.pk)
+        session.save()
+        return session.session_key or ""
+
+    def test_lookup_session_rejects_revoked_meta_by_session_token(
+        self,
+    ) -> None:
+        session_token = self._create_session()
+        UserSessionMeta.objects.create(
+            user=self.user,
+            session_key="different-session-key",
+            session_token=session_token,
+            revoked_reason="manual",
+            revoked_at=timezone.now(),
+        )
+
+        self.assertIsNone(self.strategy.lookup_session(session_token))
 
 
 class StrictAccountAdapterTests(TestCase):

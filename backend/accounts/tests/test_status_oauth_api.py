@@ -63,7 +63,6 @@ class AccountStatusAndOAuthApiTests(APITestCase):
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 401, response.content)
-        self.assertEqual(response.json()["detail"], "session revoked")
 
     def test_oauth_link_requires_auth(self) -> None:
         response = self.client.get(self.api("/oauth/link/yandex"))

@@ -80,6 +80,10 @@ function isUnauthorized(error) {
   return error?.response?.status === 401;
 }
 
+function isRevokedSessionError(error) {
+  return error?.response?.status === 410;
+}
+
 function extractSessionToken(respOrErrResp) {
   const meta = respOrErrResp?.data?.meta || {};
   return (
@@ -289,23 +293,30 @@ async function allauthAppRequest(
   url,
   { data = null, headers = {} } = {},
 ) {
-  const sessionHeaders = buildSessionHeaders(tokenStore.getSessionToken());
-  const response = await bareClient.request({
-    method,
-    url: `${ALLAUTH_APP_BASE}${url}`,
-    data,
-    headers: {
-      ...sessionHeaders,
-      ...headers,
-    },
-  });
+  try {
+    const sessionHeaders = buildSessionHeaders(tokenStore.getSessionToken());
+    const response = await bareClient.request({
+      method,
+      url: `${ALLAUTH_APP_BASE}${url}`,
+      data,
+      headers: {
+        ...sessionHeaders,
+        ...headers,
+      },
+    });
 
-  const sessionToken = extractSessionToken(response);
-  if (sessionToken) {
-    setSessionToken(sessionToken, { emit: true });
+    const sessionToken = extractSessionToken(response);
+    if (sessionToken) {
+      setSessionToken(sessionToken, { emit: true });
+    }
+
+    return response;
+  } catch (error) {
+    if (isRevokedSessionError(error)) {
+      performHardLogout(HARD_LOGOUT_REASONS.SESSION_UNAUTHORIZED);
+    }
+    throw error;
   }
-
-  return response;
 }
 
 function normalizeEmailStatus(addresses) {

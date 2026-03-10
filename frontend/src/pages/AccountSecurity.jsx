@@ -223,7 +223,8 @@ function fallbackEmailStatus(profile) {
 
 function isUnauthorizedResult(result) {
   return (
-    result?.status === "rejected" && result.reason?.response?.status === 401
+    result?.status === "rejected" &&
+    [401, 410].includes(result.reason?.response?.status)
   );
 }
 

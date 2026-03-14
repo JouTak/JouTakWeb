@@ -57,46 +57,31 @@ django_bootstrap() {
     python manage.py migrate --noinput
   fi
 
+  if [ "${DJANGO_SYNC_SITE:-1}" = "1" ]; then
+    log "Ensuring django.contrib.sites is configured ..."
+    python manage.py sync_site
+  fi
+
+  if [ "${DJANGO_REENCRYPT_MFA_AUTHENTICATORS:-1}" = "1" ]; then
+    log "Encrypting legacy MFA secrets ..."
+    python manage.py reencrypt_mfa_authenticators
+  fi
+
+  log "Running auth/session maintenance bootstrap ..."
+  python manage.py run_auth_maintenance --once --db-wait-seconds 0
+
   if [ "${DJANGO_COLLECTSTATIC:-1}" = "1" ]; then
     log "Collecting static ..."
     python manage.py collectstatic --noinput
   fi
 
   if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL:-}" ] ; then
-  log "Ensuring superuser ${DJANGO_SUPERUSER_USERNAME} exists ..."
-  python manage.py shell -c "
-import os
-from django.contrib.auth import get_user_model
-from django.core.exceptions import FieldDoesNotExist
-
-User = get_user_model()
-username_field = User.USERNAME_FIELD
-
-u = os.environ['DJANGO_SUPERUSER_USERNAME']
-e = os.environ['DJANGO_SUPERUSER_EMAIL']
-p = os.environ.get('DJANGO_SUPERUSER_PASSWORD') or ''
-
-lookup = {username_field: u}
-defaults = {'is_superuser': True, 'is_staff': True}
-try:
-    User._meta.get_field('email')
-except FieldDoesNotExist:
-    pass
-else:
-    defaults['email'] = e
-
-user, created = User.objects.get_or_create(defaults=defaults, **lookup)
-if created:
-    if p:
-        user.set_password(p)
-    else:
-        user.set_unusable_password()
-    user.save()
-    print('Created superuser:', getattr(user, username_field))
-else:
-    print('Superuser already exists:', getattr(user, username_field))
-"
-fi
+    log "Ensuring superuser ${DJANGO_SUPERUSER_USERNAME} exists ..."
+    python manage.py ensure_superuser \
+      --username "${DJANGO_SUPERUSER_USERNAME}" \
+      --email "${DJANGO_SUPERUSER_EMAIL}" \
+      --password "${DJANGO_SUPERUSER_PASSWORD:-}"
+  fi
 }
 
 wait_for_db

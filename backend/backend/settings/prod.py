@@ -1,9 +1,43 @@
+from urllib.parse import urlparse
+
 import dj_database_url
 from decouple import Csv, config
 
-from .base import *  # noqa: F403
+from . import base as base_settings
+
+globals().update(base_settings.as_public_settings())
 
 DEBUG = False
+if (
+    not base_settings.SECRET_KEY
+    or base_settings.SECRET_KEY == "VERY_LONG_PASS_>80!TODO_CHANGE_ME!"
+):
+    raise RuntimeError(
+        "A non-default DJANGO_SECRET_KEY is required in production"
+    )
+
+frontend_base_url = (base_settings.FRONTEND_BASE_URL or "").strip()
+if not frontend_base_url:
+    raise RuntimeError("FRONTEND_BASE_URL is required in production")
+
+parsed_frontend = urlparse(
+    frontend_base_url
+    if "://" in frontend_base_url
+    else f"https://{frontend_base_url}"
+)
+allow_localhost_frontend_base_url = config(
+    "DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL",
+    cast=bool,
+    default=False,
+)
+if (
+    parsed_frontend.hostname in {"localhost", "127.0.0.1"}
+    and not allow_localhost_frontend_base_url
+):
+    raise RuntimeError(
+        "FRONTEND_BASE_URL must point to a non-localhost frontend "
+        "in production"
+    )
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv(), default="")
@@ -62,6 +96,7 @@ EMAIL_USE_TLS = config(
     cast=bool,
     default=(not EMAIL_USE_SSL),
 )
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", cast=int, default=10)
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise RuntimeError("EMAIL_USE_SSL and EMAIL_USE_TLS cannot both be true")
 DEFAULT_FROM_EMAIL = config(

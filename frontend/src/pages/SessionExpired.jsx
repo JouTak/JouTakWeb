@@ -18,6 +18,8 @@ const reasonText = {
     "Срок действия сессии завершился. Для продолжения необходимо войти снова.",
   SESSION_UNAUTHORIZED:
     "Срок действия сессии завершился. Для продолжения необходимо войти снова.",
+  PASSWORD_CHANGED:
+    "Пароль был изменён. Для продолжения необходимо войти снова.",
 };
 
 export default function SessionExpired() {
@@ -34,8 +36,7 @@ export default function SessionExpired() {
     };
   }, [location.search]);
 
-  const message =
-    reasonText[reason] || reasonText.SESSION_UNAUTHORIZED;
+  const message = reasonText[reason] || reasonText.SESSION_UNAUTHORIZED;
 
   return (
     <section
@@ -67,4 +68,3 @@ export default function SessionExpired() {
     </section>
   );
 }
-

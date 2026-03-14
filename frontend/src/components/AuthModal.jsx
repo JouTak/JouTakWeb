@@ -2,19 +2,40 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Modal, Button, TextInput, useToaster } from "@gravity-ui/uikit";
 import { useNavigate } from "react-router-dom";
-import { doLogin, doSignupAndLogin, me } from "../services/api";
+import {
+  doLogin,
+  doSignupAndLogin,
+  me,
+  requestPasswordReset,
+} from "../services/api";
 import { needsPersonalization } from "../utils/profileState";
+
+const fieldBlockStyle = {
+  display: "grid",
+  gap: 6,
+};
+
+const fieldLabelStyle = {
+  fontSize: 13,
+  lineHeight: 1.25,
+  opacity: 0.85,
+};
 
 function isSafeInternalPath(path) {
   return (
-    typeof path === "string" &&
-    path.startsWith("/") &&
-    !path.startsWith("//")
+    typeof path === "string" && path.startsWith("/") && !path.startsWith("//")
   );
 }
 
 function extractErrorMessage(error, fallback) {
   const data = error?.response?.data;
+  if (Array.isArray(data?.errors)) {
+    const firstError = data.errors.find(
+      (entry) =>
+        entry && typeof entry.message === "string" && entry.message.trim(),
+    );
+    if (firstError?.message) return firstError.message;
+  }
   if (data?.fields && typeof data.fields === "object") {
     const firstFieldMessage = Object.values(data.fields).find(
       (value) => typeof value === "string" && value.trim(),
@@ -46,29 +67,38 @@ export default function AuthModal({
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
 
-  const [username, setUsername] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
 
-  const [suUsername, setSuUsername] = useState("");
   const [suEmail, setSuEmail] = useState("");
   const [suPassword, setSuPassword] = useState("");
   const [suPassword2, setSuPassword2] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
 
   const toaster = useToaster();
   const isLogin = mode === "login";
-  const title = useMemo(() => (isLogin ? "Вход" : "Регистрация"), [isLogin]);
+  const isResetPassword = mode === "reset-password";
+  const title = useMemo(() => {
+    if (isResetPassword) return "Сброс пароля";
+    if (isLogin) return "Вход";
+    return "Регистрация";
+  }, [isLogin, isResetPassword]);
   const safeSuccessRedirectTo = useMemo(() => {
     if (isSafeInternalPath(successRedirectTo)) return successRedirectTo;
     return null;
   }, [successRedirectTo]);
 
   function resetForms() {
-    setUsername("");
+    setLogin("");
     setPassword("");
-    setSuUsername("");
     setSuEmail("");
     setSuPassword("");
     setSuPassword2("");
+    setResetEmail("");
+    setResetError("");
+    setResetSuccess("");
   }
 
   function close({ notifyParent = true } = {}) {
@@ -88,13 +118,12 @@ export default function AuthModal({
   const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
   function validateLogin() {
-    if (!username.trim()) return "Укажите логин.";
+    if (!login.trim()) return "Укажите email или старый логин.";
     if (!password) return "Введите пароль.";
     return null;
   }
 
   function validateSignup() {
-    if (!suUsername.trim()) return "Укажите имя пользователя.";
     if (!suEmail.trim()) return "Укажите email.";
     if (!emailOk(suEmail)) return "Неверный формат email.";
     if (!suPassword) return "Введите пароль.";
@@ -103,17 +132,48 @@ export default function AuthModal({
     return null;
   }
 
+  async function onResetRequestSubmit(e) {
+    e.preventDefault();
+    const trimmedEmail = String(resetEmail || "").trim();
+    if (!trimmedEmail) {
+      setResetError("Укажите email.");
+      return;
+    }
+    if (!emailOk(trimmedEmail)) {
+      setResetError("Неверный формат email.");
+      return;
+    }
+
+    setBusy(true);
+    setResetError("");
+    try {
+      await requestPasswordReset(trimmedEmail);
+      setResetSuccess(
+        "Если аккаунт с таким email существует, мы отправили письмо со ссылкой для сброса пароля.",
+      );
+    } catch (ex) {
+      setResetError(
+        extractErrorMessage(
+          ex,
+          "Не удалось отправить письмо для сброса пароля.",
+        ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onLoginSubmit(e) {
     e.preventDefault();
     const err = validateLogin();
     if (err) return toaster.add({ title: err, theme: "warning" });
     setBusy(true);
     try {
-      await doLogin({ username, password });
+      await doLogin({ login, password });
       const p = await me();
       toaster.add({
         title: "Готово!",
-        content: `Здравствуйте, ${p.username}.`,
+        content: "Вы вошли в аккаунт.",
         theme: "success",
       });
       if (needsPersonalization(p)) {
@@ -151,16 +211,15 @@ export default function AuthModal({
     setBusy(true);
     try {
       await doSignupAndLogin({
-        username: suUsername.trim(),
         email: suEmail.trim(),
         password: suPassword,
       });
-      const p = await me();
       toaster.add({
         title: "Аккаунт создан",
-        content: `Добро пожаловать, ${p.username}!`,
+        content: "Аккаунт создан. Теперь можно продолжить настройку профиля.",
         theme: "success",
       });
+      const p = await me();
       if (needsPersonalization(p)) {
         close({ notifyParent: !safeSuccessRedirectTo });
         navigate("/account/complete-profile", { replace: true });
@@ -188,6 +247,7 @@ export default function AuthModal({
       open={open}
       onClose={close}
       aria-labelledby="auth-modal-title"
+      disableBodyScrollLock
       style={{ "--g-modal-width": "520px" }}
     >
       <div style={{ padding: 24, display: "grid", gap: 16 }}>
@@ -197,26 +257,32 @@ export default function AuthModal({
 
         {isLogin ? (
           <form onSubmit={onLoginSubmit} style={{ display: "grid", gap: 12 }}>
-            <TextInput
-              size="l"
-              label="Никнейм"
-              value={username}
-              onUpdate={setUsername}
-              name="joutak__username"
-              autoComplete="username"
-              autoFocus
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="password"
-              label="Пароль"
-              value={password}
-              onUpdate={setPassword}
-              name="joutak__password"
-              autoComplete="current-password"
-              disabled={busy}
-            />
+            <div style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Email или старый логин</span>
+              <TextInput
+                size="l"
+                value={login}
+                onUpdate={setLogin}
+                name="joutak__login"
+                autoComplete="username"
+                autoFocus
+                disabled={busy}
+                aria-label="Email или старый логин"
+              />
+            </div>
+            <div style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Пароль</span>
+              <TextInput
+                size="l"
+                type="password"
+                value={password}
+                onUpdate={setPassword}
+                name="joutak__password"
+                autoComplete="current-password"
+                disabled={busy}
+                aria-label="Пароль"
+              />
+            </div>
             <Button
               view="action"
               size="l"
@@ -236,6 +302,21 @@ export default function AuthModal({
               Нет аккаунта? Зарегистрируйтесь
             </Button>
 
+            <Button
+              view="flat"
+              size="l"
+              width="max"
+              type="button"
+              onClick={() => {
+                setResetError("");
+                setResetSuccess("");
+                setResetEmail("");
+                setMode("reset-password");
+              }}
+            >
+              Забыли пароль?
+            </Button>
+
             <div
               style={{
                 display: "flex",
@@ -248,47 +329,123 @@ export default function AuthModal({
               </Button>
             </div>
           </form>
+        ) : isResetPassword ? (
+          <div style={{ display: "grid", gap: 12 }}>
+            <p style={{ margin: 0, opacity: 0.9 }}>
+              Укажите email, и мы отправим письмо со ссылкой для сброса пароля.
+            </p>
+
+            {resetSuccess ? (
+              <>
+                <p style={{ margin: 0, opacity: 0.9 }}>{resetSuccess}</p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button view="action" onClick={() => setMode("login")}>
+                    Вернуться ко входу
+                  </Button>
+                  <Button
+                    view="outlined"
+                    type="button"
+                    onClick={() => {
+                      setResetSuccess("");
+                      setResetError("");
+                    }}
+                  >
+                    Отправить ещё раз
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <form
+                onSubmit={onResetRequestSubmit}
+                style={{ display: "grid", gap: 12 }}
+              >
+                <div style={fieldBlockStyle}>
+                  <span style={fieldLabelStyle}>Email</span>
+                  <TextInput
+                    size="l"
+                    type="email"
+                    value={resetEmail}
+                    onUpdate={setResetEmail}
+                    autoComplete="email"
+                    autoFocus
+                    disabled={busy}
+                    aria-label="Email"
+                  />
+                </div>
+                {resetError && (
+                  <p style={{ margin: 0, color: "#ff8e8e" }}>{resetError}</p>
+                )}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button view="action" type="submit" loading={busy}>
+                    Отправить письмо
+                  </Button>
+                  <Button
+                    view="outlined"
+                    type="button"
+                    onClick={() => {
+                      setResetError("");
+                      setMode("login");
+                    }}
+                  >
+                    Назад ко входу
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: 4,
+              }}
+            >
+              <Button view="flat" onClick={close}>
+                Закрыть
+              </Button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
-            <TextInput
-              size="l"
-              label="Никнейм"
-              value={suUsername}
-              onUpdate={setSuUsername}
-              name="joutak__username"
-              autoComplete="username"
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="email"
-              label="Email"
-              value={suEmail}
-              onUpdate={setSuEmail}
-              name="joutak__email"
-              autoComplete="email"
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="password"
-              label="Пароль"
-              value={suPassword}
-              onUpdate={setSuPassword}
-              name="joutak__password"
-              autoComplete="new-password"
-              disabled={busy}
-            />
-            <TextInput
-              size="l"
-              type="password"
-              label="Повторите пароль"
-              value={suPassword2}
-              onUpdate={setSuPassword2}
-              name="joutak__password"
-              autoComplete="new-password"
-              disabled={busy}
-            />
+            <div style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Email</span>
+              <TextInput
+                size="l"
+                type="email"
+                value={suEmail}
+                onUpdate={setSuEmail}
+                name="joutak__email"
+                autoComplete="email"
+                disabled={busy}
+                aria-label="Email"
+              />
+            </div>
+            <div style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Пароль</span>
+              <TextInput
+                size="l"
+                type="password"
+                value={suPassword}
+                onUpdate={setSuPassword}
+                name="joutak__password"
+                autoComplete="new-password"
+                disabled={busy}
+                aria-label="Пароль"
+              />
+            </div>
+            <div style={fieldBlockStyle}>
+              <span style={fieldLabelStyle}>Повторите пароль</span>
+              <TextInput
+                size="l"
+                type="password"
+                value={suPassword2}
+                onUpdate={setSuPassword2}
+                name="joutak__password"
+                autoComplete="new-password"
+                disabled={busy}
+                aria-label="Повторите пароль"
+              />
+            </div>
             <Button
               view="action"
               size="l"

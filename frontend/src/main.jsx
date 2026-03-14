@@ -3,7 +3,6 @@ import App from "./App.jsx";
 import { setupAxiosInterceptors } from "./services/api";
 
 import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 import {
   ThemeProvider,

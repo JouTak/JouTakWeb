@@ -30,15 +30,23 @@ function boolIcon(value) {
   return "❔";
 }
 
-export default function ProfileCard({ onUpdated }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [vkUsername, setVkUsername] = useState("");
-  const [minecraftNick, setMinecraftNick] = useState("");
-  const [minecraftHasLicense, setMinecraftHasLicense] = useState(null);
-  const [isItmoStudent, setIsItmoStudent] = useState(null);
-  const [itmoIsu, setItmoIsu] = useState("");
-  const [loading, setLoading] = useState(true);
+export default function ProfileCard({ profile, onUpdated }) {
+  const [firstName, setFirstName] = useState(() => profile?.first_name || "");
+  const [lastName, setLastName] = useState(() => profile?.last_name || "");
+  const [vkUsername, setVkUsername] = useState(
+    () => profile?.vk_username || "",
+  );
+  const [minecraftNick, setMinecraftNick] = useState(
+    () => profile?.minecraft_nick || "",
+  );
+  const [minecraftHasLicense, setMinecraftHasLicense] = useState(
+    () => profile?.minecraft_has_license ?? null,
+  );
+  const [isItmoStudent, setIsItmoStudent] = useState(
+    () => profile?.is_itmo_student ?? null,
+  );
+  const [itmoIsu, setItmoIsu] = useState(() => profile?.itmo_isu || "");
+  const [loading, setLoading] = useState(() => !profile);
 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -52,17 +60,21 @@ export default function ProfileCard({ onUpdated }) {
 
   const { add } = useToaster();
 
+  const applyProfileData = useCallback((data = {}) => {
+    setFirstName(data.first_name || "");
+    setLastName(data.last_name || "");
+    setVkUsername(data.vk_username || "");
+    setMinecraftNick(data.minecraft_nick || "");
+    setMinecraftHasLicense(data.minecraft_has_license ?? null);
+    setIsItmoStudent(data.is_itmo_student ?? null);
+    setItmoIsu(data.itmo_isu || "");
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await me();
-      setFirstName(data.first_name || "");
-      setLastName(data.last_name || "");
-      setVkUsername(data.vk_username || "");
-      setMinecraftNick(data.minecraft_nick || "");
-      setMinecraftHasLicense(data.minecraft_has_license ?? null);
-      setIsItmoStudent(data.is_itmo_student ?? null);
-      setItmoIsu(data.itmo_isu || "");
+      applyProfileData(data);
     } catch {
       add({
         name: "profile-load-error",
@@ -73,11 +85,16 @@ export default function ProfileCard({ onUpdated }) {
     } finally {
       setLoading(false);
     }
-  }, [add]);
+  }, [add, applyProfileData]);
 
   useEffect(() => {
+    if (profile) {
+      applyProfileData(profile);
+      setLoading(false);
+      return;
+    }
     load();
-  }, [load]);
+  }, [applyProfileData, load, profile]);
 
   function openForm() {
     setFDraft(firstName);
@@ -137,7 +154,16 @@ export default function ProfileCard({ onUpdated }) {
       (!isuRequired || isu.length > 0) &&
       isuOk
     );
-  }, [fDraft, lDraft, vkDraft, mcDraft, licenseDraft, itmoDraft, isuDraft, isuRequired]);
+  }, [
+    fDraft,
+    lDraft,
+    vkDraft,
+    mcDraft,
+    licenseDraft,
+    itmoDraft,
+    isuDraft,
+    isuRequired,
+  ]);
 
   async function onSave(e) {
     e.preventDefault();
@@ -151,21 +177,32 @@ export default function ProfileCard({ onUpdated }) {
         minecraft_nick: (mcDraft || "").trim(),
         minecraft_has_license: selectToBool(licenseDraft),
         is_itmo_student: selectToBool(itmoDraft),
-        ...(isuRequired ? { itmo_isu: (isuDraft || "").trim() } : { itmo_isu: "" }),
+        ...(isuRequired
+          ? { itmo_isu: (isuDraft || "").trim() }
+          : { itmo_isu: "" }),
       };
-      const { message } = await updateProfile(payload);
-      setFirstName(payload.first_name);
-      setLastName(payload.last_name);
-      setVkUsername(payload.vk_username);
-      setMinecraftNick(payload.minecraft_nick);
-      setMinecraftHasLicense(payload.minecraft_has_license);
-      setIsItmoStudent(payload.is_itmo_student);
-      setItmoIsu(payload.itmo_isu || "");
-      onUpdated?.();
+      const result = await updateProfile(payload);
+      applyProfileData(payload);
+      onUpdated?.({
+        ...payload,
+        email_verified: result?.email_verified,
+        profile_complete: result?.profile_complete,
+        account_active: result?.account_active,
+        registration_completed: result?.registration_completed,
+        profile_state: result?.profile_state,
+        profile_tier: result?.profile_tier,
+        blocking_reasons: result?.blocking_reasons,
+        personalization_ui_enabled: result?.personalization_ui_enabled,
+        personalization_interstitial_enabled:
+          result?.personalization_interstitial_enabled,
+        personalization_enforce_enabled:
+          result?.personalization_enforce_enabled,
+        missing_fields: result?.missing_fields,
+      });
       add({
         name: "name-save",
         title: "Профиль",
-        content: message || "Сохранено",
+        content: result?.message || "Сохранено",
         theme: "success",
       });
       setOpen(false);
@@ -216,7 +253,11 @@ export default function ProfileCard({ onUpdated }) {
       ) : (
         <>
           <div style={{ display: "grid", gap: 8 }}>
-            {fullName ? <div><b>{fullName}</b></div> : null}
+            {fullName ? (
+              <div>
+                <b>{fullName}</b>
+              </div>
+            ) : null}
 
             {vkUsername ? (
               <a
@@ -397,5 +438,14 @@ export default function ProfileCard({ onUpdated }) {
 }
 
 ProfileCard.propTypes = {
+  profile: PropTypes.shape({
+    first_name: PropTypes.string,
+    last_name: PropTypes.string,
+    vk_username: PropTypes.string,
+    minecraft_nick: PropTypes.string,
+    minecraft_has_license: PropTypes.bool,
+    is_itmo_student: PropTypes.bool,
+    itmo_isu: PropTypes.string,
+  }),
   onUpdated: PropTypes.func,
 };

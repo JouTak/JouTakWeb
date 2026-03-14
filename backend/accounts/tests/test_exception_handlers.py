@@ -8,7 +8,7 @@ from django.test import TestCase
 
 
 class ExceptionHandlerHelperTests(TestCase):
-    def test_normalize_form_errors_returns_structured_maps(self):
+    def test_normalize_form_errors_returns_structured_maps(self) -> None:
         raw = (
             '{"field":[{"message":"Ошибка","code":"invalid"}],'
             '"name":["Обязательное поле"]}'
@@ -20,12 +20,12 @@ class ExceptionHandlerHelperTests(TestCase):
         self.assertEqual(errors["field"][0]["code"], "invalid")
         self.assertEqual(fields["name"], "Обязательное поле")
 
-    def test_normalize_form_errors_handles_non_json(self):
+    def test_normalize_form_errors_handles_non_json(self) -> None:
         errors, fields = _normalize_form_errors("not-json")
         self.assertIsNone(errors)
         self.assertIsNone(fields)
 
-    def test_normalize_error_payload_with_business_code(self):
+    def test_normalize_error_payload_with_business_code(self) -> None:
         payload = _normalize_error_payload(
             '{"detail":"Forbidden","error_code":"E_CODE",'
             '"blocking_reasons":["REASON_1"]}'
@@ -34,6 +34,8 @@ class ExceptionHandlerHelperTests(TestCase):
         self.assertEqual(payload["error_code"], "E_CODE")
         self.assertEqual(payload["blocking_reasons"], ["REASON_1"])
 
-    def test_normalize_error_payload_returns_none_for_unknown_shape(self):
+    def test_normalize_error_payload_returns_none_for_unknown_shape(
+        self,
+    ) -> None:
         payload = _normalize_error_payload('{"message":"plain"}')
         self.assertIsNone(payload)

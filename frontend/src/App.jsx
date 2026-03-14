@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,25 +9,32 @@ import {
 } from "react-router-dom";
 
 import Layout from "./components/Layout";
-import JouTak from "./pages/JouTak";
-import Legacy from "./pages/Legacy.jsx";
-import MiniGames from "./pages/Minigames.jsx";
-import ItmoCraft from "./pages/ItmoCraft.jsx";
-import Contact from "./pages/Contact.jsx";
-import NotFound from "./pages/NotFound.jsx";
 import AuthModal from "./components/AuthModal.jsx";
-import AccountSecurity from "./pages/AccountSecurity.jsx";
-import AccountOnboarding from "./pages/AccountOnboarding.jsx";
-import SessionExpired from "./pages/SessionExpired.jsx";
 import RequireAuth from "./components/RequireAuth.jsx";
-import Pay from "./pages/joutak/Pay.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
+
+const JouTak = lazy(() => import("./pages/JouTak.jsx"));
+const Legacy = lazy(() => import("./pages/Legacy.jsx"));
+const MiniGames = lazy(() => import("./pages/Minigames.jsx"));
+const ItmoCraft = lazy(() => import("./pages/ItmoCraft.jsx"));
+const Contact = lazy(() => import("./pages/Contact.jsx"));
+const NotFound = lazy(() => import("./pages/NotFound.jsx"));
+const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
+const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
+const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
+const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
+const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
 
 function safeInternalPath(path) {
   if (typeof path !== "string") return "/joutak";
   if (!path.startsWith("/")) return "/joutak";
   if (path.startsWith("//")) return "/joutak";
   return path;
+}
+
+function RouteFallback() {
+  return <div className="py-5 text-center text-secondary">Загрузка...</div>;
 }
 
 function LoginModalRoute() {
@@ -53,7 +61,7 @@ function AppRoutes() {
   const background = location.state && location.state.background;
 
   return (
-    <>
+    <Suspense fallback={<RouteFallback />}>
       <Routes location={background || location}>
         <Route path="/" element={<Navigate to="/joutak" replace />} />
         <Route path="/joutak" element={<JouTak />} />
@@ -95,6 +103,8 @@ function AppRoutes() {
         />
         <Route path="/joutak/pay" element={<Pay />} />
         <Route path="/session-expired" element={<SessionExpired />} />
+        <Route path="/confirm-email" element={<ConfirmEmail />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/login" element={<LoginModalRoute />} />
         <Route path="*" element={<NotFound />} />
@@ -105,7 +115,7 @@ function AppRoutes() {
           <Route path="/login" element={<LoginModalRoute />} />
         </Routes>
       )}
-    </>
+    </Suspense>
   );
 }
 

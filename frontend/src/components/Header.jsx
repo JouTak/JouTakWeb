@@ -9,11 +9,19 @@ import {
   Label,
 } from "@gravity-ui/uikit";
 import { useState, useCallback, useEffect, useMemo } from "react";
+import Offcanvas from "react-bootstrap/Offcanvas";
 import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
 import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
 import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
-import { isPersonalizedProfile, needsPersonalization } from "../utils/profileState";
+import {
+  isPersonalizedProfile,
+  needsPersonalization,
+} from "../utils/profileState";
+import {
+  getProfileDisplayName,
+  getProfileIdentityKey,
+} from "../utils/accountIdentity";
 
 const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 
@@ -52,21 +60,13 @@ const Header = () => {
   const location = useLocation();
 
   const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [personalizationModalOpen, setPersonalizationModalOpen] = useState(false);
+  const [personalizationModalOpen, setPersonalizationModalOpen] =
+    useState(false);
 
-  const closeOffcanvas = useCallback(() => {
-    const el = document.getElementById("offcanvasDarkNavbar");
-    const bs = window.bootstrap;
-    if (el && bs?.Offcanvas) {
-      let inst = bs.Offcanvas.getInstance(el);
-      if (!inst) inst = new bs.Offcanvas(el);
-      inst.hide();
-    } else {
-      document.querySelector("#offcanvasDarkNavbar .btn-close")?.click();
-    }
-  }, []);
+  const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
 
   const openAuth = useCallback(() => {
     closeOffcanvas();
@@ -74,9 +74,8 @@ const Header = () => {
   }, [closeOffcanvas]);
 
   useEffect(() => {
-    const el = document.getElementById("offcanvasDarkNavbar");
-    if (el && el.classList.contains("show")) closeOffcanvas();
-  }, [location.pathname, closeOffcanvas]);
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   const loadProfileIfTokens = useCallback(async () => {
     if (!hasStoredAuth()) {
@@ -112,10 +111,17 @@ const Header = () => {
 
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
-  const onLogout = () => {
-    logout();
-    setProfile(null);
-  };
+  const onLogout = useCallback(async () => {
+    closeOffcanvas();
+    setAuthOpen(false);
+    setPersonalizationModalOpen(false);
+    try {
+      await logout();
+    } finally {
+      setProfile(null);
+      navigate("/joutak", { replace: true });
+    }
+  }, [closeOffcanvas, navigate]);
 
   const registrationCompleted = useMemo(
     () => isPersonalizedProfile(profile),
@@ -123,18 +129,17 @@ const Header = () => {
   );
 
   const personalizationNoticeKey = useMemo(() => {
-    const username = profile?.username || "";
-    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${username}`;
-  }, [profile?.username]);
+    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${getProfileIdentityKey(profile)}`;
+  }, [profile]);
 
   const closePersonalizationModal = useCallback(
     ({ markSeen = true } = {}) => {
-      if (markSeen && profile?.username) {
+      if (markSeen && getProfileIdentityKey(profile) !== "guest") {
         localStorage.setItem(personalizationNoticeKey, "1");
       }
       setPersonalizationModalOpen(false);
     },
-    [personalizationNoticeKey, profile?.username],
+    [personalizationNoticeKey, profile],
   );
 
   const openPersonalizationFlow = useCallback(() => {
@@ -165,10 +170,10 @@ const Header = () => {
     >
       <Avatar
         size="m"
-        text={profile?.username || "?"}
+        text={getProfileDisplayName(profile)}
         imgUrl={profile?.avatar_url}
         view="outlined"
-        title={profile?.username || "Гость"}
+        title={getProfileDisplayName(profile)}
       />
     </Button>
   );
@@ -177,7 +182,7 @@ const Header = () => {
     <>
       <header>
         <nav className="navbar navbar-dark bg-dark">
-          <div className="container container-fluid d-flex justify-content-between align-items-center">
+          <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
             <a className="navbar-brand" href="https://joutak.ru">
               <img
                 src="/img/icons/logo.png"
@@ -201,12 +206,14 @@ const Header = () => {
                   renderSwitcher={renderAccountSwitcher}
                   items={[
                     ...(!registrationCompleted
-                      ? [[
-                          {
-                            text: "Завершить профиль",
-                            action: goOnboarding,
-                          },
-                        ]]
+                      ? [
+                          [
+                            {
+                              text: "Завершить профиль",
+                              action: goOnboarding,
+                            },
+                          ],
+                        ]
                       : []),
                     [{ text: "Аккаунт и безопасность", action: goSecurity }],
                     { text: "Выйти", action: onLogout, theme: "danger" },
@@ -229,8 +236,7 @@ const Header = () => {
               <button
                 className="navbar-toggler ms-2"
                 type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#offcanvasDarkNavbar"
+                onClick={() => setMenuOpen(true)}
                 aria-controls="offcanvasDarkNavbar"
                 aria-label="Toggle navigation"
               >
@@ -241,35 +247,30 @@ const Header = () => {
         </nav>
       </header>
 
-      <div
-        className="offcanvas offcanvas-start text-bg-dark"
-        tabIndex="-1"
+      <Offcanvas
+        show={menuOpen}
+        onHide={closeOffcanvas}
+        placement="start"
+        scroll
         id="offcanvasDarkNavbar"
-        aria-labelledby="offcanvasDarkNavbarLabel"
+        className="text-bg-dark"
       >
-        <div className="offcanvas-header">
-          <h5 className="offcanvas-title" id="offcanvasDarkNavbarLabel">
-            Меню
-          </h5>
-          <button
-            type="button"
-            className="btn-close btn-close-white"
-            data-bs-dismiss="offcanvas"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div className="offcanvas-body">
+        <Offcanvas.Header closeButton closeVariant="white">
+          <Offcanvas.Title id="offcanvasDarkNavbarLabel">Меню</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             <DynamicMenu />
           </ul>
-        </div>
-      </div>
+        </Offcanvas.Body>
+      </Offcanvas>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
       <Modal
         open={personalizationModalOpen}
         onClose={() => closePersonalizationModal({ markSeen: true })}
+        disableBodyScrollLock
         aria-labelledby="personalization-modal-title"
         style={{ "--g-modal-width": "620px" }}
       >

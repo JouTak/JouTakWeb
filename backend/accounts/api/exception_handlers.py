@@ -2,11 +2,17 @@ import json
 from json import JSONDecodeError
 
 from accounts.transport.schemas import ErrorOut
+from django.http import HttpRequest, HttpResponse
 from ninja import NinjaAPI
 from ninja.errors import HttpError
 
 
-def _normalize_form_errors(raw: str):
+def _normalize_form_errors(
+    raw: str,
+) -> tuple[
+    dict[str, list[dict[str, str | None]]] | None,
+    dict[str, str] | None,
+]:
     try:
         data = json.loads(raw)
     except (JSONDecodeError, TypeError):
@@ -34,7 +40,9 @@ def _normalize_form_errors(raw: str):
     return (errors or None), (fields or None)
 
 
-def _normalize_error_payload(raw: str):
+def _normalize_error_payload(
+    raw: str,
+) -> dict[str, str | list[str] | None] | None:
     try:
         data = json.loads(raw)
     except (JSONDecodeError, TypeError):
@@ -46,9 +54,7 @@ def _normalize_error_payload(raw: str):
     blocking_reasons = data.get("blocking_reasons")
     if detail is None and error_code is None:
         return None
-    if blocking_reasons is not None and not isinstance(
-        blocking_reasons, list
-    ):
+    if blocking_reasons is not None and not isinstance(blocking_reasons, list):
         blocking_reasons = None
     return {
         "detail": str(detail or "error"),
@@ -59,7 +65,7 @@ def _normalize_error_payload(raw: str):
 
 def install_http_error_handler(api: NinjaAPI) -> None:
     @api.exception_handler(HttpError)
-    def on_http_error(request, exc: HttpError):  # noqa: N802
+    def on_http_error(request: HttpRequest, exc: HttpError) -> HttpResponse:
         status = getattr(exc, "status_code", 500)
         raw_detail = getattr(exc, "message", None)
         if raw_detail is None:

@@ -1,3 +1,40 @@
+x-backend-environment: &backend-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  DJANGO_SETTINGS_MODULE: backend.settings.prod
+
+  DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
+  DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL}
+  DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
+  FF_PROFILE_PERSONALIZATION_UI: "true"
+  FF_PROFILE_PERSONALIZATION_INTERSTITIAL: "true"
+  FF_PROFILE_PERSONALIZATION_ENFORCE: "false"
+  USE_X_FORWARDED_PROTO: "false"
+  SECURE_SSL_REDIRECT: "false"
+  SECURE_HSTS_SECONDS: "0"
+
+  SESSION_COOKIE_SAMESITE: "None"
+  CSRF_COOKIE_SAMESITE: "None"
+  SESSION_COOKIE_SECURE: "false"
+  CSRF_COOKIE_SECURE: "false"
+
+  DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+  CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
+  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:5173}
+  DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL: "true"
+  DJANGO_SITE_DOMAIN: ${DJANGO_SITE_DOMAIN:-}
+  DJANGO_SITE_NAME: ${DJANGO_SITE_NAME:-}
+  ACCOUNT_TRUST_PROXY_HEADERS: ${ACCOUNT_TRUST_PROXY_HEADERS:-false}
+  ACCOUNT_TRUSTED_PROXY_CIDRS: ${ACCOUNT_TRUSTED_PROXY_CIDRS:-}
+  MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:-}
+  AUTH_SESSION_RETENTION_DAYS: ${AUTH_SESSION_RETENTION_DAYS:-30}
+  AUTH_TOKEN_RETENTION_DAYS: ${AUTH_TOKEN_RETENTION_DAYS:-30}
+
+  DB_SSL_REQUIRED: "False"
+  DJANGO_CHECK_DEPLOY_STRICT: "0"
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+
 services:
   db:
     image: postgres:16-alpine
@@ -28,42 +65,14 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    environment:
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      DJANGO_SETTINGS_MODULE: backend.settings.prod
-
-      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
-      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL}
-      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
-      FF_PROFILE_PERSONALIZATION_UI: "true"
-      FF_PROFILE_PERSONALIZATION_INTERSTITIAL: "true"
-      FF_PROFILE_PERSONALIZATION_ENFORCE: "false"
-      USE_X_FORWARDED_PROTO: "false"
-      SECURE_SSL_REDIRECT: "false"
-      SECURE_HSTS_SECONDS: "0"
-
-      SESSION_COOKIE_SAMESITE: "None"
-      CSRF_COOKIE_SAMESITE: "None"
-      SESSION_COOKIE_SECURE: "false"
-      CSRF_COOKIE_SECURE: "false"
-
-      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
-      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
-      CORS_ALLOWED_ORIGINS: "http://localhost,http://127.0.0.1,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
-
-      DB_SSL_REQUIRED: "False"
-      DJANGO_MIGRATE: "1"
-      DJANGO_COLLECTSTATIC: "1"
-      DJANGO_CHECK_DEPLOY: "1"
-      DJANGO_CHECK_DEPLOY_STRICT: "0"
+    environment: *backend-environment
     healthcheck:
       test:
         [
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=2)",
         ]
       interval: 10s
       timeout: 3s
@@ -71,6 +80,22 @@ services:
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles
+    networks:
+      - joutak_net
+
+  backend-maintenance:
+#    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    pull_policy: always
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /app/backend
+    entrypoint: ["/usr/bin/tini", "--"]
+    command: ["python", "manage.py", "run_auth_maintenance"]
+    environment: *backend-environment
     networks:
       - joutak_net
 

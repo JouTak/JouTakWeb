@@ -1,0 +1,100 @@
+x-backend-environment: &backend-environment
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  DJANGO_SETTINGS_MODULE: backend.settings.prod
+  DB_SSL_REQUIRED: "False"
+
+  USE_X_FORWARDED_PROTO: ${USE_X_FORWARDED_PROTO:-true}
+  SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-true}
+  SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
+
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?DJANGO_CSRF_TRUSTED_ORIGINS is required}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
+  DJANGO_SITE_DOMAIN: ${DJANGO_SITE_DOMAIN:-}
+  DJANGO_SITE_NAME: ${DJANGO_SITE_NAME:-}
+  ACCOUNT_TRUST_PROXY_HEADERS: ${ACCOUNT_TRUST_PROXY_HEADERS:-false}
+  ACCOUNT_TRUSTED_PROXY_CIDRS: ${ACCOUNT_TRUSTED_PROXY_CIDRS:-}
+  MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:-}
+  AUTH_SESSION_RETENTION_DAYS: ${AUTH_SESSION_RETENTION_DAYS:-30}
+  AUTH_TOKEN_RETENTION_DAYS: ${AUTH_TOKEN_RETENTION_DAYS:-30}
+
+  DJANGO_CHECK_DEPLOY_STRICT: "1"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - joutak_net
+    labels:
+      - traefik.enable=false
+
+  backend:
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment: *backend-environment
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    networks:
+      - joutak_net
+
+  backend-maintenance:
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /app/backend
+    entrypoint: ["/usr/bin/tini", "--"]
+    command: ["python", "manage.py", "run_auth_maintenance"]
+    environment: *backend-environment
+    networks:
+      - joutak_net
+
+  frontend:
+    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
+    pull_policy: always
+    environment:
+      REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+    ports:
+      - "${FRONTEND_PORT:-8010}:8080"
+    networks:
+      - joutak_net
+
+networks:
+  joutak_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:

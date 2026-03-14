@@ -4,12 +4,10 @@ import events from './events.data.js'
 
 export default function EventsSection() {
     return (
-        <section>
-            <div>
-                {events.map(event => (
-                    <EventCard key={event.title} {...event}/>
-                ))}
-            </div>
+        <section className={styles.eventsSection}>
+            {events.map(event => (
+                <EventCard key={event.title} {...event}/>
+            ))}
         </section>
     )
 }

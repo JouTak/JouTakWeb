@@ -19,7 +19,7 @@
 
 .section {
   background-color: var(--background-color);
-  padding: 100px 40px;
+  padding: 100px 40px 60px 40px;
   width: 100%;
   box-sizing: border-box;
 }

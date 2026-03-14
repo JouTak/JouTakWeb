@@ -8,12 +8,28 @@
     src: url('img/fonts/Geologica-VariableFont_slnt,wght.ttf') format('truetype');
 }
 
+.eventsSection {
+    background-color: #070E14;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
 .card {
     display: flex;
-    background-color: #278CF0;
-    max-width: 1360px;
-    padding: 40px;
+    align-items: center;
     justify-content: space-around;
+
+    background-image: url('/img/event-card-bg.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+
+    width: 100%;
+    max-width: 1440px;
+    aspect-ratio: 1360 / 588;
+
+    padding: 70px;
 }
 
 .text {
@@ -48,5 +64,6 @@
 
 .eventImg {
     max-width: 739px;
-    height: 406px;
+    width: 100%;
+    height: auto;
 }

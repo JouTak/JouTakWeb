@@ -19,5 +19,12 @@
   color: #EAEAEA;
   text-shadow: 3px 3px 0 #3F3F3F;
   cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.button:hover {
+  filter: brightness(70%);
+  transform: scale(1.02);
+  transition: all 0.1s ease;
 }
 

@@ -1,0 +1,73 @@
+@font-face {
+    font-family: 'MinecraftFont';
+    src: url('img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'GeologicaFont';
+    src: url('img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
+}
+
+.faqSection {
+    background-color: #070E14;
+    padding: 20px 130px 20px 130px;
+}
+
+.qaHead {
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+
+
+.qaBlock {
+    font-family: 'GeologicaFont', sans-serif;
+    margin-bottom: 20px;
+}
+
+.title {
+    font-family: 'MinecraftFont', sans-serif;
+    color: var(--big-title-color);
+    text-shadow: 5px 5px 0 var(--big-title-shadow);
+    font-size: 64px;
+    font-weight: 400;
+    margin-bottom: 40px;
+}
+
+.question {
+    font-weight: 500;
+    font-size: 24px;
+    color: #3C9BF9;
+}
+
+p {
+    font-size: 16px;
+    color: #ECF7FF;
+    font-weight: 300;
+}
+
+.openBtn, .closeBtn {
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    padding: 0;
+}
+
+.openBtn {
+    width: 48px;
+    height: 30px;
+}
+
+.closeBtn {
+    width: 48px;
+    height: 48px;
+}
+
+.answer {
+    margin-top: 10px;
+    margin-left: 64px;
+
+}

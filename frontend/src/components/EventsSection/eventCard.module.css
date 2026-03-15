@@ -13,17 +13,18 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    padding: 0 40px;
 }
 
 .card {
     display: flex;
     align-items: center;
-    justify-content: space-around;
+    justify-content: space-evenly;
 
     background-image: url('/img/event-card-bg.png');
     background-repeat: no-repeat;
     background-position: center;
-    background-size: cover;
+    background-size: contain;
 
     width: 100%;
     max-width: 1440px;
@@ -59,11 +60,105 @@
     color: #141E28;
     font-size: 16px;
     font-weight: 300;
-    margin-top: 20px;
+    margin-top: 30px;
 }
 
 .eventImg {
+    margin-left: 30px;
     max-width: 739px;
     width: 100%;
     height: auto;
 }
+
+@media (max-width: 1351px) {
+    .eventImg {
+        max-width: 700px;
+    }
+}
+
+@media (max-width: 1260px) {
+    .eventImg {
+        max-width: 650px;
+    }
+}
+
+@media (max-width: 1180px) {
+    .eventImg {
+        max-width: 600px;
+    }
+}
+
+@media (max-width: 1120px) {
+    .card {
+        padding: 50px;
+        aspect-ratio: 2.2;
+    }
+
+    .title {
+        font-size: 48px;
+    }
+
+    .info {
+        font-size: 18px;
+    }
+
+    .description {
+        font-size: 14px;
+    }
+
+    .eventImg {
+        max-width: 500px;
+    }
+}
+
+@media (max-width: 980px) {
+    .description {
+        margin-top: 15px;
+    }
+}
+
+@media (max-width: 930px) {
+    .eventImg {
+        max-width: 400px;
+    }
+
+    .title {
+        font-size: 36px;
+    }
+
+    .info {
+        margin-top: 5px;
+        font-size: 14px;
+    }
+
+    .description {
+        margin-top: 5px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 800px) {
+
+    .card {
+        padding: 50px;
+    }
+
+    .eventImg {
+        max-width: 300px;
+    }
+
+    .title {
+        font-size: 32px;
+    }
+
+    .info {
+        margin-top: 3px;
+        font-size: 12px;
+    }
+
+    .description {
+        margin-top: 3px;
+    }
+    
+}
+

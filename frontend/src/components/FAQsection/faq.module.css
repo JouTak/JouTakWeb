@@ -10,7 +10,14 @@
 
 .faqSection {
     background-color: #070E14;
-    padding: 20px 130px 20px 130px;
+    padding: 100px 40px 60px 40px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.faqSection .inner {
+    max-width: 1440px;
+    margin: 0 auto;
 }
 
 .qaHead {

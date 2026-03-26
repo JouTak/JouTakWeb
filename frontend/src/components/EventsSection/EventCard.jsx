@@ -1,4 +1,3 @@
-import { Link, useNavigate } from "react-router-dom";
 import MinecraftButton from "../MineCraftButton/MinecraftButton";
 import styles from "./eventCard.module.css";
 import { FiCalendar } from "react-icons/fi";
@@ -19,8 +18,6 @@ export default function EventCard({
         hour: "2-digit",
         minute: "2-digit",
     });
-
-    let navigate = useNavigate();
     return (
         <div className={styles.card}>
             <div className={styles.text}>

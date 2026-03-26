@@ -8,18 +8,6 @@
     src: url('img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
 }
 
-.faqSection {
-    background-color: #070E14;
-    padding: 100px 40px 60px 40px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.faqSection .inner {
-    max-width: 1440px;
-    margin: 0 auto;
-}
-
 .qaHead {
     display: flex;
     align-items: center;
@@ -33,11 +21,6 @@
 }
 
 .title {
-    font-family: 'MinecraftFont', sans-serif;
-    color: var(--big-title-color);
-    text-shadow: 5px 5px 0 var(--big-title-shadow);
-    font-size: 64px;
-    font-weight: 400;
     margin-bottom: 40px;
 }
 
@@ -45,12 +28,14 @@
     font-weight: 500;
     font-size: 24px;
     color: #3C9BF9;
+    margin: 0;
 }
 
-p {
+.answer {
     font-size: 16px;
     color: #ECF7FF;
     font-weight: 300;
+    line-height: 1.35;
 }
 
 .toggleBtn {
@@ -92,4 +77,56 @@ p {
 .answer {
     margin-top: 10px;
     margin-left: 64px;
+}
+
+@media (max-width: 1024px) {
+    .question {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 768px) {
+    .title {
+        margin-bottom: 40px;
+    }
+
+    .qaBlock {
+        margin-bottom: 16px;
+    }
+
+    .toggleBtn {
+        width: 40px;
+        height: 40px;
+        margin-right: 12px;
+    }
+
+    .question {
+        font-size: 18px;
+    }
+
+    .answer {
+        font-size: 14px;
+        margin-left: 52px;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        margin-bottom: 32px;
+    }
+
+    .toggleBtn {
+        width: 36px;
+        height: 36px;
+        margin-right: 10px;
+    }
+
+    .question {
+        font-size: 16px;
+    }
+
+    .answer {
+        font-size: 13px;
+        margin-left: 46px;
+    }
 }

@@ -53,7 +53,7 @@ p {
     font-weight: 300;
 }
 
-.openBtn, .closeBtn {
+.toggleBtn {
     background: transparent;
     border: none;
     display: flex;
@@ -61,20 +61,35 @@ p {
     justify-content: center;
     margin-right: 16px;
     padding: 0;
-}
-
-.openBtn {
-    width: 48px;
-    height: 30px;
-}
-
-.closeBtn {
     width: 48px;
     height: 48px;
+    cursor: pointer;
+}
+
+.toggleBtn img {
+    display: block;
+    transform: rotate(0deg);
+    transform-origin: center;
+    transition: transform 0.28s ease;
+}
+
+.toggleBtnOpen img {
+    transform: rotate(90deg);
+}
+
+.answerWrapper {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.32s ease, opacity 0.24s ease;
+}
+
+.answerWrapperOpen {
+    max-height: 500px;
+    opacity: 1;
 }
 
 .answer {
     margin-top: 10px;
     margin-left: 64px;
-
 }

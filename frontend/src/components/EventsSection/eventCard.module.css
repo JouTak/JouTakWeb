@@ -17,9 +17,8 @@
 .card {
     display: flex;
     align-items: stretch;
-    justify-content: space-between;
-    gap: clamp(16px, 2.5vw, 32px);
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
 
     background-image: url('/img/event-card-bg.png');
     background-repeat: no-repeat;
@@ -28,9 +27,9 @@
 
     width: 100%;
     max-width: 1440px;
-    min-height: clamp(260px, 34vw, 520px);
+    min-height: 520px;
 
-    padding: clamp(14px, 2vw, 28px) clamp(20px, 3vw, 56px);
+    padding: 28px 100px;
     box-sizing: border-box;
 }
 
@@ -38,12 +37,12 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    flex: 1 1 320px;
-    min-width: 260px;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .title {
-    font-size: clamp(34px, 4.2vw, 64px);
+    font-size: 60px;
     font-weight: 400;
     font-family: 'MinecraftFont', sans-serif;
     color: #141E28;
@@ -54,9 +53,9 @@
 .info {
     font-family: 'GeologicaFont', sans-serif;
     color: #141E28B2;
-    font-size: clamp(14px, 1.4vw, 20px);
+    font-size: 20px;
     font-weight: 300;
-    margin: 10px 0 0 0;
+    margin: 20px 0 0 0;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -65,18 +64,22 @@
 .description {
     font-family: 'GeologicaFont', sans-serif;
     color: #141E28;
-    font-size: clamp(12px, 1.15vw, 16px);
+    font-size: 16px;
     font-weight: 300;
-    margin: 20px 0 24px 0;
+    margin: 20px 0 0 0;
     line-height: 1.4;
+    max-width: 325px;
 }
 
 .eventImg {
     margin-left: 0;
-    flex: 1 1 420px;
-    min-width: 240px;
-    max-width: min(739px, 100%);
-    width: 100%;
+    flex: 0 0 739px;
+    width: 739px;
+    max-width: 739px;
     height: auto;
     object-fit: contain;
+}
+
+.text button {
+    margin-top: 20px !important;
 }

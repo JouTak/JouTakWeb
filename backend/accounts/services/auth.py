@@ -246,27 +246,17 @@ class AuthService:
             raise HttpError(401, "invalid refresh")
 
         request_token = request.headers.get("X-Session-Token") or ""
-        request_session_key = request.session.session_key or ""
-        request_meta = (
-            UserSessionMeta.objects.filter(
-                user=user, session_token=request_token
-            ).first()
-            if request_token
-            else None
-        ) or (
-            UserSessionMeta.objects.filter(
-                user=user, session_key=request_session_key
-            ).first()
-            if request_session_key
-            else None
-        )
-        current_session_key = request_session_key or (
-            request_meta.session_key if request_meta else ""
-        )
-        if (
-            not current_session_key
-            or mapping.session_key != current_session_key
-        ):
+        if not request_token:
+            raise HttpError(401, "session token required for refresh")
+
+        request_meta = UserSessionMeta.objects.filter(
+            user=user,
+            session_token=request_token,
+        ).first()
+        if not request_meta or not request_meta.session_key:
+            raise HttpError(401, "invalid session token")
+
+        if mapping.session_key != request_meta.session_key:
             raise HttpError(401, "invalid refresh")
 
         current_meta = UserSessionMeta.objects.filter(

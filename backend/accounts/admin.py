@@ -12,6 +12,8 @@ User = get_user_model()
 try:
     admin.site.unregister(User)
 except NotRegistered:
+    # The auth user model may be absent in admin at startup in some envs.
+    # Re-register below with our custom admin class.
     pass
 
 

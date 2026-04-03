@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -19,6 +20,7 @@ from ninja.errors import HttpError
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 UNKNOWN_IP_FALLBACK = "127.0.0.1"
@@ -33,7 +35,11 @@ class SessionService:
             if adapter_ip:
                 return adapter_ip
         except Exception:
-            pass
+            # Non-fatal: fallback to REMOTE_ADDR if adapter resolution fails.
+            logger.debug(
+                "Failed to resolve client IP via account adapter",
+                exc_info=True,
+            )
         return request.META.get("REMOTE_ADDR") or None
 
     @staticmethod

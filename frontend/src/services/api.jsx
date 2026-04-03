@@ -13,7 +13,7 @@ function normalizeBackendRoot(value) {
 
 export const BACKEND_ROOT_URL = normalizeBackendRoot(BACKEND_URL);
 const API_BASE = `${BACKEND_ROOT_URL}/api`;
-const ALLAUTH_APP_BASE = "/auth/flow/app/v1";
+const ALLAUTH_APP_BASE = "auth/flow/app/v1";
 const TOKENS_KEY = "joutak_auth";
 export const AUTH_STATE_EVENT = "joutak:auth-state-changed";
 
@@ -283,10 +283,13 @@ async function allauthAppRequest(
   url,
   { data = null, headers = {} } = {},
 ) {
+  const suffix = String(url || "").startsWith("/")
+    ? String(url || "")
+    : `/${String(url || "")}`;
   const sessionHeaders = buildSessionHeaders(tokenStore.getSessionToken());
   const response = await bareClient.request({
     method,
-    url: `${ALLAUTH_APP_BASE}${url}`,
+    url: `${ALLAUTH_APP_BASE}${suffix}`,
     data,
     headers: {
       ...sessionHeaders,

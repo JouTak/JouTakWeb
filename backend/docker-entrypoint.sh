@@ -91,6 +91,7 @@ defaults = {'is_superuser': True, 'is_staff': True}
 try:
     User._meta.get_field('email')
 except FieldDoesNotExist:
+    # Custom user model may not include an email field; skip assignment.
     pass
 else:
     defaults['email'] = e
@@ -129,8 +130,9 @@ run_auth_maintenance() {
 }
 
 start_auth_maintenance_loop() {
-  interval_minutes="${AUTH_MAINTENANCE_INTERVAL_MINUTES:-0}"
+  interval_minutes="${AUTH_MAINTENANCE_INTERVAL_MINUTES:-60}"
   if ! is_positive_int "$interval_minutes"; then
+    log "Auth maintenance loop disabled: AUTH_MAINTENANCE_INTERVAL_MINUTES must be a positive integer"
     return 0
   fi
 

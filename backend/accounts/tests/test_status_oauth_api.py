@@ -56,7 +56,7 @@ class AccountStatusAndOAuthApiTests(APITestCase):
     def test_oauth_providers_rejects_revoked_session(self) -> None:
         payload = self.signup_and_auth()
         token = payload["session_token"]
-        user = User.objects.get(username=payload["username"])
+        user = User.objects.get(email=payload["email"].lower())
         self._revoke_token(user, token)
         response = self.client.get(
             self.api("/oauth/providers"),

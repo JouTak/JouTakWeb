@@ -133,6 +133,8 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+ACCOUNT_ADAPTER = "accounts.adapters.StrictAccountAdapter"
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = False
 
 NINJA_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
@@ -151,8 +153,8 @@ NINJA_JWT = {
 }
 
 
-ACCOUNT_LOGIN_METHODS = {"username"}
-ACCOUNT_SIGNUP_FIELDS = ["email", "username*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = config(
     "ACCOUNT_EMAIL_VERIFICATION", default="optional"
 )
@@ -161,8 +163,12 @@ FRONTEND_BASE_URL = config(
 )
 _frontend_base = FRONTEND_BASE_URL.rstrip("/")
 HEADLESS_FRONTEND_URLS = {
+    "account_signup": (f"{_frontend_base}/login"),
     "account_confirm_email": (f"{_frontend_base}/confirm-email?key={{key}}"),
-    "account_reset_password": (f"{_frontend_base}/reset-password?key={{key}}"),
+    "account_reset_password": (f"{_frontend_base}/reset-password"),
+    "account_reset_password_from_key": (
+        f"{_frontend_base}/reset-password?key={{key}}"
+    ),
 }
 ACCOUNT_CHANGE_EMAIL = True
 
@@ -172,6 +178,21 @@ HEADLESS_SERVE_SPECIFICATION = DEBUG
 HEADLESS_TOKEN_STRATEGY = config(
     "HEADLESS_TOKEN_STRATEGY",
     default="allauth.headless.tokens.strategies.sessions.SessionTokenStrategy",
+)
+
+ACCOUNT_TRUST_PROXY_HEADERS = config(
+    "ACCOUNT_TRUST_PROXY_HEADERS", cast=bool, default=False
+)
+ACCOUNT_TRUSTED_PROXY_CIDRS = tuple(
+    value.strip()
+    for value in config("ACCOUNT_TRUSTED_PROXY_CIDRS", default="", cast=Csv())
+    if value and value.strip()
+)
+AUTH_SESSION_RETENTION_DAYS = config(
+    "AUTH_SESSION_RETENTION_DAYS", cast=int, default=30
+)
+AUTH_TOKEN_RETENTION_DAYS = config(
+    "AUTH_TOKEN_RETENTION_DAYS", cast=int, default=30
 )
 
 MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]

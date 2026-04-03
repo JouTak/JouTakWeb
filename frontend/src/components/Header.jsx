@@ -15,6 +15,10 @@ import DynamicMenu from "./DynamicMenu";
 import AuthModal from "./AuthModal";
 import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
 import { isPersonalizedProfile, needsPersonalization } from "../utils/profileState";
+import {
+  getProfileDisplayName,
+  getProfileIdentityKey,
+} from "../utils/accountIdentity";
 
 const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 
@@ -103,10 +107,17 @@ const Header = () => {
 
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
-  const onLogout = () => {
-    logout();
-    setProfile(null);
-  };
+  const onLogout = useCallback(async () => {
+    closeOffcanvas();
+    setAuthOpen(false);
+    setPersonalizationModalOpen(false);
+    try {
+      await logout();
+    } finally {
+      setProfile(null);
+      navigate("/joutak", { replace: true });
+    }
+  }, [closeOffcanvas, navigate]);
 
   const registrationCompleted = useMemo(
     () => isPersonalizedProfile(profile),
@@ -114,18 +125,17 @@ const Header = () => {
   );
 
   const personalizationNoticeKey = useMemo(() => {
-    const username = profile?.username || "";
-    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${username}`;
-  }, [profile?.username]);
+    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${getProfileIdentityKey(profile)}`;
+  }, [profile]);
 
   const closePersonalizationModal = useCallback(
     ({ markSeen = true } = {}) => {
-      if (markSeen && profile?.username) {
+      if (markSeen && getProfileIdentityKey(profile) !== "guest") {
         localStorage.setItem(personalizationNoticeKey, "1");
       }
       setPersonalizationModalOpen(false);
     },
-    [personalizationNoticeKey, profile?.username],
+    [personalizationNoticeKey, profile],
   );
 
   const openPersonalizationFlow = useCallback(() => {
@@ -156,10 +166,10 @@ const Header = () => {
     >
       <Avatar
         size="m"
-        text={profile?.username || "?"}
+        text={getProfileDisplayName(profile)}
         imgUrl={profile?.avatar_url}
         view="outlined"
-        title={profile?.username || "Гость"}
+        title={getProfileDisplayName(profile)}
       />
     </Button>
   );
@@ -168,7 +178,7 @@ const Header = () => {
     <>
       <header>
         <nav className="navbar navbar-dark bg-dark">
-          <div className="container container-fluid d-flex justify-content-between align-items-center">
+          <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
             <a className="navbar-brand" href="https://joutak.ru">
               <img
                 src="/img/icons/logo.png"
@@ -235,6 +245,7 @@ const Header = () => {
         show={menuOpen}
         onHide={closeOffcanvas}
         placement="start"
+        scroll
         id="offcanvasDarkNavbar"
         className="text-bg-dark"
       >
@@ -254,6 +265,7 @@ const Header = () => {
         open={personalizationModalOpen}
         onClose={() => closePersonalizationModal({ markSeen: true })}
         aria-labelledby="personalization-modal-title"
+        disableBodyScrollLock
         style={{ "--g-modal-width": "620px" }}
       >
         <div style={{ padding: 24, display: "grid", gap: 12 }}>

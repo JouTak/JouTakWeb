@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from accounts.transport.schemas import RevokeSessionsIn, SessionRowOut
+from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.usersessions.models import UserSession
 from core.models import UserSessionMeta, UserSessionToken
 from django.contrib.auth import get_user_model
@@ -20,7 +21,6 @@ from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 User = get_user_model()
 
 
-FORWARD_HEADERS = ("HTTP_X_REAL_IP", "HTTP_X_FORWARDED_FOR")
 UNKNOWN_IP_FALLBACK = "127.0.0.1"
 
 
@@ -28,11 +28,13 @@ UNKNOWN_IP_FALLBACK = "127.0.0.1"
 class SessionService:
     @staticmethod
     def _client_ip(request: HttpRequest) -> str | None:
-        for h in FORWARD_HEADERS:
-            v = request.META.get(h)
-            if v:
-                return v.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR")
+        try:
+            adapter_ip = get_account_adapter().get_client_ip(request)
+            if adapter_ip:
+                return adapter_ip
+        except Exception:
+            pass
+        return request.META.get("REMOTE_ADDR") or None
 
     @staticmethod
     def _ua(request: HttpRequest) -> str:

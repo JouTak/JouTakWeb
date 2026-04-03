@@ -15,9 +15,14 @@ User = get_user_model()
 
 
 class AccountApiTests(APITestCase):
-    def create_authenticated_user(self) -> tuple[User, str]:
+    def create_authenticated_user(
+        self,
+        send_confirmation_mock: Mock | None = None,
+    ) -> tuple[User, str]:
         payload = self.signup_and_auth()
-        user = User.objects.get(username=payload["username"])
+        if send_confirmation_mock is not None:
+            send_confirmation_mock.reset_mock()
+        user = User.objects.get(email=payload["email"].lower())
         return user, payload["session_token"]
 
     def _ensure_current_session_key(self) -> str:
@@ -305,7 +310,7 @@ class AccountApiTests(APITestCase):
         self,
         send_confirmation_mock: Mock,
     ) -> None:
-        _, token = self.create_authenticated_user()
+        _, token = self.create_authenticated_user(send_confirmation_mock)
         taken_email = self.unique_email("taken")
         other_user = User.objects.create_user(
             username=self.unique_username("other"),
@@ -335,7 +340,7 @@ class AccountApiTests(APITestCase):
         self,
         send_confirmation_mock: Mock,
     ) -> None:
-        user, token = self.create_authenticated_user()
+        user, token = self.create_authenticated_user(send_confirmation_mock)
         EmailAddress.objects.create(
             user=user,
             email="stale_pending@example.com",
@@ -361,7 +366,7 @@ class AccountApiTests(APITestCase):
         self,
         send_confirmation_mock: Mock,
     ) -> None:
-        user, token = self.create_authenticated_user()
+        user, token = self.create_authenticated_user(send_confirmation_mock)
         response = self.post_json(
             "/account/email/change",
             {"new_email": user.email},
@@ -375,7 +380,7 @@ class AccountApiTests(APITestCase):
         self,
         send_confirmation_mock: Mock,
     ) -> None:
-        user, token = self.create_authenticated_user()
+        user, token = self.create_authenticated_user(send_confirmation_mock)
         new_email = self.unique_email("change")
         response = self.post_json(
             "/account/email/change",
@@ -393,7 +398,7 @@ class AccountApiTests(APITestCase):
         self,
         send_confirmation_mock: Mock,
     ) -> None:
-        user, token = self.create_authenticated_user()
+        user, token = self.create_authenticated_user(send_confirmation_mock)
         EmailAddress.objects.update_or_create(
             user=user,
             email=user.email,
@@ -413,7 +418,7 @@ class AccountApiTests(APITestCase):
         self,
         send_confirmation_mock: Mock,
     ) -> None:
-        user, token = self.create_authenticated_user()
+        user, token = self.create_authenticated_user(send_confirmation_mock)
         EmailAddress.objects.update_or_create(
             user=user,
             email=user.email,

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -99,7 +99,7 @@ function normalizeSession(raw) {
 
 export default function SessionsCard() {
   const navigate = useNavigate();
-  const [sessions, setSessions] = useState([]);
+  const [allSessions, setAllSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showHistory, setShowHistory] = useState(false);
@@ -122,13 +122,7 @@ export default function SessionsCard() {
       const norm = (
         Array.isArray(raw) ? raw : raw?.results || raw?.sessions || []
       ).map(normalizeSession);
-      const cutoff = Date.now() - WINDOW_HOURS * 3600 * 1000;
-      const inWindow = norm.filter((s) => {
-        const ts = Date.parse(s.last_seen || s.created || "") || 0;
-        return ts >= cutoff || !ts;
-      });
-      const final = showHistory ? inWindow : inWindow.filter((s) => !s.revoked);
-      setSessions(final);
+      setAllSessions(norm);
     } catch (error) {
       if (error?.response?.status === 401) {
         redirectToSessionExpired();
@@ -138,11 +132,20 @@ export default function SessionsCard() {
     } finally {
       setLoading(false);
     }
-  }, [redirectToSessionExpired, showHistory]);
+  }, [redirectToSessionExpired]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
+
+  const sessions = useMemo(() => {
+    const cutoff = Date.now() - WINDOW_HOURS * 3600 * 1000;
+    const inWindow = allSessions.filter((s) => {
+      const ts = Date.parse(s.last_seen || s.created || "") || 0;
+      return ts >= cutoff || !ts;
+    });
+    return showHistory ? inWindow : inWindow.filter((s) => !s.revoked);
+  }, [allSessions, showHistory]);
 
   function askRevokeOne(id) {
     setConfirmAction("revoke-one");
@@ -163,7 +166,7 @@ export default function SessionsCard() {
   async function revokeAllExceptCurrent() {
     const res = await bulkRevokeSessionsHeadless();
     const ids = new Set(res?.revoked_ids || []);
-    setSessions((arr) =>
+    setAllSessions((arr) =>
       arr.map((s) =>
         ids.has(s.id)
           ? { ...s, revoked: true, revoked_reason: "bulk_except_current" }
@@ -178,7 +181,7 @@ export default function SessionsCard() {
     try {
       if (confirmAction === "revoke-one" && targetSessionId) {
         const r = await revokeSessionHeadless(targetSessionId, "manual");
-        setSessions((arr) =>
+        setAllSessions((arr) =>
           arr.map((s) =>
             s.id === r.id
               ? {
@@ -241,7 +244,26 @@ export default function SessionsCard() {
       </div>
 
       {loading ? (
-        <Loader size="m" />
+        <div style={{ display: "grid", gap: 8 }}>
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              className="skeleton-block"
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 10,
+                padding: 12,
+                display: "grid",
+                gap: 8,
+              }}
+            >
+              <div className="skeleton-line" style={{ width: "24%" }} />
+              <div className="skeleton-line" style={{ width: "72%" }} />
+              <div className="skeleton-line" style={{ width: "64%" }} />
+            </div>
+          ))}
+          <Loader size="s" />
+        </div>
       ) : sessions.length ? (
         <div style={{ display: "grid", gap: 8 }}>
           {sessions.map((s) => {

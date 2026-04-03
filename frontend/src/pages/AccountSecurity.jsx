@@ -156,7 +156,7 @@ export default function AccountSecurity() {
       <AccountHero profile={profile} />
       <ProfileCard onUpdated={reload} />
       <EmailCard />
-      <PasswordCard />
+      <PasswordCard username={profile?.email || profile?.username || ""} />
       {/*<MfaCard profile={profile} />*/}
       {/*<PasskeysCard />*/}
       {/*<OauthCard />*/}

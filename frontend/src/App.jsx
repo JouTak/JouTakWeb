@@ -22,6 +22,8 @@ const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
 const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
 const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
+const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
 
 function safeInternalPath(path) {
@@ -101,6 +103,8 @@ function AppRoutes() {
         />
         <Route path="/joutak/pay" element={<Pay />} />
         <Route path="/session-expired" element={<SessionExpired />} />
+        <Route path="/confirm-email" element={<ConfirmEmail />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/login" element={<LoginModalRoute />} />
         <Route path="*" element={<NotFound />} />

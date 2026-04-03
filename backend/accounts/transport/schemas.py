@@ -103,6 +103,15 @@ class TokenRefreshOut(Schema):
 class ChangePasswordIn(Schema):
     current_password: str
     new_password: str
+    terminate_other_sessions: bool = True
+    logout_current_session: bool = False
+
+
+class ChangePasswordOut(Schema):
+    ok: bool
+    message: str | None = None
+    logged_out_current_session: bool = False
+    terminated_other_sessions: bool = True
 
 
 class DeleteAccountIn(Schema):
@@ -163,27 +172,6 @@ class ProfileUpdateOut(Schema):
     personalization_interstitial_enabled: bool = True
     personalization_enforce_enabled: bool = False
     missing_fields: list[str]
-
-
-# ---------- Headless (session token) ----------
-class SessionMetaOut(Schema):
-    session_token: str
-
-
-class LoginOut(Schema):
-    meta: SessionMetaOut
-
-
-class LoginIn(Schema):
-    username: str
-    password: str
-
-
-class SignupIn(Schema):
-    username: str
-    email: str | None = None
-    password: str
-
 
 # ---------- OAuth linking ----------
 class ProvidersOut(Schema):

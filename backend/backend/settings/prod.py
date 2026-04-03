@@ -64,6 +64,7 @@ EMAIL_USE_TLS = config(
 )
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise RuntimeError("EMAIL_USE_SSL and EMAIL_USE_TLS cannot both be true")
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", cast=int, default=10)
 DEFAULT_FROM_EMAIL = config(
     "DEFAULT_FROM_EMAIL",
     default=(EMAIL_HOST_USER or "noreply@example.com"),

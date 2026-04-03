@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Button, TextInput } from "@gravity-ui/uikit";
+import { Button, Switch, TextInput } from "@gravity-ui/uikit";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
 import { changePassword } from "../../services/api";
 
@@ -122,6 +122,7 @@ export default function PasswordCard({
   const [curPwd, setCurPwd] = useState("");
   const [new1, setNew1] = useState("");
   const [new2, setNew2] = useState("");
+  const [terminateOtherSessions, setTerminateOtherSessions] = useState(true);
 
   const [touched, setTouched] = useState({ cur: false, n1: false, n2: false });
   const [capsCur, setCapsCur] = useState(false);
@@ -171,6 +172,7 @@ export default function PasswordCard({
     setCurPwd("");
     setNew1("");
     setNew2("");
+    setTerminateOtherSessions(true);
     setTouched({ cur: false, n1: false, n2: false });
     setBackendErr({ cur: "", n1: "" });
     setCapsCur(false);
@@ -185,12 +187,25 @@ export default function PasswordCard({
   function mapBackendErrors(data) {
     let cur = "";
     let n1 = "";
+    const flatFields =
+      data?.fields && typeof data.fields === "object" ? data.fields : {};
+    const nestedErrors =
+      data?.errors && typeof data.errors === "object" ? data.errors : {};
     const fieldMsgs = (k) =>
-      Array.isArray(data?.[k])
-        ? data[k].join("\n")
-        : typeof data?.[k] === "string"
-          ? data[k]
-          : "";
+      typeof flatFields?.[k] === "string"
+        ? flatFields[k]
+        : Array.isArray(nestedErrors?.[k])
+          ? nestedErrors[k]
+              .map((entry) =>
+                typeof entry?.message === "string" ? entry.message : "",
+              )
+              .filter(Boolean)
+              .join("\n")
+          : Array.isArray(data?.[k])
+            ? data[k].join("\n")
+            : typeof data?.[k] === "string"
+              ? data[k]
+              : "";
     n1 = fieldMsgs("new_password") || fieldMsgs("password") || "";
     cur = fieldMsgs("current_password") || "";
     if (/too short/i.test(n1))
@@ -203,6 +218,44 @@ export default function PasswordCard({
     if (cur || n1) touchAll();
   }
 
+  function firstBackendMessage(data) {
+    if (data?.fields && typeof data.fields === "object") {
+      const firstFieldMessage = Object.values(data.fields).find(
+        (value) => typeof value === "string" && value.trim(),
+      );
+      if (firstFieldMessage) return firstFieldMessage;
+    }
+    if (
+      data?.errors &&
+      typeof data.errors === "object" &&
+      !Array.isArray(data.errors)
+    ) {
+      for (const entries of Object.values(data.errors)) {
+        if (!Array.isArray(entries)) continue;
+        const firstEntry = entries.find(
+          (entry) =>
+            entry && typeof entry.message === "string" && entry.message.trim(),
+        );
+        if (firstEntry?.message) return firstEntry.message;
+      }
+    }
+    if (Array.isArray(data?.errors)) {
+      const firstError = data.errors.find(
+        (entry) =>
+          entry && typeof entry.message === "string" && entry.message.trim(),
+      );
+      if (firstError?.message) return firstError.message;
+    }
+    return (
+      (typeof data?.detail === "string" &&
+        data.detail !== "validation_error" &&
+        data.detail) ||
+      (Array.isArray(data?.non_field_errors) &&
+        data.non_field_errors.join("\n")) ||
+      null
+    );
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     touchAll();
@@ -211,12 +264,17 @@ export default function PasswordCard({
 
     setBusy(true);
     try {
-      await changePassword({ current_password: curPwd, new_password: new1 });
+      const result = await changePassword({
+        current_password: curPwd,
+        new_password: new1,
+        terminate_other_sessions: terminateOtherSessions,
+      });
 
       toaster.add({
         name: "pwd-ok",
         title: "Пароль обновлён",
-        content: "Новый пароль уже доступен для авторизации.",
+        content:
+          result?.message || "Новый пароль уже доступен для авторизации.",
         type: "success",
       });
 
@@ -243,15 +301,10 @@ export default function PasswordCard({
       }
     } catch (ex) {
       const data = ex?.response?.data;
-      const detail =
-        (typeof data?.detail === "string" && data.detail) ||
-        (Array.isArray(data?.non_field_errors) &&
-          data.non_field_errors.join("\n")) ||
-        null;
       toaster.add({
         name: "pwd-err",
         title: "Ошибка",
-        content: detail || "Не удалось изменить пароль.",
+        content: firstBackendMessage(data) || "Не удалось изменить пароль.",
         type: "error",
       });
       if (data && typeof data === "object") mapBackendErrors(data);
@@ -368,6 +421,13 @@ export default function PasswordCard({
           />
 
           <StrengthBar score={strength.score} label={strength.label} />
+
+          <Switch
+            size="m"
+            checked={terminateOtherSessions}
+            onUpdate={setTerminateOtherSessions}
+            content="Завершить другие активные сессии после смены пароля"
+          />
 
           <div style={{ opacity: 0.8, fontSize: 12, display: "grid", gap: 4 }}>
             <div>

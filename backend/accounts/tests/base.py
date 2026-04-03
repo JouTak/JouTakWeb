@@ -3,12 +3,19 @@ from __future__ import annotations
 import json
 from uuid import uuid4
 
+from accounts.services.email_addresses import sync_user_email_address
+from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.test import TestCase
+from django.test.utils import override_settings
+
+User = get_user_model()
 
 
+@override_settings(ACCOUNT_RATE_LIMITS=False)
 class APITestCase(TestCase):
     api_root = "/api"
+    headless_root = "/api/auth/flow/app/v1"
     default_password = "StrongPass123!"
 
     def setUp(self) -> None:
@@ -18,6 +25,9 @@ class APITestCase(TestCase):
 
     def api(self, path: str) -> str:
         return f"{self.api_root}{path}"
+
+    def headless(self, path: str) -> str:
+        return f"{self.headless_root}{path}"
 
     def post_json(
         self,
@@ -58,6 +68,32 @@ class APITestCase(TestCase):
             **headers,
         )
 
+    def headless_post_json(
+        self,
+        path: str,
+        payload: dict[str, object] | None = None,
+        **headers: str,
+    ) -> HttpResponse:
+        return self.client.post(
+            self.headless(path),
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+            **headers,
+        )
+
+    def headless_put_json(
+        self,
+        path: str,
+        payload: dict[str, object] | None = None,
+        **headers: str,
+    ) -> HttpResponse:
+        return self.client.put(
+            self.headless(path),
+            data=json.dumps(payload or {}),
+            content_type="application/json",
+            **headers,
+        )
+
     def unique_username(self, prefix: str = "user") -> str:
         return f"{prefix}_{uuid4().hex[:8]}"
 
@@ -65,24 +101,27 @@ class APITestCase(TestCase):
         return f"{prefix}_{uuid4().hex[:8]}@example.com"
 
     def signup(
-        self, *, username: str, email: str, password: str | None = None
+        self,
+        *,
+        email: str,
+        password: str | None = None,
     ) -> HttpResponse:
         password = password or self.default_password
-        return self.post_json(
+        return self.headless_post_json(
             "/auth/signup",
-            {"username": username, "email": email, "password": password},
+            {"email": email, "password": password},
         )
 
     def login(
         self,
         *,
-        username: str,
+        email: str,
         password: str | None = None,
     ) -> HttpResponse:
         password = password or self.default_password
-        return self.post_json(
+        return self.headless_post_json(
             "/auth/login",
-            {"username": username, "password": password},
+            {"email": str(email).strip(), "password": password},
         )
 
     @staticmethod
@@ -96,17 +135,32 @@ class APITestCase(TestCase):
         return {"HTTP_X_SESSION_TOKEN": session_token}
 
     def signup_and_auth(
-        self, *, username: str | None = None, email: str | None = None
+        self, *, email: str | None = None
     ) -> dict[str, str]:
-        username = username or self.unique_username("signup")
         email = email or self.unique_email("signup")
-        response = self.signup(username=username, email=email)
+        response = self.signup(email=email)
         self.assertEqual(response.status_code, 200, response.content)
         token = self.session_token(response)
         self.assertTrue(token)
+        user = User.objects.get(email=email.lower())
         token_value = token or ""
         return {
-            "username": username,
+            "username": user.username,
             "email": email,
             "session_token": token_value,
         }
+
+    def create_legacy_user(
+        self,
+        *,
+        username: str | None = None,
+        email: str | None = None,
+        password: str | None = None,
+    ):
+        user = User.objects.create_user(
+            username=username or self.unique_username("legacy"),
+            email=(email or self.unique_email("legacy")).lower(),
+            password=password or self.default_password,
+        )
+        sync_user_email_address(user)
+        return user

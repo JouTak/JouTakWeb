@@ -57,6 +57,16 @@ django_bootstrap() {
     python manage.py migrate --noinput
   fi
 
+  if [ "${DJANGO_SYNC_SITE:-1}" = "1" ]; then
+    log "Ensuring django.contrib.sites is configured ..."
+    python manage.py sync_site
+  fi
+
+  if [ "${DJANGO_SYNC_EMAIL_ADDRESSES:-1}" = "1" ]; then
+    log "Syncing allauth email addresses ..."
+    python manage.py sync_email_addresses
+  fi
+
   if [ "${DJANGO_COLLECTSTATIC:-1}" = "1" ]; then
     log "Collecting static ..."
     python manage.py collectstatic --noinput
@@ -99,8 +109,49 @@ else:
 fi
 }
 
+is_positive_int() {
+  case "${1:-}" in
+    ''|*[!0-9]*) return 1 ;;
+    *) [ "$1" -gt 0 ] ;;
+  esac
+}
+
+run_auth_maintenance() {
+  if python manage.py run_auth_maintenance; then
+    return 0
+  fi
+  if [ "${AUTH_MAINTENANCE_STRICT:-0}" = "1" ]; then
+    log "Auth maintenance failed in strict mode"
+    exit 1
+  fi
+  log "Auth maintenance failed (strict mode disabled)"
+  return 1
+}
+
+start_auth_maintenance_loop() {
+  interval_minutes="${AUTH_MAINTENANCE_INTERVAL_MINUTES:-0}"
+  if ! is_positive_int "$interval_minutes"; then
+    return 0
+  fi
+
+  interval_seconds=$((interval_minutes * 60))
+  log "Starting auth maintenance loop (every ${interval_minutes}m)"
+  (
+    while true; do
+      sleep "$interval_seconds"
+      log "Running scheduled auth maintenance ..."
+      python manage.py run_auth_maintenance || true
+    done
+  ) &
+}
+
 wait_for_db
 django_bootstrap
+
+if [ "${AUTH_MAINTENANCE_ON_START:-1}" = "1" ]; then
+  run_auth_maintenance || true
+fi
+start_auth_maintenance_loop
 
 log "Starting app: $*"
 exec "$@"

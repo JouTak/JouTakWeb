@@ -322,6 +322,19 @@ class HeadlessAuthApiTests(APITestCase):
             third_refresh_with_new.content,
         )
 
+    def test_refresh_requires_session_token_header(self) -> None:
+        payload = self.signup_and_auth()
+        session_token = payload["session_token"]
+        pair = self.jwt_from_session(session_token).json()
+        refresh_token = pair["refresh"]
+
+        response = self.post_json("/auth/refresh", {"refresh": refresh_token})
+        self.assertEqual(response.status_code, 401, response.content)
+        self.assertEqual(
+            response.json()["detail"],
+            "session token required for refresh",
+        )
+
     def test_refresh_updates_existing_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
         session_token = payload["session_token"]

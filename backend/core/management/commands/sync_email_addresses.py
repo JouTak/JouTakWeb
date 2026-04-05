@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from accounts.services.email_addresses import sync_user_email_address
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
+from django.db import IntegrityError
 
 User = get_user_model()
 
@@ -17,10 +19,21 @@ class Command(BaseCommand):
         created = 0
         updated_user_email = 0
         promoted_primary = 0
+        failed = 0
 
         users = User.objects.exclude(email__isnull=True).exclude(email="")
         for user in users.iterator():
-            result = sync_user_email_address(user)
+            try:
+                result = sync_user_email_address(user)
+            except (ValidationError, IntegrityError, ValueError) as exc:
+                failed += 1
+                self.stderr.write(
+                    self.style.WARNING(
+                        "sync_email_addresses: skip "
+                        f"user_id={user.pk} email={user.email!r}: {exc}"
+                    )
+                )
+                continue
             created += int(result.created)
             updated_user_email += int(result.updated_user_email)
             promoted_primary += int(result.promoted_primary)
@@ -30,6 +43,7 @@ class Command(BaseCommand):
                 "sync_email_addresses completed: "
                 f"created={created}, "
                 f"updated_user_email={updated_user_email}, "
-                f"promoted_primary={promoted_primary}"
+                f"promoted_primary={promoted_primary}, "
+                f"failed={failed}"
             )
         )

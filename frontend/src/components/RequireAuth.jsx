@@ -48,13 +48,12 @@ export default function RequireAuth({ children }) {
     );
   }
 
-  const next = location.pathname;
   const params = new URLSearchParams({
     reason: "auth_required",
-    next,
+    next: location.pathname + location.search,
   });
 
-  return <Navigate to={`/session-expired?${params.toString()}`} replace />;
+  return <Navigate to={`/401?${params.toString()}`} replace />;
 }
 
 RequireAuth.propTypes = {

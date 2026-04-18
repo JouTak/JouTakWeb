@@ -3,6 +3,7 @@ import ProjectsSection from '../components/ProjectsSection/ProjectsSection'
 import EventsSection from '../components/EventsSection/EventsSection'
 import ImageCarousel from "../components/ImageCarousel";
 import FAQsection from "../components/FAQsection/FAQsection";
+import GallerySection from "../components/GallerySection/GallerySection";
 
 const JOUTAK_CAROUSEL_ITEMS = [
   {
@@ -68,7 +69,7 @@ const JouTak = () => {
 
     <ProjectsSection />
     <EventsSection />
-    {/* <GalerySection /> */}
+    <GallerySection />
     <FAQsection />
     </>
   );

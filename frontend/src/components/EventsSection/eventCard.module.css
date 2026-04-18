@@ -1,0 +1,85 @@
+@font-face {
+    font-family: 'MinecraftFont';
+    src: url('img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'GeologicaFont';
+    src: url('img/fonts/Geologica-VariableFont_slnt,wght.ttf') format('truetype');
+}
+
+.eventsList {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.card {
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+
+    background-image: url('/img/event-card-bg.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100% 100%;
+
+    width: 100%;
+    max-width: 1440px;
+    min-height: 520px;
+
+    padding: 28px 100px;
+    box-sizing: border-box;
+}
+
+.text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.title {
+    font-size: 60px;
+    font-weight: 400;
+    font-family: 'MinecraftFont', sans-serif;
+    color: #141E28;
+    text-shadow: 5px 5px #006BD4;
+    margin: 0;
+}
+
+.info {
+    font-family: 'GeologicaFont', sans-serif;
+    color: #141E28B2;
+    font-size: 20px;
+    font-weight: 300;
+    margin: 20px 0 0 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.description {
+    font-family: 'GeologicaFont', sans-serif;
+    color: #141E28;
+    font-size: 16px;
+    font-weight: 300;
+    margin: 20px 0 0 0;
+    line-height: 1.4;
+    max-width: 325px;
+}
+
+.eventImg {
+    margin-left: 0;
+    flex: 0 0 739px;
+    width: 739px;
+    max-width: 739px;
+    height: auto;
+    object-fit: contain;
+}
+
+.text button {
+    margin-top: 20px !important;
+}

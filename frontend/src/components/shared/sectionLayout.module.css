@@ -1,0 +1,45 @@
+.section {
+    background-color: #070E14;
+    padding: 56px 40px 32px 40px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.inner {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.title {
+    font-family: 'MinecraftFont', sans-serif;
+    color: var(--big-title-color);
+    text-shadow: 5px 5px 0 var(--big-title-shadow);
+    font-size: 64px;
+    font-weight: 400;
+}
+
+@media (max-width: 1024px) {
+    .section {
+        padding: 48px 30px 28px;
+    }
+
+    .title {
+        font-size: 56px;
+    }
+}
+
+@media (max-width: 768px) {
+    .section {
+        padding: 36px 20px 24px;
+    }
+
+    .title {
+        font-size: 42px;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 36px;
+    }
+}

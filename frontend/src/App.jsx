@@ -19,6 +19,7 @@ const MiniGames = lazy(() => import("./pages/Minigames.jsx"));
 const ItmoCraft = lazy(() => import("./pages/ItmoCraft.jsx"));
 const Contact = lazy(() => import("./pages/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
 const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
 const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
@@ -107,6 +108,8 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/login" element={<LoginModalRoute />} />
+
+        <Route path="/401" element={<Unauthorized />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
 

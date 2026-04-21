@@ -78,11 +78,13 @@ export default function AuthModal({
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
   const loginInputRef = useRef(null);
+  const signupEmailInputRef = useRef(null);
   const resetEmailInputRef = useRef(null);
 
   const toaster = useToaster();
   const isLogin = mode === "login";
   const isResetPassword = mode === "reset-password";
+  const isSignup = mode === "signup";
   const title = useMemo(() => {
     if (isResetPassword) return "Сброс пароля";
     if (isLogin) return "Вход";
@@ -124,7 +126,9 @@ export default function AuthModal({
       ? resetEmailInputRef.current
       : isLogin
         ? loginInputRef.current
-        : null;
+        : isSignup
+          ? signupEmailInputRef.current
+          : null;
     if (!targetControl) return undefined;
 
     const frameId = requestAnimationFrame(() => {
@@ -132,7 +136,7 @@ export default function AuthModal({
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [isLogin, isResetPassword, open]);
+  }, [isLogin, isResetPassword, isSignup, open]);
 
   const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
@@ -435,6 +439,7 @@ export default function AuthModal({
                 onUpdate={setSuEmail}
                 name="joutak__email"
                 autoComplete="email"
+                controlRef={signupEmailInputRef}
                 disabled={busy}
                 aria-label="Email"
               />

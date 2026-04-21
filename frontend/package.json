@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.17"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,7 +16,7 @@
     "lint:styles": "stylelint \"**/*.{css,scss}\" --cache",
     "lint:styles:fix": "stylelint \"**/*.{css,scss}\" --fix --cache",
     "check": "npm run lint && npm run format && npm run lint:styles && npm run build",
-    "prepare": "cd .. && npm --prefix frontend exec husky",
+    "prepare": "node ./prepare-husky.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -1,4 +1,26 @@
 {
   "extends": "stylelint-config-standard",
-  "rules": {}
+  "rules": {
+    "declaration-empty-line-before": null,
+    "custom-property-empty-line-before": null,
+    "media-feature-range-notation": "prefix",
+    "rule-empty-line-before": [
+      "always-multi-line",
+      {
+        "ignore": ["first-nested"]
+      }
+    ],
+    "at-rule-empty-line-before": [
+      "always",
+      {
+        "ignore": ["after-comment", "first-nested", "inside-block"]
+      }
+    ],
+    "comment-empty-line-before": [
+      "always",
+      {
+        "ignore": ["after-comment"]
+      }
+    ]
+  }
 }

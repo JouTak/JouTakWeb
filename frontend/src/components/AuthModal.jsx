@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { Button, Modal, TextInput, useToaster } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
-import { Modal, Button, TextInput, useToaster } from "@gravity-ui/uikit";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   doLogin,
   doSignupAndLogin,
@@ -76,10 +77,14 @@ export default function AuthModal({
   const [resetEmail, setResetEmail] = useState("");
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
+  const loginInputRef = useRef(null);
+  const signupEmailInputRef = useRef(null);
+  const resetEmailInputRef = useRef(null);
 
   const toaster = useToaster();
   const isLogin = mode === "login";
   const isResetPassword = mode === "reset-password";
+  const isSignup = mode === "signup";
   const title = useMemo(() => {
     if (isResetPassword) return "Сброс пароля";
     if (isLogin) return "Вход";
@@ -114,6 +119,24 @@ export default function AuthModal({
       setBusy(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const targetControl = isResetPassword
+      ? resetEmailInputRef.current
+      : isLogin
+        ? loginInputRef.current
+        : isSignup
+          ? signupEmailInputRef.current
+          : null;
+    if (!targetControl) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      targetControl.focus();
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [isLogin, isResetPassword, isSignup, open]);
 
   const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
@@ -265,7 +288,7 @@ export default function AuthModal({
                 onUpdate={setLogin}
                 name="joutak__login"
                 autoComplete="username"
-                autoFocus
+                controlRef={loginInputRef}
                 disabled={busy}
                 aria-label="Email или старый логин"
               />
@@ -367,7 +390,7 @@ export default function AuthModal({
                     value={resetEmail}
                     onUpdate={setResetEmail}
                     autoComplete="email"
-                    autoFocus
+                    controlRef={resetEmailInputRef}
                     disabled={busy}
                     aria-label="Email"
                   />
@@ -416,6 +439,7 @@ export default function AuthModal({
                 onUpdate={setSuEmail}
                 name="joutak__email"
                 autoComplete="email"
+                controlRef={signupEmailInputRef}
                 disabled={busy}
                 aria-label="Email"
               />

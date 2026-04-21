@@ -1,20 +1,21 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import PropTypes from "prop-types";
 import {
   Button,
-  Label,
-  Switch,
-  Tooltip,
   DropdownMenu,
+  Label,
   Modal,
+  Switch,
   Text,
+  Tooltip,
 } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import {
-  listSessionsHeadless,
-  revokeSessionHeadless,
   bulkRevokeSessionsHeadless,
+  listSessionsHeadless,
   logout,
+  revokeSessionHeadless,
 } from "../../services/api";
 
 const cardStyle = {

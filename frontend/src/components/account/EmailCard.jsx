@@ -1,15 +1,16 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
-import PropTypes from "prop-types";
 import {
   Button,
   Label,
+  Loader,
   TextInput,
   useToaster,
-  Loader,
 } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import {
-  getEmailStatus,
   changeEmail,
+  getEmailStatus,
   resendEmailVerification,
 } from "../../services/api";
 

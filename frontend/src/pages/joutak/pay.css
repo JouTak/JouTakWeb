@@ -9,26 +9,26 @@ iframe.pay {
   border: 1px solid var(--g-color-line-generic);
 }
 
-@media (width <= 1024px) {
+@media (max-width: 1024px) {
   iframe.pay {
     width: 100%;
     padding: 24px;
   }
 }
 
-@media (width <= 768px) {
+@media (max-width: 768px) {
   iframe.pay {
     height: calc(1450px - 10vw);
   }
 }
 
-@media (width <= 450px) {
+@media (max-width: 450px) {
   iframe.pay {
     height: calc(1650px - 20vw);
   }
 }
 
-@media (width <= 390px) {
+@media (max-width: 390px) {
   iframe.pay {
     height: calc(1680px - 20vw);
   }

@@ -1,7 +1,8 @@
+import { Loader } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { Loader } from "@gravity-ui/uikit";
+
 import { hasStoredAuth, me } from "../services/api";
 
 export default function RequireAuth({ children }) {

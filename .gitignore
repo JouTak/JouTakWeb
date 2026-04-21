@@ -178,3 +178,4 @@ cython_debug/
 
 .env.development
 .env.production.secrets
+.husky/_

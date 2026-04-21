@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
 import { Button, Label, Loader, TextInput } from "@gravity-ui/uikit";
+import { useEffect, useState } from "react";
+
 import {
+  deleteWebAuthnAuthenticators,
   listAuthenticators,
   registerPasskeyFlow,
-  deleteWebAuthnAuthenticators,
   renameWebAuthnAuthenticator,
 } from "../../services/api";
 

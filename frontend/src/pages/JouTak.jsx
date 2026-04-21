@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+
 import ImageCarousel from "../components/ImageCarousel";
 
 const JOUTAK_CAROUSEL_ITEMS = [

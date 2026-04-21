@@ -1,6 +1,7 @@
+import { Button, Loader, TextInput } from "@gravity-ui/uikit";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, Loader, TextInput } from "@gravity-ui/uikit";
+
 import {
   inspectPasswordResetKey,
   requestPasswordReset,

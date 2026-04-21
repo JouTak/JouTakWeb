@@ -1,15 +1,15 @@
-import { Suspense, lazy } from "react";
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
-  Routes,
-  Route,
   Navigate,
-  useNavigate,
+  Route,
+  Routes,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 
-import Layout from "./components/Layout";
 import AuthModal from "./components/AuthModal.jsx";
+import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
 

@@ -1,8 +1,9 @@
-import { useMemo, useState, useCallback } from "react";
-import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 import { Button, Switch, TextInput } from "@gravity-ui/uikit";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { changePassword, clearAuthState } from "../../services/api";
 
 const cardStyle = {
@@ -186,6 +187,17 @@ export default function PasswordCard({
     setEditing(false);
   }, [resetForm]);
 
+  useEffect(() => {
+    if (!editing || busy) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onCancel();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busy, editing, onCancel]);
+
   function mapBackendErrors(data) {
     let cur = "";
     let n1 = "";
@@ -353,9 +365,6 @@ export default function PasswordCard({
           onSubmit={onSubmit}
           style={{ display: "grid", gap: 12 }}
           autoComplete="off"
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && !busy) onCancel();
-          }}
         >
           {identityHint ? (
             <input

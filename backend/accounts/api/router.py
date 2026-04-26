@@ -97,7 +97,7 @@ def account_delete(
 
 @account_router.post(
     "/avatar",
-    response={200: OkOut, 401: ErrorOut},
+    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
     summary="Upload/replace user avatar",
     operation_id="account_upload_avatar",
 )

@@ -4,19 +4,34 @@ import json
 import re
 from dataclasses import dataclass
 from typing import Never
+from uuid import uuid4
 
 from accounts.services.personalization import personalization_complete
 from core.models import UserProfile
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import UploadedFile
+from django.core.files.utils import validate_file_name
 from django.db import transaction
 from django.utils import timezone
 from ninja.errors import HttpError
+from PIL import Image, UnidentifiedImageError
 
 User = get_user_model()
 VK_USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,64}$")
 MINECRAFT_NICK_RE = re.compile(r"^[A-Za-z0-9_]{3,16}$")
 ITMO_ISU_RE = re.compile(r"^\d{5,20}$")
+AVATAR_ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+AVATAR_FORMAT_EXTENSIONS = {
+    "JPEG": "jpg",
+    "PNG": "png",
+    "WEBP": "webp",
+}
+DEFAULT_AVATAR_MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 
 
 @dataclass(slots=True)
@@ -217,9 +232,41 @@ class ProfileService:
             user.save(update_fields=to_update)
 
     @staticmethod
+    def _validate_avatar_upload(avatar: UploadedFile) -> str:
+        max_size = getattr(
+            settings,
+            "AVATAR_MAX_UPLOAD_BYTES",
+            DEFAULT_AVATAR_MAX_UPLOAD_BYTES,
+        )
+        if avatar.size and avatar.size > max_size:
+            raise HttpError(400, "avatar file is too large")
+
+        content_type = (getattr(avatar, "content_type", "") or "").lower()
+        if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
+            raise HttpError(400, "unsupported avatar content type")
+
+        try:
+            avatar.seek(0)
+            with Image.open(avatar) as image:
+                image.verify()
+                extension = AVATAR_FORMAT_EXTENSIONS.get(image.format or "")
+        except (OSError, SyntaxError, UnidentifiedImageError) as exc:
+            raise HttpError(400, "invalid avatar image") from exc
+        finally:
+            avatar.seek(0)
+
+        if not extension:
+            raise HttpError(400, "unsupported avatar image format")
+        return extension
+
+    @staticmethod
     def save_avatar(user: User, avatar: UploadedFile) -> bool:
         if hasattr(user, "avatar"):
-            user.avatar.save(avatar.name, avatar)
+            extension = ProfileService._validate_avatar_upload(avatar)
+            safe_name = validate_file_name(
+                f"avatar-{uuid4().hex}.{extension}"
+            )
+            user.avatar.save(safe_name, avatar)
             user.save(update_fields=["avatar"])
             return True
         return False

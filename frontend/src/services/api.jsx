@@ -74,6 +74,7 @@ function readJsonTokens(raw) {
 function readStoredTokens() {
   const storage = tokenStorage();
   if (!storage) {
+    legacyTokenStorage()?.removeItem(TOKENS_KEY);
     return {};
   }
 
@@ -84,11 +85,13 @@ function readStoredTokens() {
 
   const legacyStorage = legacyTokenStorage();
   const legacyTokens = readJsonTokens(legacyStorage?.getItem(TOKENS_KEY));
-  if (Object.keys(legacyTokens).length > 0) {
-    storage.setItem(TOKENS_KEY, JSON.stringify(legacyTokens));
+  const { refresh, ...migratedTokens } = legacyTokens;
+  void refresh;
+  if (Object.keys(migratedTokens).length > 0) {
+    storage.setItem(TOKENS_KEY, JSON.stringify(migratedTokens));
     legacyStorage?.removeItem(TOKENS_KEY);
   }
-  return legacyTokens;
+  return migratedTokens;
 }
 
 function writeStoredTokens(tokens, { emit = true } = {}) {

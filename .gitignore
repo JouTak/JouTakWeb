@@ -172,6 +172,10 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Frontend lint caches
+.eslintcache
+.stylelintcache
+
 # PyPI configuration file
 .pypirc
 

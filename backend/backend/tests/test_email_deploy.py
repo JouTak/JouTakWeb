@@ -47,7 +47,7 @@ class EmailDeployRoutesTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
-class EmailTemplateTests(TestCase):
+class EmailTemplateTests(SimpleTestCase):
     def test_confirmation_email_html_uses_branded_template_context(
         self,
     ) -> None:
@@ -72,6 +72,27 @@ class EmailTemplateTests(TestCase):
         self.assertIn(f">{activate_url}</a>", html)
         self.assertNotIn(">username<", html)
         self.assertNotIn("https://example.com", html)
+
+    def test_confirmation_email_html_renders_code_flow(self) -> None:
+        user = get_user_model()(username="email_code_user")
+        site = Site(domain="", name="JouTak")
+        activate_url = "https://joutak.ru/confirm-email?key=test-key"
+        code = "123456"
+
+        html = render_to_string(
+            "account/email/email_confirmation_message.html",
+            {
+                "user": user,
+                "current_site": site,
+                "activate_url": activate_url,
+                "code": code,
+            },
+        )
+
+        self.assertIn(code, html)
+        self.assertIn("joutak.ru", html)
+        self.assertNotIn(activate_url, html)
+        self.assertNotIn("подтвердить почту", html)
 
 
 class SyncSiteCommandTests(TestCase):

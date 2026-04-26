@@ -8,7 +8,12 @@ from datetime import datetime
 from accounts.transport.schemas import RevokeSessionsIn, SessionRowOut
 from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.usersessions.models import UserSession
-from core.models import UserSessionMeta, UserSessionToken
+from core.models import (
+    UserSessionMeta,
+    UserSessionToken,
+    session_token_digest,
+    session_token_digest_matches,
+)
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout as dj_logout
 from django.contrib.sessions.models import Session
@@ -54,8 +59,11 @@ class SessionService:
     @staticmethod
     def assert_session_allowed(request: HttpRequest) -> None:
         token = SessionService._header_token(request)
-        if token:
-            meta = UserSessionMeta.objects.filter(session_token=token).first()
+        token_digest = session_token_digest(token)
+        if token_digest:
+            meta = UserSessionMeta.objects.filter(
+                session_token_digest=token_digest
+            ).first()
             if meta and meta.revoked_at:
                 raise HttpError(401, "session revoked")
         s_key = SessionService._session_key(request)
@@ -71,10 +79,11 @@ class SessionService:
         dj_key: str,
     ) -> UserSessionMeta:
         key_for_meta = dj_key or token
+        token_digest = session_token_digest(token)
         meta, _ = UserSessionMeta.objects.select_for_update().get_or_create(
             user=user,
             session_key=key_for_meta,
-            defaults={"session_token": token or None},
+            defaults={"session_token_digest": token_digest or None},
         )
         return meta
 
@@ -88,9 +97,10 @@ class SessionService:
         throttle_seconds: int,
     ) -> None:
         update_fields: list[str] = []
-        if token and not meta.session_token:
-            meta.session_token = token
-            update_fields.append("session_token")
+        token_digest = session_token_digest(token)
+        if token_digest and not meta.session_token_digest:
+            meta.session_token_digest = token_digest
+            update_fields.append("session_token_digest")
 
         should_refresh = (
             not meta.last_seen
@@ -273,7 +283,9 @@ class SessionService:
 
         token = SessionService._header_token(request)
         is_current = (s_key == SessionService._session_key(request)) or (
-            meta and token and meta.session_token == token
+            meta
+            and token
+            and session_token_digest_matches(meta.session_token_digest, token)
         )
         is_revoked = bool(revoked_at) or not session_alive
 
@@ -375,9 +387,14 @@ class SessionService:
         user: User,
     ) -> str:
         token = SessionService._header_token(request)
-        cur_meta = UserSessionMeta.objects.filter(
-            user=user, session_token=token
-        ).first()
+        token_digest = session_token_digest(token)
+        cur_meta = (
+            UserSessionMeta.objects.filter(
+                user=user, session_token_digest=token_digest
+            ).first()
+            if token_digest
+            else None
+        )
         return SessionService._session_key(request) or (
             cur_meta.session_key if cur_meta else ""
         )

@@ -1,5 +1,25 @@
 from django.conf import settings
 from django.db import models
+from django.utils.crypto import constant_time_compare, salted_hmac
+
+SESSION_TOKEN_DIGEST_SALT = "core.UserSessionMeta.session_token.v1"
+
+
+def session_token_digest(value: str | None) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    return salted_hmac(SESSION_TOKEN_DIGEST_SALT, raw).hexdigest()
+
+
+def session_token_digest_matches(
+    digest: str | None,
+    value: str | None,
+) -> bool:
+    candidate = session_token_digest(value)
+    return bool(
+        digest and candidate and constant_time_compare(digest, candidate)
+    )
 
 
 class UserSessionMeta(models.Model):
@@ -9,7 +29,8 @@ class UserSessionMeta(models.Model):
         related_name="session_meta",
     )
     session_key = models.CharField(max_length=64, db_index=True)
-    session_token = models.CharField(
+    session_token = models.CharField(max_length=64, null=True, blank=True)
+    session_token_digest = models.CharField(
         max_length=64, null=True, blank=True, db_index=True
     )
     first_seen = models.DateTimeField(auto_now_add=True)
@@ -23,8 +44,16 @@ class UserSessionMeta(models.Model):
         unique_together = (("user", "session_key"),)
         indexes = (
             models.Index(fields=["user", "session_key"]),
-            models.Index(fields=["user", "session_token"]),
+            models.Index(fields=["user", "session_token_digest"]),
         )
+
+    def save(self, *args, **kwargs):
+        if self.session_token:
+            self.session_token_digest = session_token_digest(
+                self.session_token
+            )
+            self.session_token = None
+        super().save(*args, **kwargs)
 
 
 class UserSessionToken(models.Model):

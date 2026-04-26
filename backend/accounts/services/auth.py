@@ -20,7 +20,11 @@ from allauth.core import context
 from allauth.headless.account.inputs import ChangePasswordInput
 from allauth.mfa.adapter import get_adapter as get_mfa_adapter
 from allauth.socialaccount.models import SocialAccount
-from core.models import UserSessionMeta, UserSessionToken
+from core.models import (
+    UserSessionMeta,
+    UserSessionToken,
+    session_token_digest,
+)
 from django.contrib.auth import get_user_model
 from django.contrib.auth import logout as dj_logout
 from django.db import transaction
@@ -44,25 +48,37 @@ class AuthService:
         if not getattr(user, "is_authenticated", False):
             raise HttpError(401, "Not authenticated")
         token = request.headers.get("X-Session-Token") or ""
+        token_digest = session_token_digest(token)
         dj_key = request.session.session_key or ""
 
         meta = (
             UserSessionMeta.objects.filter(
-                user=user, session_token=token
+                user=user, session_token_digest=token_digest
             ).first()
-            or UserSessionMeta.objects.filter(
+            if token_digest
+            else None
+        ) or (
+            UserSessionMeta.objects.filter(
                 user=user, session_key=dj_key
             ).first()
+            if dj_key
+            else None
         )
         if not meta:
             meta = UserSessionMeta.objects.create(
                 user=user,
                 session_key=dj_key or token,
-                session_token=token or None,
+                session_token_digest=token_digest or None,
             )
+        updates: list[str] = []
+        if token_digest and not meta.session_token_digest:
+            meta.session_token_digest = token_digest
+            updates.append("session_token_digest")
         if dj_key and meta.session_key != dj_key:
             meta.session_key = dj_key
-            meta.save(update_fields=["session_key"])
+            updates.append("session_key")
+        if updates:
+            meta.save(update_fields=sorted(set(updates)))
 
         rt = RefreshToken.for_user(user)
         at = rt.access_token
@@ -78,12 +94,13 @@ class AuthService:
         user = getattr(request, "auth", None) or getattr(request, "user", None)
         if user and getattr(user, "is_authenticated", False):
             token = request.headers.get("X-Session-Token") or ""
+            token_digest = session_token_digest(token)
             dj_key = request.session.session_key or ""
             meta = (
                 UserSessionMeta.objects.filter(
-                    user=user, session_token=token
+                    user=user, session_token_digest=token_digest
                 ).first()
-                if token
+                if token_digest
                 else None
             ) or (
                 UserSessionMeta.objects.filter(
@@ -99,12 +116,12 @@ class AuthService:
                 meta, _ = meta_qs.get_or_create(
                     user=user,
                     session_key=session_key,
-                    defaults={"session_token": token or None},
+                    defaults={"session_token_digest": token_digest or None},
                 )
                 updates: list[str] = []
-                if token and not meta.session_token:
-                    meta.session_token = token
-                    updates.append("session_token")
+                if token_digest and not meta.session_token_digest:
+                    meta.session_token_digest = token_digest
+                    updates.append("session_token_digest")
                 if not meta.revoked_at:
                     meta.revoked_at = now
                     updates.append("revoked_at")
@@ -244,10 +261,11 @@ class AuthService:
         request_token = request.headers.get("X-Session-Token") or ""
         if not request_token:
             raise HttpError(401, "session token required for refresh")
+        request_token_digest = session_token_digest(request_token)
 
         request_meta = UserSessionMeta.objects.filter(
             user=user,
-            session_token=request_token,
+            session_token_digest=request_token_digest,
         ).first()
         if not request_meta or not request_meta.session_key:
             raise HttpError(401, "invalid session token")

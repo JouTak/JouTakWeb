@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from accounts.tests.base import APITestCase
-from core.models import UserSessionMeta, UserSessionToken
+from core.models import (
+    UserSessionMeta,
+    UserSessionToken,
+    session_token_digest,
+)
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.utils import timezone
@@ -145,9 +149,11 @@ class HeadlessAuthApiTests(APITestCase):
 
         user = User.objects.get(email=payload["email"].lower())
         meta = UserSessionMeta.objects.filter(
-            user=user, session_token=session_token
+            user=user,
+            session_token_digest=session_token_digest(session_token),
         ).first()
         self.assertIsNotNone(meta)
+        self.assertIsNone(meta.session_token)
 
         refresh_jti = str(RefreshToken(data["refresh"]).get("jti"))
         self.assertTrue(

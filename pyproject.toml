@@ -60,6 +60,10 @@ exclude = '''
 )/
 '''
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "backend.settings.dev"
+pythonpath = ["backend", "."]
+
 [tool.ruff]
 line-length = 79
 target-version = "py312"

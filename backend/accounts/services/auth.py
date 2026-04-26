@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from accounts.services.account_status import AccountStatusService
+from accounts.services.auth_cookies import get_refresh_cookie
 from accounts.services.profile import ProfileService
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
@@ -238,8 +239,12 @@ class AuthService:
         request: HttpRequest,
         payload: TokenRefreshIn,
     ) -> TokenRefreshOut:
+        refresh_token = payload.refresh or get_refresh_cookie(request)
+        if not refresh_token:
+            raise HttpError(401, "refresh required")
+
         try:
-            rt = RefreshToken(payload.refresh)
+            rt = RefreshToken(refresh_token)
             rt.check_blacklist()
         except TokenError as e:
             raise HttpError(401, "invalid refresh") from e

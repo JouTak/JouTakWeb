@@ -78,15 +78,15 @@ class RevokeOut(Schema):
 # ---------- Auth / JWT ----------
 class TokenPairOut(Schema):
     access: str
-    refresh: str
+    refresh: str | None = None
 
 
 class TokenRefreshIn(Schema):
-    refresh: str
+    refresh: str | None = None
 
 
 class TokenRefreshOut(Schema):
-    refresh: str
+    refresh: str | None = None
     access: str | None = None
 
 

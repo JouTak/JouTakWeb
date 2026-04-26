@@ -1,4 +1,8 @@
 from accounts.services.auth import AuthService
+from accounts.services.auth_cookies import (
+    delete_refresh_cookie,
+    set_refresh_cookie,
+)
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
     ChangePasswordIn,
@@ -12,7 +16,7 @@ from accounts.transport.schemas import (
 )
 from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.contrib.auth import get_user_model
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from ninja import Body, Router
 from ninja.errors import HttpError
 
@@ -42,9 +46,13 @@ def _require_active_user(
     summary="Issue JWT pair bound to current session",
     operation_id="auth_jwt_from_session",
 )
-def jwt_from_session(request: HttpRequest) -> TokenPairOut:
+def jwt_from_session(
+    request: HttpRequest, response: HttpResponse
+) -> TokenPairOut:
     user = _require_active_user(request, touch=True)
-    return AuthService.issue_pair_for_session(request, user)
+    pair = AuthService.issue_pair_for_session(request, user)
+    set_refresh_cookie(response, pair.refresh or "")
+    return TokenPairOut(access=pair.access)
 
 
 @auth_router.post(
@@ -54,9 +62,10 @@ def jwt_from_session(request: HttpRequest) -> TokenPairOut:
     summary="Logout current session",
     operation_id="auth_logout",
 )
-def logout_current(request: HttpRequest) -> OkOut:
+def logout_current(request: HttpRequest, response: HttpResponse) -> OkOut:
     _require_active_user(request)
     AuthService.logout_current(request)
+    delete_refresh_cookie(response)
     return OkOut(ok=True, message="logged out")
 
 
@@ -101,6 +110,9 @@ def change_password(
 )
 def refresh_pair(
     request: HttpRequest,
+    response: HttpResponse,
     payload: TokenRefreshIn = BODY_REQUIRED,
 ) -> TokenRefreshOut:
-    return AuthService.refresh_pair(request, payload)
+    pair = AuthService.refresh_pair(request, payload)
+    set_refresh_cookie(response, pair.refresh or "")
+    return TokenRefreshOut(access=pair.access)

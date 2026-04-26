@@ -153,6 +153,23 @@ NINJA_JWT = {
     "UPDATE_LAST_LOGIN": True,
 }
 
+JWT_REFRESH_COOKIE_NAME = config(
+    "JWT_REFRESH_COOKIE_NAME", default="joutak_refresh"
+)
+JWT_REFRESH_COOKIE_DOMAIN = config("JWT_REFRESH_COOKIE_DOMAIN", default=None)
+JWT_REFRESH_COOKIE_PATH = config(
+    "JWT_REFRESH_COOKIE_PATH", default="/api/auth/refresh"
+)
+JWT_REFRESH_COOKIE_SECURE = config(
+    "JWT_REFRESH_COOKIE_SECURE", cast=bool, default=not DEBUG
+)
+JWT_REFRESH_COOKIE_SAMESITE = config(
+    "JWT_REFRESH_COOKIE_SAMESITE", default="Lax"
+)
+JWT_REFRESH_COOKIE_MAX_AGE = int(
+    NINJA_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
+)
+
 
 ACCOUNT_LOGIN_METHODS = {"email", "username"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]

@@ -23,18 +23,17 @@ const CLIENT_HEADERS = Object.freeze({
 });
 
 const HARD_LOGOUT_REASONS = Object.freeze({
-  MISSING_REFRESH: "MISSING_REFRESH",
   REFRESH_FAILED: "REFRESH_FAILED",
   SESSION_UNAUTHORIZED: "SESSION_UNAUTHORIZED",
 });
 
-const bareClient = axios.create({ baseURL: API_BASE });
+const bareClient = axios.create({ baseURL: API_BASE, withCredentials: true });
 
 let hardLogoutHandler = () => {};
 let refreshPromise = null;
 
 function hasAuthTokens(tokens) {
-  return Boolean(tokens?.session_token || tokens?.access || tokens?.refresh);
+  return Boolean(tokens?.session_token || tokens?.access);
 }
 
 function emitAuthStateChanged() {
@@ -167,34 +166,22 @@ function performHardLogout(reason = HARD_LOGOUT_REASONS.SESSION_UNAUTHORIZED) {
 }
 
 async function refreshAccessToken({ hardLogoutOnFailure = true } = {}) {
-  const refreshToken = readStoredTokens()?.refresh || null;
-
-  if (!refreshToken) {
-    const error = new Error("Refresh token is missing");
-    error.code = HARD_LOGOUT_REASONS.MISSING_REFRESH;
-    if (hardLogoutOnFailure) {
-      performHardLogout(HARD_LOGOUT_REASONS.MISSING_REFRESH);
-    }
-    throw error;
-  }
-
   if (!refreshPromise) {
     refreshPromise = bareClient
       .post(
         "/auth/refresh",
-        { refresh: refreshToken },
+        {},
         { headers: buildSessionHeaders(tokenStore.getSessionToken()) },
       )
       .then(({ data }) => {
         const access = data?.access;
-        const refresh = data?.refresh || refreshToken;
 
         if (!access) {
           throw new Error("Access token is missing in refresh response");
         }
 
-        mergeStoredTokens({ access, refresh }, { emit: false });
-        return { access, refresh };
+        mergeStoredTokens({ access, refresh: null }, { emit: false });
+        return { access };
       })
       .finally(() => {
         refreshPromise = null;
@@ -478,7 +465,7 @@ export async function jwtFromSession() {
   mergeStoredTokens(
     {
       access: pair?.access || null,
-      refresh: pair?.refresh || null,
+      refresh: null,
     },
     { emit: false },
   );

@@ -1,6 +1,7 @@
+import { Button, TextInput, useToaster } from "@gravity-ui/uikit";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, TextInput, useToaster } from "@gravity-ui/uikit";
+
 import { clearAuthState, deleteCurrentAccount } from "../../services/api";
 
 const cardStyle = {

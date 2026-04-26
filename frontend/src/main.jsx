@@ -1,19 +1,18 @@
-import { createRoot } from "react-dom/client";
-import App from "./App.jsx";
-import { setupAxiosInterceptors } from "./services/api";
-
 import "bootstrap/dist/css/bootstrap.min.css";
-
-import {
-  ThemeProvider,
-  ToasterProvider,
-  ToasterComponent,
-  configure,
-} from "@gravity-ui/uikit";
 import "@gravity-ui/uikit/styles/fonts.css";
 import "@gravity-ui/uikit/styles/styles.css";
-
 import "./assets/index.css";
+
+import {
+  configure,
+  ThemeProvider,
+  ToasterComponent,
+  ToasterProvider,
+} from "@gravity-ui/uikit";
+import { createRoot } from "react-dom/client";
+
+import App from "./App.jsx";
+import { setupAxiosInterceptors } from "./services/api";
 
 setupAxiosInterceptors(({ reason } = {}) => {
   const currentPath = window.location.pathname || "/";

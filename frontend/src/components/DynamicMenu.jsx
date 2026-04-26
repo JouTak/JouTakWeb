@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+
 import { getProjectByPath } from "../utils/projectUtils";
 
 const DynamicMenu = () => {

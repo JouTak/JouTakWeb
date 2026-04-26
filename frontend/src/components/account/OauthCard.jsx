@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import { Button, DropdownMenu, Loader, useToaster } from "@gravity-ui/uikit";
-import { getOAuthProviders, getOAuthLink } from "../../services/api";
+import { useEffect, useState } from "react";
+
+import { getOAuthLink, getOAuthProviders } from "../../services/api";
 
 const cardStyle = {
   border: "1px solid rgba(255,255,255,0.12)",

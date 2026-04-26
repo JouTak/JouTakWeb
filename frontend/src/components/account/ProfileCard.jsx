@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-import PropTypes from "prop-types";
 import {
   Button,
   Loader,
@@ -7,6 +5,9 @@ import {
   TextInput,
   useToaster,
 } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import { me, updateProfile } from "../../services/api";
 import { boolToSelect, selectToBool } from "../../utils/profileForm";
 
@@ -22,6 +23,16 @@ const headerStyle = {
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
+};
+const choiceGroupStyle = {
+  border: 0,
+  display: "grid",
+  gap: 6,
+  margin: 0,
+  padding: 0,
+};
+const choiceLegendStyle = {
+  padding: 0,
 };
 
 function boolIcon(value) {
@@ -366,8 +377,10 @@ export default function ProfileCard({ profile, onUpdated }) {
                     placeholder="Только латиница, цифры и _"
                     required
                   />
-                  <label style={{ display: "grid", gap: 6 }}>
-                    <span>Есть лицензия Minecraft?</span>
+                  <fieldset style={choiceGroupStyle}>
+                    <legend style={choiceLegendStyle}>
+                      Есть лицензия Minecraft?
+                    </legend>
                     <RadioButton
                       size="l"
                       width="max"
@@ -378,9 +391,9 @@ export default function ProfileCard({ profile, onUpdated }) {
                         { value: "false", content: "Нет" },
                       ]}
                     />
-                  </label>
-                  <label style={{ display: "grid", gap: 6 }}>
-                    <span>Вы студент ИТМО?</span>
+                  </fieldset>
+                  <fieldset style={choiceGroupStyle}>
+                    <legend style={choiceLegendStyle}>Вы студент ИТМО?</legend>
                     <RadioButton
                       size="l"
                       width="max"
@@ -391,7 +404,7 @@ export default function ProfileCard({ profile, onUpdated }) {
                         { value: "false", content: "Нет" },
                       ]}
                     />
-                  </label>
+                  </fieldset>
                   {isuRequired && (
                     <TextInput
                       size="l"

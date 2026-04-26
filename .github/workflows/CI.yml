@@ -30,6 +30,8 @@ jobs:
             command: npm run lint:styles
           - check_name: Build
             command: npm run build
+          - check_name: Audit
+            command: npm audit --audit-level=moderate
     defaults:
       run:
         working-directory: frontend
@@ -66,14 +68,22 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Sync deps (with dev)
-        run: uv sync --python 3.12 --group dev
-
-      - name: Install backend test tooling
-        run: uv pip install --python .venv/bin/python pytest pytest-django
+      - name: Sync deps (with dev and test)
+        run: uv sync --python 3.12 --group dev --group test
 
       - name: Ruff
         run: uv run ruff check .
+
+      - name: Bandit
+        run: >
+          uv run bandit -r backend/accounts backend/core backend/backend
+          -x "*/tests/*,*/migrations/*"
+          --skip B104,B105
+
+      - name: pip-audit
+        run: |
+          uv export --frozen --no-dev --no-hashes -q -o /tmp/joutak-requirements.txt
+          uv run pip-audit --no-deps -r /tmp/joutak-requirements.txt
 
       - name: Backend tests (sqlite)
         env:

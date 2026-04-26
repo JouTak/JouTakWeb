@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Button,
   Label,
@@ -7,13 +5,16 @@ import {
   TextInput,
   useToaster,
 } from "@gravity-ui/uikit";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { me, updateProfile } from "../services/api";
-import { isPersonalizedProfile } from "../utils/profileState";
 import {
   boolToSelect,
-  selectToBool,
   PROFILE_FIELD_LABELS,
+  selectToBool,
 } from "../utils/profileForm";
+import { isPersonalizedProfile } from "../utils/profileState";
 
 const cardStyle = {
   border: "1px solid rgba(255,255,255,0.12)",

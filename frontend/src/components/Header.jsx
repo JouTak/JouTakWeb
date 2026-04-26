@@ -1,27 +1,28 @@
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Select,
-  DropdownMenu,
-  Button,
   Avatar,
+  Button,
+  DropdownMenu,
+  Label,
   Loader,
   Modal,
-  Label,
+  Select,
 } from "@gravity-ui/uikit";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Offcanvas from "react-bootstrap/Offcanvas";
-import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
-import DynamicMenu from "./DynamicMenu";
-import AuthModal from "./AuthModal";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
-import {
-  isPersonalizedProfile,
-  needsPersonalization,
-} from "../utils/profileState";
 import {
   getProfileDisplayName,
   getProfileIdentityKey,
 } from "../utils/accountIdentity";
+import {
+  isPersonalizedProfile,
+  needsPersonalization,
+} from "../utils/profileState";
+import { getPathByProject, getProjectByPath } from "../utils/projectUtils";
+import AuthModal from "./AuthModal";
+import DynamicMenu from "./DynamicMenu";
 
 const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 

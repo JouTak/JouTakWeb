@@ -15,8 +15,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  frontend_lint:
+  frontend_checks:
+    name: Frontend ${{ matrix.check_name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check_name: ESLint
+            command: npm run lint
+          - check_name: Prettier
+            command: npm run format
+          - check_name: Stylelint
+            command: npm run lint:styles
+          - check_name: Build
+            command: npm run build
     defaults:
       run:
         working-directory: frontend
@@ -28,22 +41,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "20.17.0"
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install deps
         run: npm ci
 
-      - name: ESLint
-        run: npx eslint .
-
-#     todo: обновить настройки для линтера
-#      - name: Prettier check
-#        run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"
-
-      - name: Stylelint
-        run: npx stylelint "**/*.{css,scss}"
+      - name: Run ${{ matrix.check_name }}
+        run: ${{ matrix.command }}
 
   backend_test:
     runs-on: ubuntu-latest

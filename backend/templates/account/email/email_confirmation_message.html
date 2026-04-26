@@ -7,21 +7,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Письмо</title>
     <style>
-        @font-face {
-            font-family: "Geologica";
-            font-style: normal;
-            src: local("Geologica"), url("") format("truetype");
-        }
-        @font-face {
-            font-family: "Minecraft Seven Cyrillic";
-            font-style: normal;
-            src: local(""), local("Minecraft Seven"), url("") format("truetype");
-        }
-        @font-face {
-            font-family: "Minecraft Ten Cyrillic";
-            font-style: normal;
-            src: local("Minecraft Ten"), local("Minecraft Ten Cyrillic"), url("") format("truetype");
-        }
         body, table, td, a {
             -webkit-text-size-adjust: 100%;
             -ms-text-size-adjust: 100%;
@@ -63,8 +48,9 @@
 </head>
 <body style="margin: 0; padding: 0; background-color: #f3f4f6;">
     {% user_display user as user_display %}
+    {% with site_domain=current_site.domain|default:"joutak.ru" %}
     <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; color: transparent;">
-        Подтвердите почту на {{ current_site.domain|default:"JouTak.ru" }}
+        Подтвердите почту на {{ site_domain }}
     </div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f3f4f6;">
@@ -81,7 +67,7 @@
 
                     <tr>
                         <td align="left" style="padding: 14px 32px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: center;" class="mobile-padding">
-                            <a href="https://{{ current_site.domain|default:'joutak.ru' }}" target="_blank" style="text-decoration: none; color: #111827;">
+                            <a href="https://{{ site_domain }}" target="_blank" style="text-decoration: none; color: #111827;">
                                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td valign="middle" style="padding-right: 12px;">
@@ -97,7 +83,7 @@
                     </tr>
 
                     <tr>
-                        <td align="center" valign="middle" background="background.png" style="padding: 0 32px; height: 254px; text-align: center; background-image: url('https://cloud.joutak.ru/apps/files_sharing/publicpreview/Kxmt2zaqePezGYb?file=/&amp;fileId=39872&amp;x=2560&amp;y=1600&amp;a=true&amp;etag=2225ddfa4e98001ead49e964c161c78c'); background-repeat: no-repeat; background-position: center center; background-size: 600px auto;" class="mobile-padding">
+                        <td align="center" valign="middle" background="https://cloud.joutak.ru/apps/files_sharing/publicpreview/Kxmt2zaqePezGYb?file=/&amp;fileId=39872&amp;x=2560&amp;y=1600&amp;a=true&amp;etag=2225ddfa4e98001ead49e964c161c78c" style="padding: 0 32px; height: 254px; text-align: center; background-image: url('https://cloud.joutak.ru/apps/files_sharing/publicpreview/Kxmt2zaqePezGYb?file=/&amp;fileId=39872&amp;x=2560&amp;y=1600&amp;a=true&amp;etag=2225ddfa4e98001ead49e964c161c78c'); background-repeat: no-repeat; background-position: center center; background-size: 600px auto;" class="mobile-padding">
                             <!-- <p style="margin: 0; font-family: 'Minecraft Ten Cyrillic', Helvetica, sans-serif; font-size: 36px; line-height: 130%; color: #E7CBBD; font-weight: 400; text-align: center; -webkit-text-stroke: 3.5px #734853; text-shadow: 8px 3px 0 #3F2826;">
                                 подтвердите почту
                             </p> -->
@@ -107,7 +93,7 @@
                     <tr>
                         <td align="left" style="padding: 26px 32px 0;" class="mobile-padding">
                             <p style="margin: 0 40px 0 0 ; font-family: 'Geologica', Helvetica, sans-serif; font-size: 16px; line-height: 24px; color: #000000; font-weight: 200;">
-                                Вы получили это письмо, потому что пользователь <span style="font-weight: 400;">{{ user_display }}</span> указал ваш адрес электронной почты для регистрации учетной записи на сайте <span style="font-weight: 400;">{{ current_site.domain|default:"joutak.ru" }}</span>
+                                Вы получили это письмо, потому что пользователь <span style="font-weight: 400;">{{ user_display }}</span> указал ваш адрес электронной почты для регистрации учетной записи на сайте <span style="font-weight: 400;">{{ site_domain }}</span>
                             </p>
                         </td>
                     </tr>
@@ -154,7 +140,7 @@
                     <tr>
                         <td align="left" style="padding: 24px; background-color: #bababa1f; border-top: 1px solid #d0d0d0c7; text-align: center;" class="mobile-padding">
                             <p style="margin: 0 0 8px; font-family: 'Geologica', Helvetica, sans-serif; font-size: 10px; font-weight: 100; line-height: 141%; color: #000000DB;">
-                                Если вы не регистрировались на сайте {{ current_site.domain|default:"joutak.ru" }}, просто проигнорируйте это письмо.
+                                Если вы не регистрировались на сайте {{ site_domain }}, просто проигнорируйте это письмо.
                             </p>
                         </td>
                     </tr>
@@ -162,5 +148,6 @@
             </td>
         </tr>
     </table>
+    {% endwith %}
 </body>
 </html>

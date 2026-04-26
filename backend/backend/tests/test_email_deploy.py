@@ -66,7 +66,9 @@ class EmailTemplateTests(SimpleTestCase):
         )
 
         self.assertIn("<!DOCTYPE html>", html)
-        self.assertIn("background-image: url(", html)
+        self.assertIn('alt="Подтвердите почту"', html)
+        self.assertIn("width: 100%; max-width: 600px; height: auto", html)
+        self.assertNotIn("background-size: 600px auto", html)
         self.assertIn("email_template_user", html)
         self.assertIn(f'href="{activate_url}"', html)
         self.assertIn(f">{activate_url}</a>", html)

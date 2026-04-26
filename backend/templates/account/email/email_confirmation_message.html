@@ -1,0 +1,166 @@
+{% load account %}
+<!DOCTYPE html>
+<html lang="ru" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Письмо</title>
+    <style>
+        @font-face {
+            font-family: "Geologica";
+            font-style: normal;
+            src: local("Geologica"), url("") format("truetype");
+        }
+        @font-face {
+            font-family: "Minecraft Seven Cyrillic";
+            font-style: normal;
+            src: local(""), local("Minecraft Seven"), url("") format("truetype");
+        }
+        @font-face {
+            font-family: "Minecraft Ten Cyrillic";
+            font-style: normal;
+            src: local("Minecraft Ten"), local("Minecraft Ten Cyrillic"), url("") format("truetype");
+        }
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+            display: block;
+        }
+        table {
+            border-collapse: collapse !important;
+        }
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: #f3f4f6;
+        }
+        @media screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+            }
+            .mobile-padding {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+            .mobile-center {
+                text-align: center !important;
+            }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6;">
+    {% user_display user as user_display %}
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; color: transparent;">
+        Подтвердите почту на {{ current_site.domain|default:"JouTak.ru" }}
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 24px 12px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="container" style="width: 600px; max-width: 600px; background-color: #ffffff; overflow: hidden;">
+                    <tr>
+                        <td align="right" style="padding: 16px 36px; background-color: #A395A2;" class="mobile-padding">
+                            <p style="margin: 0; font-family: 'Geologica', Helvetica, sans-serif; font-size: 12px; line-height: 141%; color: #ffffff; font-weight: 300; text-align: right;">
+                                стань частью комьюнити
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="left" style="padding: 14px 32px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: center;" class="mobile-padding">
+                            <a href="https://{{ current_site.domain|default:'joutak.ru' }}" target="_blank" style="text-decoration: none; color: #111827;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                    <tr>
+                                        <td valign="middle" style="padding-right: 12px;">
+                                            <img src="https://cloud.joutak.ru/apps/files_sharing/publicpreview/ttmD5Eo8zb9gQxE?file=/&amp;fileId=39871&amp;x=2560&amp;y=1600&amp;a=true&amp;etag=933af93bdaaade5209eb0346187569ba" alt="Joutak" style="width: 243px; height: 50px; display: block;">
+                                        </td>
+                                        <!-- <td valign="middle">
+                                            <span style="font-family: 'Minecraft Seven Cyrillic', 'Geologica', Helvetica, sans-serif; font-size: 32px; line-height: 141%; color: #000; font-weight: 400;">joutak.ru</span>
+                                        </td> -->
+                                    </tr>
+                                </table>
+                            </a>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="center" valign="middle" background="background.png" style="padding: 0 32px; height: 254px; text-align: center; background-image: url('https://cloud.joutak.ru/apps/files_sharing/publicpreview/Kxmt2zaqePezGYb?file=/&amp;fileId=39872&amp;x=2560&amp;y=1600&amp;a=true&amp;etag=2225ddfa4e98001ead49e964c161c78c'); background-repeat: no-repeat; background-position: center center; background-size: 600px auto;" class="mobile-padding">
+                            <!-- <p style="margin: 0; font-family: 'Minecraft Ten Cyrillic', Helvetica, sans-serif; font-size: 36px; line-height: 130%; color: #E7CBBD; font-weight: 400; text-align: center; -webkit-text-stroke: 3.5px #734853; text-shadow: 8px 3px 0 #3F2826;">
+                                подтвердите почту
+                            </p> -->
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="left" style="padding: 26px 32px 0;" class="mobile-padding">
+                            <p style="margin: 0 40px 0 0 ; font-family: 'Geologica', Helvetica, sans-serif; font-size: 16px; line-height: 24px; color: #000000; font-weight: 200;">
+                                Вы получили это письмо, потому что пользователь <span style="font-weight: 400;">{{ user_display }}</span> указал ваш адрес электронной почты для регистрации учетной записи на сайте <span style="font-weight: 400;">{{ current_site.domain|default:"joutak.ru" }}</span>
+                            </p>
+                        </td>
+                    </tr>
+
+                    {% if code %}
+                    <tr>
+                        <td align="center" style="padding: 30px 32px 30px;" class="mobile-padding">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                                <tr>
+                                    <td align="center" bgcolor="#B98F81" style="width: 250px;">
+                                        <span style="display: inline-block; padding: 20px; font-family: 'Geologica', Helvetica, sans-serif; font-size: 20px; line-height: 16px; color: #ffffff; text-decoration: none; font-weight: 400;">
+                                            {{ code }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td align="center" style="padding: 30px 32px 30px; " class="mobile-padding">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                                <tr>
+                                    <td align="center" bgcolor="#B98F81" style="width: 250px;">
+                                        <a href="{{ activate_url }}" target="_blank" style="display: inline-block; padding: 20px; font-family: 'Geologica', Helvetica, sans-serif; font-size: 20px; line-height: 16px; color: #ffffff; text-decoration: none; font-weight: 400;">
+                                            подтвердить почту
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="left" style="padding: 0 32px 32px;" class="mobile-padding">
+                            <p style="margin: 0; padding: 0; font-family: 'Geologica', Helvetica, sans-serif; font-size: 10px; line-height: 22px; color: #000000; font-weight: 200;">
+                                если кнопка не работает, перейдите по ссылке:<br>
+                                <a href="{{ activate_url }}" target="_blank" style="color: #000000; text-decoration: none; white-space: nowrap; padding: 0; word-break: normal;">{{ activate_url }}</a>
+                            </p>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    <tr>
+                        <td align="left" style="padding: 24px; background-color: #bababa1f; border-top: 1px solid #d0d0d0c7; text-align: center;" class="mobile-padding">
+                            <p style="margin: 0 0 8px; font-family: 'Geologica', Helvetica, sans-serif; font-size: 10px; font-weight: 100; line-height: 141%; color: #000000DB;">
+                                Если вы не регистрировались на сайте {{ current_site.domain|default:"joutak.ru" }}, просто проигнорируйте это письмо.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

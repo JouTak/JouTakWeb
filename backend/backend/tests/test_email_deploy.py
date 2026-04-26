@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
 from django.core.management import call_command
+from django.template.loader import render_to_string
 from django.test import SimpleTestCase, TestCase, override_settings
 
 
@@ -44,6 +45,33 @@ class EmailDeployRoutesTests(TestCase):
     def test_allauth_headless_password_reset_route_is_available(self) -> None:
         response = self.client.get("/api/auth/flow/app/v1/auth/password/reset")
         self.assertEqual(response.status_code, 400)
+
+
+class EmailTemplateTests(TestCase):
+    def test_confirmation_email_html_uses_branded_template_context(
+        self,
+    ) -> None:
+        user = get_user_model()(username="email_template_user")
+        site = Site(domain="joutak.ru", name="JouTak")
+        activate_url = "https://joutak.ru/confirm-email?key=test-key"
+
+        html = render_to_string(
+            "account/email/email_confirmation_message.html",
+            {
+                "user": user,
+                "current_site": site,
+                "activate_url": activate_url,
+                "code": None,
+            },
+        )
+
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("background-image: url(", html)
+        self.assertIn("email_template_user", html)
+        self.assertIn(f'href="{activate_url}"', html)
+        self.assertIn(f">{activate_url}</a>", html)
+        self.assertNotIn(">username<", html)
+        self.assertNotIn("https://example.com", html)
 
 
 class SyncSiteCommandTests(TestCase):

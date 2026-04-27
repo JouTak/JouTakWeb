@@ -5,14 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { changePassword, clearAuthState } from "../../services/api";
-
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 
 const COMMON_PASSWORDS = new Set([
   "123456",
@@ -339,7 +332,7 @@ export default function PasswordCard({
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <h3 style={{ margin: 0, fontSize: 18 }}>Пароль</h3>
 
       {!editing ? (
@@ -486,7 +479,7 @@ export default function PasswordCard({
           </div>
         </form>
       )}
-    </section>
+    </SectionCard>
   );
 }
 

@@ -2,14 +2,7 @@ import { Button, DropdownMenu, Loader, useToaster } from "@gravity-ui/uikit";
 import { useEffect, useState } from "react";
 
 import { getOAuthLink, getOAuthProviders } from "../../services/api";
-
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 
 const row = {
   display: "flex",
@@ -89,7 +82,7 @@ export default function OauthCard() {
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <h3 style={{ margin: 0, fontSize: 18 }}>Связанные аккаунты</h3>
       {loading ? (
         <Loader size="m" />
@@ -115,6 +108,6 @@ export default function OauthCard() {
       ) : (
         <div style={{ opacity: 0.8 }}>Доступных провайдеров нет.</div>
       )}
-    </section>
+    </SectionCard>
   );
 }

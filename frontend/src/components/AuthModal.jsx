@@ -9,6 +9,7 @@ import {
   me,
   requestPasswordReset,
 } from "../services/api";
+import { extractErrorMessage } from "../services/errors";
 import { needsPersonalization } from "../utils/profileState";
 
 const fieldBlockStyle = {
@@ -26,37 +27,6 @@ function isSafeInternalPath(path) {
   return (
     typeof path === "string" && path.startsWith("/") && !path.startsWith("//")
   );
-}
-
-function extractErrorMessage(error, fallback) {
-  const data = error?.response?.data;
-  if (Array.isArray(data?.errors)) {
-    const firstError = data.errors.find(
-      (entry) =>
-        entry && typeof entry.message === "string" && entry.message.trim(),
-    );
-    if (firstError?.message) return firstError.message;
-  }
-  if (data?.fields && typeof data.fields === "object") {
-    const firstFieldMessage = Object.values(data.fields).find(
-      (value) => typeof value === "string" && value.trim(),
-    );
-    if (firstFieldMessage) return firstFieldMessage;
-  }
-  if (data?.errors && typeof data.errors === "object") {
-    for (const entries of Object.values(data.errors)) {
-      if (!Array.isArray(entries)) continue;
-      const first = entries.find(
-        (entry) =>
-          entry &&
-          typeof entry === "object" &&
-          typeof entry.message === "string" &&
-          entry.message.trim(),
-      );
-      if (first?.message) return first.message;
-    }
-  }
-  return data?.detail || data?.message || fallback;
 }
 
 export default function AuthModal({

@@ -13,14 +13,7 @@ import {
   getEmailStatus,
   resendEmailVerification,
 } from "../../services/api";
-
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 
 const headerStyle = {
   display: "flex",
@@ -163,7 +156,7 @@ export default function EmailCard({ initialStatus }) {
   );
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={headerStyle}>
         <h3 style={{ margin: 0, fontSize: 18 }}>Email</h3>
         {email ? (
@@ -236,7 +229,7 @@ export default function EmailCard({ initialStatus }) {
           )}
         </>
       )}
-    </section>
+    </SectionCard>
   );
 }
 

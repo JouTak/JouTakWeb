@@ -15,9 +15,14 @@ const DynamicMenu = () => {
           </Link>
         </li>
         <li className="nav-item">
-          <Link className="nav-link" to="http://map.joutak.ru">
+          <a
+            className="nav-link"
+            href="https://map.joutak.ru"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             Онлайн карта
-          </Link>
+          </a>
         </li>
       </>
     );

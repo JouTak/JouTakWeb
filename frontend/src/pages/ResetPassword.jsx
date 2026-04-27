@@ -7,6 +7,7 @@ import {
   requestPasswordReset,
   resetPasswordByKey,
 } from "../services/api";
+import { extractErrorMessage } from "../services/errors";
 
 const cardStyle = {
   maxWidth: 760,
@@ -17,23 +18,6 @@ const cardStyle = {
   display: "grid",
   gap: 12,
 };
-
-function extractErrorMessage(error, fallback) {
-  const errors = error?.response?.data?.errors;
-  if (Array.isArray(errors)) {
-    const first = errors.find(
-      (entry) =>
-        entry &&
-        typeof entry === "object" &&
-        typeof entry.message === "string" &&
-        entry.message.trim(),
-    );
-    if (first?.message) {
-      return first.message;
-    }
-  }
-  return error?.response?.data?.detail || fallback;
-}
 
 function emailOk(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());

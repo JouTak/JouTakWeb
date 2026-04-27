@@ -17,14 +17,7 @@ import {
   logout,
   revokeSessionHeadless,
 } from "../../services/api";
-
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 
 const rowBetween = {
   display: "flex",
@@ -362,7 +355,7 @@ export default function SessionsCard({ initialSessions }) {
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={rowBetween}>
         <h3 style={{ margin: 0, fontSize: 18 }}>Сессии</h3>
         <div
@@ -532,7 +525,7 @@ export default function SessionsCard({ initialSessions }) {
           </div>
         </div>
       </Modal>
-    </section>
+    </SectionCard>
   );
 }
 

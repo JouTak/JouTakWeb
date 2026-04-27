@@ -3,11 +3,12 @@ name = "backend"
 version = "0.1.0"
 description = "JouTak Backend Service"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "cffi==2.0.0",
     "cryptography>=46.0.5",
     "dj-database-url>=3.0.1",
+    "django>=5.2.13,<5.3",
     "django-allauth[headless-spec,mfa]>=64.0",
     "django-cors-headers>=4.7.0",
     "django-ninja>=1.4.3",
@@ -16,7 +17,9 @@ dependencies = [
     "django-otp>=1.6.1",
     "django-phonenumber-field[phonenumberslite]>=8.1.0",
     "django-two-factor-auth>=1.17.0",
+    "Pillow>=11.3.0,<13.0",
     "pydantic==2.12.0",
+    "PyJWT[crypto]>=2.12.0,<3.0",
     "python-decouple>=3.8",
     "requests>=2.32.5",
     "typing-extensions==4.15.0",
@@ -27,8 +30,16 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "bandit>=1.9.0",
     "django-debug-toolbar>=6.0.0",
+    "pip-audit>=2.9.0",
     "ruff>=0.12.10",
+]
+test = [
+    "coverage[toml]>=7.6.0",
+    "parameterized==0.9.0",
+    "pytest>=8.3.0",
+    "pytest-django>=4.8.0",
 ]
 
 
@@ -48,6 +59,10 @@ exclude = '''
   | frontend
 )/
 '''
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "backend.settings.dev"
+pythonpath = ["backend", "."]
 
 [tool.ruff]
 line-length = 79

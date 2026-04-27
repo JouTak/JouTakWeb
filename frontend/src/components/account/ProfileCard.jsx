@@ -10,14 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { me, updateProfile } from "../../services/api";
 import { boolToSelect, selectToBool } from "../../utils/profileForm";
-
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 const headerStyle = {
   display: "flex",
   alignItems: "center",
@@ -244,7 +237,7 @@ export default function ProfileCard({ profile, onUpdated }) {
   const vkLabel = fullName || (vkUsername ? `@${vkUsername}` : "");
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={headerStyle}>
         <h3 style={{ margin: 0, fontSize: 18 }}>Профиль</h3>
         {!open && (
@@ -446,7 +439,7 @@ export default function ProfileCard({ profile, onUpdated }) {
           </div>
         </>
       )}
-    </section>
+    </SectionCard>
   );
 }
 

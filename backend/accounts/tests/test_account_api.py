@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from unittest.mock import Mock, patch
 
+from accounts.services.profile import ProfileService
 from accounts.tests.base import APITestCase
 from allauth.account.models import EmailAddress
 from allauth.usersessions.models import UserSession
@@ -14,7 +16,10 @@ from django.contrib.auth import (
 )
 from django.contrib.sessions.backends.db import SessionStore
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from django.utils import timezone
+from ninja.errors import HttpError
+from PIL import Image
 
 User = get_user_model()
 
@@ -111,10 +116,7 @@ class AccountApiTests(APITestCase):
             },
             **self.auth_headers(token),
         )
-        self.assertEqual(response.status_code, 400, response.content)
-        data = response.json()
-        self.assertEqual(data["detail"], "validation_error")
-        self.assertIn("minecraft_nick", data["fields"])
+        self.assertEqual(response.status_code, 422, response.content)
 
     def test_profile_patch_clears_itmo_isu_for_non_itmo(self) -> None:
         user, token = self.create_authenticated_user()
@@ -149,10 +151,29 @@ class AccountApiTests(APITestCase):
             {"first_name": "x" * (max_length + 1)},
             **self.auth_headers(token),
         )
-        self.assertEqual(response.status_code, 400, response.content)
-        data = response.json()
-        self.assertEqual(data["detail"], "validation_error")
-        self.assertIn("first_name", data["fields"])
+        self.assertEqual(response.status_code, 422, response.content)
+
+    def test_profile_patch_rejects_invalid_vk_at_schema_boundary(
+        self,
+    ) -> None:
+        _, token = self.create_authenticated_user()
+        response = self.patch_json(
+            "/account/profile",
+            {"vk_username": "bad username with spaces"},
+            **self.auth_headers(token),
+        )
+        self.assertEqual(response.status_code, 422, response.content)
+
+    def test_profile_patch_rejects_invalid_itmo_isu_at_schema_boundary(
+        self,
+    ) -> None:
+        _, token = self.create_authenticated_user()
+        response = self.patch_json(
+            "/account/profile",
+            {"is_itmo_student": True, "itmo_isu": "abc"},
+            **self.auth_headers(token),
+        )
+        self.assertEqual(response.status_code, 422, response.content)
 
     def test_account_delete_requires_correct_password(self) -> None:
         user, token = self.create_authenticated_user()
@@ -221,6 +242,28 @@ class AccountApiTests(APITestCase):
                 response = self.post_json(path, payload)
                 self.assertEqual(response.status_code, 401, response.content)
 
+    def test_bulk_revoke_rejects_unbounded_ids_at_schema_boundary(
+        self,
+    ) -> None:
+        _, token = self.create_authenticated_user()
+        response = self.post_json(
+            "/account/sessions/bulk",
+            {"ids": [f"session-{index}" for index in range(101)]},
+            **self.auth_headers(token),
+        )
+        self.assertEqual(response.status_code, 422, response.content)
+
+    def test_bulk_revoke_rejects_invalid_reason_at_schema_boundary(
+        self,
+    ) -> None:
+        _, token = self.create_authenticated_user()
+        response = self.post_json(
+            "/account/sessions/bulk",
+            {"all_except_current": True, "reason": "bad reason"},
+            **self.auth_headers(token),
+        )
+        self.assertEqual(response.status_code, 422, response.content)
+
     def test_profile_patch_requires_authentication(self) -> None:
         response = self.patch_json(
             "/account/profile",
@@ -261,6 +304,57 @@ class AccountApiTests(APITestCase):
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 422, response.content)
+
+    def test_avatar_validation_rejects_large_dimensions(self) -> None:
+        image = BytesIO()
+        Image.new("RGB", (20, 20), color="red").save(image, format="PNG")
+        avatar = SimpleUploadedFile(
+            "avatar.png", image.getvalue(), content_type="image/png"
+        )
+
+        with override_settings(AVATAR_MAX_PIXELS=100):
+            with self.assertRaisesMessage(
+                HttpError, "avatar image dimensions are too large"
+            ):
+                ProfileService._validate_avatar_upload(avatar)
+
+    def test_avatar_normalization_reencodes_valid_image(self) -> None:
+        image = BytesIO()
+        Image.new("RGB", (4, 4), color="red").save(image, format="PNG")
+        avatar = SimpleUploadedFile(
+            "avatar.png", image.getvalue(), content_type="image/png"
+        )
+
+        extension, normalized = ProfileService._normalize_avatar_file(avatar)
+
+        self.assertEqual(extension, "png")
+        with Image.open(BytesIO(normalized.read())) as normalized_image:
+            self.assertEqual(normalized_image.format, "PNG")
+            self.assertEqual(normalized_image.size, (4, 4))
+
+    def test_avatar_normalization_rejects_oversized_output(self) -> None:
+        image = BytesIO()
+        Image.new("RGB", (64, 64), color="red").save(
+            image, format="JPEG", quality=1, optimize=True
+        )
+        raw_image = image.getvalue()
+        avatar = SimpleUploadedFile(
+            "avatar.jpg", raw_image, content_type="image/jpeg"
+        )
+        _, normalized = ProfileService._normalize_avatar_file(avatar)
+        normalized_size = len(normalized.read())
+        self.assertGreater(normalized_size, len(raw_image))
+
+        limited_avatar = SimpleUploadedFile(
+            "avatar.jpg", raw_image, content_type="image/jpeg"
+        )
+        with override_settings(
+            AVATAR_MAX_UPLOAD_BYTES=normalized_size - 1
+        ):
+            with self.assertRaisesMessage(
+                HttpError, "avatar file is too large"
+            ):
+                ProfileService._normalize_avatar_file(limited_avatar)
 
     def test_email_change_requires_email_field(self) -> None:
         _, token = self.create_authenticated_user()
@@ -559,18 +653,28 @@ class AccountApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 404, response.content)
 
+    def test_revoke_single_session_rejects_invalid_reason(self) -> None:
+        user, token = self.create_authenticated_user()
+        _, other_key = self._prepare_sessions(user)
+        response = self.client.delete(
+            self.api(f"/account/sessions/{other_key}?reason=bad%20reason"),
+            **self.auth_headers(token),
+        )
+        self.assertEqual(response.status_code, 422, response.content)
+
     def test_revoke_single_session_success(self) -> None:
         user, token = self.create_authenticated_user()
         _, other_key = self._prepare_sessions(user)
 
         response = self.client.delete(
-            self.api(f"/account/sessions/{other_key}"),
+            self.api(f"/account/sessions/{other_key}?reason=manual:single"),
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 200, response.content)
         data = response.json()
         self.assertEqual(data["ok"], True)
         self.assertEqual(data["id"], other_key)
+        self.assertEqual(data["revoked_reason"], "manual:single")
 
         store = SessionStore(session_key=other_key)
         self.assertFalse(store.exists(other_key))

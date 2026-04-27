@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from importlib import import_module
+from io import BytesIO
 from unittest.mock import patch
 
 from accounts.adapters import StrictAccountAdapter
@@ -19,6 +20,7 @@ from core.models import UserProfile, UserSessionMeta
 from django.conf import settings
 from django.contrib.auth import SESSION_KEY, get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.http import HttpRequest
 from django.test import (
@@ -29,6 +31,7 @@ from django.test import (
 )
 from django.utils import timezone
 from ninja.errors import HttpError
+from PIL import Image
 
 User = get_user_model()
 TEST_PASSWORD = "StrongPass123!"
@@ -115,6 +118,33 @@ class ProfileServiceTests(TestCase):
             )
         self.assertEqual(ctx.exception.status_code, 400)
         self.assertIn("first_name", str(ctx.exception.message))
+
+    def test_validate_avatar_upload_rejects_non_image_payload(self) -> None:
+        upload = SimpleUploadedFile(
+            "avatar.png",
+            b"not-an-image",
+            content_type="image/png",
+        )
+
+        with self.assertRaises(HttpError) as ctx:
+            ProfileService._validate_avatar_upload(upload)
+
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertEqual(ctx.exception.message, "invalid avatar image")
+
+    def test_validate_avatar_upload_accepts_png_image(self) -> None:
+        image_bytes = BytesIO()
+        Image.new("RGBA", (1, 1), (0, 0, 0, 0)).save(
+            image_bytes,
+            format="PNG",
+        )
+        upload = SimpleUploadedFile(
+            "avatar.png",
+            image_bytes.getvalue(),
+            content_type="image/png",
+        )
+
+        self.assertEqual(ProfileService._validate_avatar_upload(upload), "png")
 
 
 class AccountStatusServiceTests(TestCase):

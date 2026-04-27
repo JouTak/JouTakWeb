@@ -25,10 +25,30 @@ class ExceptionHandlerHelperTests(TestCase):
         self.assertIsNone(errors)
         self.assertIsNone(fields)
 
+    def test_normalize_form_errors_accepts_dict_payload(self) -> None:
+        errors, fields = _normalize_form_errors(
+            {"field": [{"message": "Ошибка", "code": "invalid"}]}
+        )
+
+        self.assertEqual(errors["field"][0]["message"], "Ошибка")
+        self.assertEqual(fields["field"], "Ошибка")
+
     def test_normalize_error_payload_with_business_code(self) -> None:
         payload = _normalize_error_payload(
             '{"detail":"Forbidden","error_code":"E_CODE",'
             '"blocking_reasons":["REASON_1"]}'
+        )
+        self.assertEqual(payload["detail"], "Forbidden")
+        self.assertEqual(payload["error_code"], "E_CODE")
+        self.assertEqual(payload["blocking_reasons"], ["REASON_1"])
+
+    def test_normalize_error_payload_accepts_dict_payload(self) -> None:
+        payload = _normalize_error_payload(
+            {
+                "detail": "Forbidden",
+                "error_code": "E_CODE",
+                "blocking_reasons": ["REASON_1"],
+            }
         )
         self.assertEqual(payload["detail"], "Forbidden")
         self.assertEqual(payload["error_code"], "E_CODE")

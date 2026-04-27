@@ -29,12 +29,14 @@ export default function Pay() {
         привилегий.
       </p>
 
-      <script src="https://forms.yandex.ru/_static/embed.js"></script>
       <iframe
         className="pay"
         src="https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b?iframe=1&theme=dark"
         name="ya-form-6515e3dcd04688fca3cc271b"
         title="Форма оплаты JouTak"
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+        sandbox="allow-forms allow-popups allow-same-origin allow-scripts"
       />
     </section>
   );

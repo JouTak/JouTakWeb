@@ -3,15 +3,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { clearAuthState, deleteCurrentAccount } from "../../services/api";
-
-const cardStyle = {
-  border: "1px solid rgba(255,120,120,0.35)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-  background: "rgba(255,80,80,0.08)",
-};
+import { DangerCard } from "../ui/primitives";
 
 export default function DeleteAccountCard() {
   const navigate = useNavigate();
@@ -56,7 +48,7 @@ export default function DeleteAccountCard() {
   }
 
   return (
-    <section style={cardStyle}>
+    <DangerCard>
       <div
         style={{
           display: "flex",
@@ -133,6 +125,6 @@ export default function DeleteAccountCard() {
           </div>
         </form>
       )}
-    </section>
+    </DangerCard>
   );
 }

@@ -39,7 +39,7 @@ jobs:
           fi
 
           while IFS= read -r subject; do
-            if [[ "$subject" =~ ^Merge\  ]] || [[ "$subject" =~ ^Revert\ \" ]] || [[ "$subject" =~ $pattern ]]; then
+            if [[ "$subject" =~ ^Merge[[:space:]] ]] || [[ "$subject" =~ ^Revert\ \" ]] || [[ "$subject" =~ $pattern ]]; then
               continue
             fi
             echo "::error::Commit subject must follow: type(scope): description"
@@ -203,3 +203,6 @@ jobs:
 
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}

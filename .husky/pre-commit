@@ -3,14 +3,14 @@ set -e
 
 npm --prefix frontend exec -- lint-staged --cwd frontend --relative
 
-git diff --cached --name-only --diff-filter=ACMR |
-while IFS= read -r staged_file; do
-  case "$staged_file" in
-    backend/*.py | scripts/*.py)
-      uv run ruff check "$staged_file"
-      ;;
-  esac
-done
+staged_python_files=$(
+  git diff --cached --name-only --diff-filter=ACMR |
+    grep -E '^(backend|scripts)/.+\.py$' || true
+)
+
+if [ -n "$staged_python_files" ]; then
+  uv run ruff check $staged_python_files
+fi
 
 git diff --cached --name-only --diff-filter=ACMR |
 while IFS= read -r staged_file; do

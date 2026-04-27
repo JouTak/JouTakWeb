@@ -1,4 +1,8 @@
 from accounts.services.auth import AuthService
+from accounts.services.auth_cookies import (
+    delete_refresh_cookie,
+    set_refresh_cookie,
+)
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
     ChangePasswordIn,
@@ -12,7 +16,7 @@ from accounts.transport.schemas import (
 )
 from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.contrib.auth import get_user_model
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from ninja import Body, Router
 from ninja.errors import HttpError
 
@@ -29,6 +33,8 @@ def _require_active_user(
     user = getattr(request, "auth", None)
     if not user or not getattr(user, "is_authenticated", False):
         raise HttpError(401, "Not authenticated")
+    if not getattr(user, "is_active", False):
+        raise HttpError(401, "Not authenticated")
     SessionService.assert_session_allowed(request)
     if touch:
         SessionService.touch(request, user)
@@ -42,9 +48,13 @@ def _require_active_user(
     summary="Issue JWT pair bound to current session",
     operation_id="auth_jwt_from_session",
 )
-def jwt_from_session(request: HttpRequest) -> TokenPairOut:
+def jwt_from_session(
+    request: HttpRequest, response: HttpResponse
+) -> TokenPairOut:
     user = _require_active_user(request, touch=True)
-    return AuthService.issue_pair_for_session(request, user)
+    pair = AuthService.issue_pair_for_session(request, user)
+    set_refresh_cookie(response, pair.refresh or "")
+    return TokenPairOut(access=pair.access)
 
 
 @auth_router.post(
@@ -54,9 +64,10 @@ def jwt_from_session(request: HttpRequest) -> TokenPairOut:
     summary="Logout current session",
     operation_id="auth_logout",
 )
-def logout_current(request: HttpRequest) -> OkOut:
+def logout_current(request: HttpRequest, response: HttpResponse) -> OkOut:
     _require_active_user(request)
     AuthService.logout_current(request)
+    delete_refresh_cookie(response)
     return OkOut(ok=True, message="logged out")
 
 
@@ -75,7 +86,12 @@ def me(request: HttpRequest) -> ProfileOut:
 @auth_router.post(
     "/change_password",
     auth=[x_session_token_auth],
-    response={200: ChangePasswordOut, 400: ErrorOut, 401: ErrorOut},
+    response={
+        200: ChangePasswordOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Change password (requires current password)",
     operation_id="auth_change_password",
 )
@@ -95,12 +111,15 @@ def change_password(
 
 @auth_router.post(
     "/refresh",
-    response={200: TokenRefreshOut, 401: ErrorOut},
+    response={200: TokenRefreshOut, 401: ErrorOut, 422: ErrorOut},
     summary="Refresh JWT pair",
     operation_id="auth_refresh",
 )
 def refresh_pair(
     request: HttpRequest,
+    response: HttpResponse,
     payload: TokenRefreshIn = BODY_REQUIRED,
 ) -> TokenRefreshOut:
-    return AuthService.refresh_pair(request, payload)
+    pair = AuthService.refresh_pair(request, payload)
+    set_refresh_cookie(response, pair.refresh or "")
+    return TokenRefreshOut(access=pair.access)

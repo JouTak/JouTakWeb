@@ -1,17 +1,11 @@
-import { useMemo, useState, useCallback } from "react";
-import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 import { Button, Switch, TextInput } from "@gravity-ui/uikit";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
-import { changePassword, clearAuthState } from "../../services/api";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { changePassword, clearAuthState } from "../../services/api";
+import { SectionCard } from "../ui/primitives";
 
 const COMMON_PASSWORDS = new Set([
   "123456",
@@ -186,6 +180,17 @@ export default function PasswordCard({
     setEditing(false);
   }, [resetForm]);
 
+  useEffect(() => {
+    if (!editing || busy) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onCancel();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busy, editing, onCancel]);
+
   function mapBackendErrors(data) {
     let cur = "";
     let n1 = "";
@@ -327,7 +332,7 @@ export default function PasswordCard({
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <h3 style={{ margin: 0, fontSize: 18 }}>Пароль</h3>
 
       {!editing ? (
@@ -353,9 +358,6 @@ export default function PasswordCard({
           onSubmit={onSubmit}
           style={{ display: "grid", gap: 12 }}
           autoComplete="off"
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && !busy) onCancel();
-          }}
         >
           {identityHint ? (
             <input
@@ -477,7 +479,7 @@ export default function PasswordCard({
           </div>
         </form>
       )}
-    </section>
+    </SectionCard>
   );
 }
 

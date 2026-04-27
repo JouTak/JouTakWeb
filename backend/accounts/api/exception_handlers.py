@@ -8,15 +8,18 @@ from ninja.errors import HttpError
 
 
 def _normalize_form_errors(
-    raw: str,
+    raw: str | dict,
 ) -> tuple[
     dict[str, list[dict[str, str | None]]] | None,
     dict[str, str] | None,
 ]:
-    try:
-        data = json.loads(raw)
-    except (JSONDecodeError, TypeError):
-        return None, None
+    if isinstance(raw, dict):
+        data = raw
+    else:
+        try:
+            data = json.loads(raw)
+        except (JSONDecodeError, TypeError):
+            return None, None
     if not isinstance(data, dict):
         return None, None
 
@@ -41,12 +44,15 @@ def _normalize_form_errors(
 
 
 def _normalize_error_payload(
-    raw: str,
+    raw: str | dict,
 ) -> dict[str, str | list[str] | None] | None:
-    try:
-        data = json.loads(raw)
-    except (JSONDecodeError, TypeError):
-        return None
+    if isinstance(raw, dict):
+        data = raw
+    else:
+        try:
+            data = json.loads(raw)
+        except (JSONDecodeError, TypeError):
+            return None
     if not isinstance(data, dict):
         return None
     detail = data.get("detail")
@@ -70,7 +76,7 @@ def install_http_error_handler(api: NinjaAPI) -> None:
         raw_detail = getattr(exc, "message", None)
         if raw_detail is None:
             raw_detail = str(exc)
-        normalized_error = _normalize_error_payload(str(raw_detail))
+        normalized_error = _normalize_error_payload(raw_detail)
         if normalized_error:
             return api.create_response(
                 request,
@@ -82,7 +88,7 @@ def install_http_error_handler(api: NinjaAPI) -> None:
                 ),
                 status=status,
             )
-        errors, fields = _normalize_form_errors(str(raw_detail))
+        errors, fields = _normalize_form_errors(raw_detail)
         if errors:
             return api.create_response(
                 request,

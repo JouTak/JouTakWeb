@@ -30,7 +30,7 @@ stack.yml                 Docker Swarm production stack template
 ## Для начала работы вам потребуется
 
 - Git.
-- Node.js `>=20.17`; для локальной разработки предпочтительно Node 22.
+- Node.js `>=20.19`; для локальной разработки предпочтительно Node 22.
 - npm, поставляется вместе с Node.
 - Python 3.12.
 - [uv](https://docs.astral.sh/uv/) для Python dependency management.

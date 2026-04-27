@@ -1,13 +1,12 @@
 import PropTypes from "prop-types";
-
-import Footer from "./Footer";
+import Footer from "./Footer/Footer";
 import Header from "./Header";
 
 const Layout = ({ children }) => {
   return (
     <>
       <Header />
-      <main className="container my-4">{children}</main>
+      <main className="w-100">{children}</main>
       <Footer />
     </>
   );

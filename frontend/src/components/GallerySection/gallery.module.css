@@ -1,0 +1,100 @@
+@font-face {
+    font-family: 'MinecraftSevenFont';
+    src: url('img/fonts/Minecraft Seven_2.ttf') format('truetype');
+}
+
+.gallery {
+    position: relative;
+    margin-top: 60px;
+    width: fit-content;
+}
+
+.galleryImage {
+    display: block;
+    max-width: 1364px;
+}
+
+.photoViewer {
+    position: absolute;
+    top: 64px;
+    left: 459px;
+    width: 786px;
+}
+
+.photoViewerImage {
+    display: block;
+    width: 786px;
+    height: 442px;
+    object-fit: cover;
+    border: 4px solid #c6c6c6;
+    box-sizing: border-box;
+}
+
+.galleryPagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.paginationButton {
+    background: transparent;
+    border: none;
+    padding: 0;
+    appearance: none;
+    cursor: pointer;
+    line-height: 0;
+}
+
+.paginationArrow {
+    display: block;
+    width: auto;
+    height: 30px;
+}
+
+.paginationCounter {
+    text-align: center;
+    font-family: 'MinecraftSevenFont', sans-serif;
+    font-size: 24px;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.galleryButton {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    font-family: 'MinecraftSevenFont', sans-serif;
+    color: #000;
+    font-weight: 400;
+    font-size: 32px;
+    background: transparent;
+    border: none;
+    padding: 0 180px 0 0;
+    appearance: none;
+    cursor: pointer;
+    left: 34px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.chosenButton {
+    font-size: 40px;
+}
+
+.buttonOne {
+    top: 46px;
+}
+
+.buttonTwo {
+    top: 150px;
+}
+
+.buttonThree {
+    top: 250px;
+}
+
+.buttonFour {
+    top: 350px;
+}

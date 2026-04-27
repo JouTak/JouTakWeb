@@ -1,2 +1,22 @@
 #!/usr/bin/env sh
+set -e
+
 npm --prefix frontend exec -- lint-staged --cwd frontend --relative
+
+git diff --cached --name-only --diff-filter=ACMR |
+while IFS= read -r staged_file; do
+  case "$staged_file" in
+    backend/*.py | scripts/*.py)
+      uv run ruff check "$staged_file"
+      ;;
+  esac
+done
+
+git diff --cached --name-only --diff-filter=ACMR |
+while IFS= read -r staged_file; do
+  case "$staged_file" in
+    README.md | CONTRIBUTING.md | docs/*.md | *.yml | *.yaml | .*.yml | .*.yaml)
+      npm --prefix frontend exec -- prettier --check "$staged_file"
+      ;;
+  esac
+done

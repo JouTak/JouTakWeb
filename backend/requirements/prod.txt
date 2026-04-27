@@ -110,13 +110,10 @@ sqlparse==0.5.4
     # via django
 typing-extensions==4.15.0
     # via
-    #   asgiref
     #   backend
-    #   cryptography
     #   psycopg
     #   pydantic
     #   pydantic-core
-    #   pyjwt
     #   qrcode
     #   typing-inspection
 typing-inspection==0.4.2

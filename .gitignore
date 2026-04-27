@@ -179,7 +179,10 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# macOS filesystem metadata
+.DS_Store
 
 .env.development
+.env.production
 .env.production.secrets
 .husky/_

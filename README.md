@@ -1,82 +1,138 @@
 # JouTakWeb
 
-[![Lint](https://github.com/JouTak/JouTakWeb/actions/workflows/CI.yml/badge.svg)](https://github.com/JouTak/JouTakWeb/actions/workflows/lint.yml)
+[![CI](https://github.com/JouTak/JouTakWeb/actions/workflows/CI.yml/badge.svg)](https://github.com/JouTak/JouTakWeb/actions/workflows/CI.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/JouTak/JouTakWeb)
 
-## Начало работы:
+JouTakWeb - web-приложение для серверов комьюнити JouTak x ITMOcraft.
 
-Перед началом работы убедитесь, что на вашей системе установлены:
+## Стек
 
-- **[Git](https://git-scm.com/downloads)** – для клонирования репозитория.
-- **[Node.js](https://nodejs.org/en)** – требуется версия **20.17+** (желательно v22+).
+- Frontend: React 18, Vite, Gravity UI, legacy Bootstrap components, npm.
+- Backend: Python 3.12+, Django 5.2, Django Ninja, django-allauth, uv.
+- Database: PostgreSQL в Docker, SQLite для отдельных test runs.
+- Tooling: Ruff, Bandit, pip-audit, ESLint, Prettier, Stylelint, Vitest.
 
-## Копирование проекта с репозитория:
+## Структура Репозитория
 
-После проверки установки вы можете скопировать проект с репозитория введя команду:
-
-```bash
-git clone https://github.com/JouTak/JouTakWeb.git
+```text
+backend/                  Django project, apps, tests, Dockerfile
+backend/accounts/         Auth, account, OAuth and session APIs
+backend/core/             Shared backend models and infrastructure
+backend/requirements/     Generated uv exports for container installs
+frontend/                 Vite React application
+frontend/src/services/    Frontend HTTP, auth/session and API clients
+docs/                     Contributor, architecture and security docs
+.github/workflows/        CI and release workflows
+docker-compose*.yml       Local and image-based Compose entry points
+stack.yml                 Docker Swarm production stack template
 ```
 
-## Установка node.js
+## Для начала работы вам потребуется
 
-Если у вас ещё не установлен Node.js нужной версии, выполните следующие шаги.
+- Git.
+- Node.js `>=20.17`; для локальной разработки предпочтительно Node 22.
+- npm, поставляется вместе с Node.
+- Python 3.12.
+- [uv](https://docs.astral.sh/uv/) для Python dependency management.
+- Docker и Docker Compose для локального full stack.
 
-### Для \*nix-систем (Linux, macOS):
+### Запуск Frontend
 
-1. Установите nvm (Node Version Manager):
-   ```bash
-   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-   ```
-2. Установите Node.js версии 22:
-   ```bash
-   nvm install 22
-   ```
-3. Переключитесь на установленную версию и проверьте её:
-   ```bash
-   nvm use 22
-   node -v     # Should print "v22.x.x".
-   npm -v      # Should print "10.x.x".
-   ```
+```bash
+cd frontend
+npm ci
+npm run dev
+```
 
-### Для Windows:
+Dev server выведет локальный URL, обычно `http://localhost:5173`.
 
-1. **Установите fnm (Fast Node Manager):**
-   ```bash
-   winget install Schniz.fnm
-   ```
-2. **Установите Node.js версии 22:**
-   ```bash
-   fnm install 22
-   ```
-3. **Проверьте установленные версии:**
-   ```bash
-   node -v     # Should print "v22.x.x".
-   npm -v      # Should print "10.x.x".
-   ```
+Проверки frontend:
 
-## Установка зависимостей приложения
+```bash
+npm --prefix frontend run lint
+npm --prefix frontend run format
+npm --prefix frontend run lint:styles
+npm --prefix frontend run test:run
+npm --prefix frontend run build
+npm --prefix frontend run check
+```
 
-После клонирования репозитория и проверки установки Node.js выполните следующие команды:
+### Запуск Backend
 
-1. Перейдите в каталог с фронтендом:
+```bash
+uv sync --python 3.12 --group dev --group test
+uv run python backend/manage.py migrate --settings backend.settings.dev
+uv run python backend/manage.py runserver 8000 --settings backend.settings.dev
+```
 
-   ```bash
-   cd JouTakWeb/frontend/
-   ```
+Проверки backend:
 
-2. Установите зависимости:
+```bash
+uv run ruff check .
+uv run bandit -r backend/accounts backend/core backend/backend -x "*/tests/*,*/migrations/*" --skip B104,B105
+PYTHONPATH=backend DJANGO_SETTINGS_MODULE=backend.settings.dev uv run python scripts/check_frontend_openapi_contracts.py
+uv export --frozen --no-dev --no-hashes -q -o /tmp/joutak-requirements.txt
+uv run pip-audit --no-deps -r /tmp/joutak-requirements.txt
+uv run pytest backend -q
+```
 
-   ```bash
-   npm install
-   ```
+### Локальный Docker Stack
 
-3. Запустите проект в режиме разработки:
-   ```bash
-   npm run dev
-   ```
+Создайте локальный env-файл из очищенного примера и замените placeholder values:
 
-## And that's it!
+```bash
+cp .env.example .env
+docker compose -f docker-compose.local.yml up --build
+```
 
-В случае успешного запуска в консоли будет отображен путь, по которому доступно приложение, например:  
-`http://localhost:5173/`.
+Полезные команды для сверки конфигов:
+
+```bash
+docker compose -f docker-compose.yml config >/dev/null
+docker compose -f docker-compose.local.yml config >/dev/null
+```
+
+## Environment Files
+
+- `.env.example` содержит только очищенные placeholders.
+- `.env`, `.env.development`, `.env.production` и secret variants остаются
+  локальными.
+- `stack.yml` ожидает production secrets через Docker secrets и локальный
+  `.env.production`; этот файл нельзя коммитить.
+- Optional `*_FILE` variables имеют приоритет там, где поддерживаются.
+
+## Dependencies
+
+Frontend dependencies меняются через npm и коммитятся вместе с
+`frontend/package-lock.json`:
+
+```bash
+npm --prefix frontend install <package>
+npm --prefix frontend uninstall <package>
+```
+
+Backend dependencies меняются через uv. Generated requirements руками не
+редактируем:
+
+```bash
+uv add <package>
+uv add --group dev <package>
+uv add --group test <package>
+uv export --frozen --no-dev --no-hashes -o backend/requirements/prod.txt
+uv export --frozen --group dev --group test --no-hashes -o backend/requirements/dev.txt
+uv export --frozen --no-default-groups --group test --no-hashes -o backend/requirements/test.txt
+```
+
+## CI
+
+CI запускает frontend lint/format/style/test/build/audit, backend Ruff/Bandit/
+pip-audit/tests, Docker config/build checks, commit rules для PR и secret
+scanning.
+
+## Документация Для Участников
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [Архитектура](docs/architecture.md)
+- [Безопасность](docs/security.md)
+- [Frontend Conventions](docs/frontend-conventions.md)
+- [API Conventions](docs/api-conventions.md)

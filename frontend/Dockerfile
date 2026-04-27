@@ -14,7 +14,7 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine
 USER root
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build --chown=101:101 /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chown=101:101 nginx.conf /etc/nginx/conf.d/default.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod 0755 /entrypoint.sh && chown 101:101 /entrypoint.sh
 

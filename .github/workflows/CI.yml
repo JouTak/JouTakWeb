@@ -2,10 +2,10 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened, ready_for_review ]
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -15,6 +15,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  commit_rules:
+    name: Commit rules
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR title and commit subjects
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          pattern='^(feat|fix|chore|refactor|docs|test|ci|build|perf|style|revert)\([a-z0-9._-]+\): .+'
+          status=0
+
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "::error::PR title must follow: type(scope): description"
+            status=1
+          fi
+
+          while IFS= read -r subject; do
+            if [[ "$subject" =~ ^Merge[[:space:]] ]] || [[ "$subject" =~ ^Revert\ \" ]] || [[ "$subject" =~ $pattern ]]; then
+              continue
+            fi
+            echo "::error::Commit subject must follow: type(scope): description"
+            echo "Invalid subject: $subject"
+            status=1
+          done < <(git log --format=%s "$BASE_SHA..$HEAD_SHA")
+
+          exit "$status"
+
   frontend_checks:
     name: Frontend ${{ matrix.check_name }}
     runs-on: ubuntu-latest
@@ -28,8 +62,12 @@ jobs:
             command: npm run format
           - check_name: Stylelint
             command: npm run lint:styles
+          - check_name: Tests
+            command: npm run test:run
           - check_name: Build
             command: npm run build
+          - check_name: Audit
+            command: npm audit --audit-level=moderate
     defaults:
       run:
         working-directory: frontend
@@ -41,9 +79,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20.17.0"
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          node-version: "20.19.0"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
 
       - name: Install deps
         run: npm ci
@@ -66,14 +104,41 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Sync deps (with dev)
-        run: uv sync --python 3.12 --group dev
-
-      - name: Install backend test tooling
-        run: uv pip install --python .venv/bin/python pytest pytest-django
+      - name: Sync deps (with dev and test)
+        run: uv sync --python 3.12 --group dev --group test
 
       - name: Ruff
         run: uv run ruff check .
+
+      - name: Bandit
+        run: >
+          uv run bandit -r backend/accounts backend/core backend/backend
+          -x "*/tests/*,*/migrations/*"
+          --skip B104,B105
+
+      - name: Frontend/OpenAPI contract check
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+          DJANGO_SETTINGS_MODULE: backend.settings.dev
+        run: uv run python scripts/check_frontend_openapi_contracts.py
+
+      - name: pip-audit
+        run: |
+          uv export --frozen --no-dev --no-hashes -q -o /tmp/joutak-requirements.txt
+          uv run pip-audit --no-deps -r /tmp/joutak-requirements.txt
+
+      - name: Verify generated requirements
+        run: |
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          uv export --frozen --no-dev --no-hashes -q -o "$tmp_dir/prod.txt"
+          uv export --frozen --group dev --group test --no-hashes -q -o "$tmp_dir/dev.txt"
+          uv export --frozen --no-default-groups --group test --no-hashes -q -o "$tmp_dir/test.txt"
+
+          diff -u <(tail -n +3 backend/requirements/prod.txt) <(tail -n +3 "$tmp_dir/prod.txt")
+          diff -u <(tail -n +3 backend/requirements/dev.txt) <(tail -n +3 "$tmp_dir/dev.txt")
+          diff -u <(tail -n +3 backend/requirements/test.txt) <(tail -n +3 "$tmp_dir/test.txt")
 
       - name: Backend tests (sqlite)
         env:
@@ -82,17 +147,17 @@ jobs:
           DJANGO_SECRET_KEY: test-secret-key-change-me-please-very-long-1234567890
           DATABASE_URL: sqlite:///./testdb.sqlite3
           FRONTEND_BASE_URL: https://joutak.ru
-          DB_SSL_REQUIRED: 'false'
+          DB_SSL_REQUIRED: "false"
           DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.joutak.ru
           DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru,https://api.joutak.ru
           CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru
-          USE_X_FORWARDED_PROTO: 'false'
-          SECURE_SSL_REDIRECT: 'false'
-          SECURE_HSTS_SECONDS: '0'
-          SESSION_COOKIE_SECURE: 'false'
-          CSRF_COOKIE_SECURE: 'false'
-          SESSION_COOKIE_SAMESITE: 'None'
-          CSRF_COOKIE_SAMESITE: 'None'
+          USE_X_FORWARDED_PROTO: "false"
+          SECURE_SSL_REDIRECT: "false"
+          SECURE_HSTS_SECONDS: "0"
+          SESSION_COOKIE_SECURE: "false"
+          CSRF_COOKIE_SECURE: "false"
+          SESSION_COOKIE_SAMESITE: "None"
+          CSRF_COOKIE_SAMESITE: "None"
         run: |
           uv run python --version
           uv run python backend/manage.py check
@@ -127,3 +192,17 @@ jobs:
       - name: Build frontend image
         run: |
           docker build -f ./frontend/Dockerfile -t joutakweb:ci ./frontend
+
+  secret_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}

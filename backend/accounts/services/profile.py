@@ -1,22 +1,45 @@
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Never
+from uuid import uuid4
 
+from accounts.api.errors import raise_field_error
 from accounts.services.personalization import personalization_complete
 from core.models import UserProfile
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
+from django.core.files.utils import validate_file_name
 from django.db import transaction
 from django.utils import timezone
 from ninja.errors import HttpError
+from PIL import Image, UnidentifiedImageError
 
 User = get_user_model()
 VK_USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,64}$")
 MINECRAFT_NICK_RE = re.compile(r"^[A-Za-z0-9_]{3,16}$")
 ITMO_ISU_RE = re.compile(r"^\d{5,20}$")
+AVATAR_ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+AVATAR_FORMAT_EXTENSIONS = {
+    "JPEG": "jpg",
+    "PNG": "png",
+    "WEBP": "webp",
+}
+DEFAULT_AVATAR_MAX_UPLOAD_BYTES = 2 * 1024 * 1024
+DEFAULT_AVATAR_MAX_PIXELS = 4_000_000
+AVATAR_SAVE_OPTIONS = {
+    "JPEG": {"format": "JPEG", "quality": 90, "optimize": True},
+    "PNG": {"format": "PNG", "optimize": True},
+    "WEBP": {"format": "WEBP", "quality": 90, "method": 4},
+}
 
 
 @dataclass(slots=True)
@@ -25,13 +48,7 @@ class ProfileService:
     def _raise_field_error(
         field: str, message: str, code: str = "invalid"
     ) -> Never:
-        raise HttpError(
-            400,
-            json.dumps(
-                {field: [{"message": message, "code": code}]},
-                ensure_ascii=False,
-            ),
-        )
+        raise_field_error(field, message, code)
 
     @staticmethod
     def get_or_create_extended_profile(user: User) -> UserProfile:
@@ -217,9 +234,78 @@ class ProfileService:
             user.save(update_fields=to_update)
 
     @staticmethod
+    def _avatar_max_upload_bytes() -> int:
+        return getattr(
+            settings,
+            "AVATAR_MAX_UPLOAD_BYTES",
+            DEFAULT_AVATAR_MAX_UPLOAD_BYTES,
+        )
+
+    @staticmethod
+    def _validate_avatar_upload(avatar: UploadedFile) -> str:
+        max_size = ProfileService._avatar_max_upload_bytes()
+        if avatar.size and avatar.size > max_size:
+            raise HttpError(400, "avatar file is too large")
+
+        content_type = (getattr(avatar, "content_type", "") or "").lower()
+        if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
+            raise HttpError(400, "unsupported avatar content type")
+
+        try:
+            avatar.seek(0)
+            with Image.open(avatar) as image:
+                max_pixels = getattr(
+                    settings,
+                    "AVATAR_MAX_PIXELS",
+                    DEFAULT_AVATAR_MAX_PIXELS,
+                )
+                width, height = image.size
+                if width <= 0 or height <= 0 or width * height > max_pixels:
+                    raise HttpError(
+                        400, "avatar image dimensions are too large"
+                    )
+                image.verify()
+                extension = AVATAR_FORMAT_EXTENSIONS.get(image.format or "")
+        except (OSError, SyntaxError, UnidentifiedImageError) as exc:
+            raise HttpError(400, "invalid avatar image") from exc
+        finally:
+            avatar.seek(0)
+
+        if not extension:
+            raise HttpError(400, "unsupported avatar image format")
+        return extension
+
+    @staticmethod
+    def _normalize_avatar_file(
+        avatar: UploadedFile,
+    ) -> tuple[str, ContentFile]:
+        extension = ProfileService._validate_avatar_upload(avatar)
+        avatar.seek(0)
+        with Image.open(avatar) as image:
+            image.load()
+            image_format = image.format or ""
+            save_options = AVATAR_SAVE_OPTIONS.get(image_format)
+            if not save_options:
+                raise HttpError(400, "unsupported avatar image format")
+            if image_format == "JPEG" and image.mode not in ("RGB", "L"):
+                image = image.convert("RGB")
+            output = BytesIO()
+            image.save(output, **save_options)
+        normalized_bytes = output.getvalue()
+        if len(normalized_bytes) > ProfileService._avatar_max_upload_bytes():
+            raise HttpError(400, "avatar file is too large")
+        return extension, ContentFile(normalized_bytes)
+
+    @staticmethod
     def save_avatar(user: User, avatar: UploadedFile) -> bool:
         if hasattr(user, "avatar"):
-            user.avatar.save(avatar.name, avatar)
+            extension, normalized_avatar = (
+                ProfileService._normalize_avatar_file(avatar)
+            )
+            safe_name = validate_file_name(
+                f"avatar-{uuid4().hex}.{extension}"
+            )
+            user.avatar.save(safe_name, normalized_avatar)
             user.save(update_fields=["avatar"])
             return True
         return False

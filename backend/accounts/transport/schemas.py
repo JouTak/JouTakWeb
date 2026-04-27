@@ -1,9 +1,73 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated, Literal
 
 from ninja import Schema
+from pydantic import Field, StringConstraints
 
+SESSION_ID_MAX_LENGTH = 128
+REVOKE_REASON_MAX_LENGTH = 64
+REVOKE_REASON_PATTERN = r"^[a-zA-Z0-9_.:-]+$"
+PROVIDER_ID_MIN_LENGTH = 2
+PROVIDER_ID_MAX_LENGTH = 64
+PROVIDER_ID_PATTERN = r"^[a-zA-Z0-9_.:-]+$"
+NEXT_PATH_MAX_LENGTH = 256
+
+NameStr = Annotated[str, StringConstraints(max_length=150)]
+VkUsernameStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        max_length=128,
+        pattern=(
+            r"^$|^@?[A-Za-z0-9_.-]{2,64}$|"
+            r"^(https?://)?(m\.)?vk\.com/[A-Za-z0-9_.-]{2,64}/?$"
+        ),
+    ),
+]
+MinecraftNickStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        max_length=16,
+        pattern=r"^$|^[A-Za-z0-9_]{3,16}$",
+    ),
+]
+ItmoIsuStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        max_length=20,
+        pattern=r"^$|^\d{5,20}$",
+    ),
+]
+SessionIdStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=SESSION_ID_MAX_LENGTH,
+    ),
+]
+RevokeReasonStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=REVOKE_REASON_MAX_LENGTH,
+        pattern=REVOKE_REASON_PATTERN,
+    ),
+]
+ProviderIdStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=PROVIDER_ID_MIN_LENGTH,
+        max_length=PROVIDER_ID_MAX_LENGTH,
+        pattern=PROVIDER_ID_PATTERN,
+    ),
+]
 
 # ---------- Generic ----------
 class FieldErrorItem(Schema):
@@ -29,13 +93,13 @@ class OkOut(Schema):
 
 # ---------- Profile ----------
 class ProfileUpdateIn(Schema):
-    first_name: str | None = None
-    last_name: str | None = None
-    vk_username: str | None = None
-    minecraft_nick: str | None = None
+    first_name: NameStr | None = None
+    last_name: NameStr | None = None
+    vk_username: VkUsernameStr | None = None
+    minecraft_nick: MinecraftNickStr | None = None
     minecraft_has_license: bool | None = None
     is_itmo_student: bool | None = None
-    itmo_isu: str | None = None
+    itmo_isu: ItmoIsuStr | None = None
 
 # ---------- Sessions ----------
 class SessionRowOut(Schema):
@@ -56,9 +120,9 @@ class SessionsOut(Schema):
 
 
 class RevokeSessionsIn(Schema):
-    ids: list[str] | None = None
+    ids: list[SessionIdStr] | None = Field(default=None, max_length=100)
     all_except_current: bool = False
-    reason: str | None = None
+    reason: RevokeReasonStr | None = None
 
 
 class RevokeOut(Schema):
@@ -78,15 +142,15 @@ class RevokeOut(Schema):
 # ---------- Auth / JWT ----------
 class TokenPairOut(Schema):
     access: str
-    refresh: str
+    refresh: str | None = None
 
 
 class TokenRefreshIn(Schema):
-    refresh: str
+    refresh: str | None = None
 
 
 class TokenRefreshOut(Schema):
-    refresh: str
+    refresh: str | None = None
     access: str | None = None
 
 
@@ -163,10 +227,15 @@ class ProfileUpdateOut(Schema):
     missing_fields: list[str]
 
 # ---------- OAuth linking ----------
+class ProviderOut(Schema):
+    id: ProviderIdStr
+    name: str
+
+
 class ProvidersOut(Schema):
-    providers: list[dict]
+    providers: list[ProviderOut]
 
 
 class OAuthLinkOut(Schema):
     authorize_url: str
-    method: str
+    method: Literal["GET", "POST"]

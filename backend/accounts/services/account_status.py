@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any
 
+from accounts.api.errors import raise_structured_error
 from accounts.services.personalization import personalization_complete
 from allauth.account.models import EmailAddress
 from core.models import UserProfile
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from ninja.errors import HttpError
 
 User = get_user_model()
 PROFILE_PERSONALIZATION_REQUIRED = "PROFILE_PERSONALIZATION_REQUIRED"
@@ -70,18 +69,13 @@ class AccountStatusService:
             return
         if status["profile_state"] == "personalized":
             return
-        raise HttpError(
+        raise_structured_error(
             403,
-            json.dumps(
-                {
-                    "detail": (
-                        "Profile personalization is required for this action"
-                    ),
-                    "error_code": PROFILE_PERSONALIZATION_REQUIRED,
-                    "blocking_reasons": status.get("blocking_reasons", []),
-                },
-                ensure_ascii=False,
+            detail=(
+                "Profile personalization is required for this action"
             ),
+            error_code=PROFILE_PERSONALIZATION_REQUIRED,
+            blocking_reasons=status.get("blocking_reasons", []),
         )
 
     @staticmethod

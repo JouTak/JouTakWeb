@@ -1,7 +1,14 @@
+from accounts.api.openapi_params import (
+    REVOKE_REASON_OPENAPI_PARAMETER,
+    SESSION_ID_OPENAPI_PARAMETER,
+)
+from accounts.api.query_params import optional_str_query
 from accounts.services.account_status import AccountStatusService
 from accounts.services.profile import ProfileService
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
+    REVOKE_REASON_MAX_LENGTH,
+    REVOKE_REASON_PATTERN,
     AccountStatusOut,
     DeleteAccountIn,
     ErrorOut,
@@ -10,6 +17,7 @@ from accounts.transport.schemas import (
     ProfileUpdateOut,
     RevokeOut,
     RevokeSessionsIn,
+    SessionIdStr,
     SessionsOut,
 )
 from allauth.headless.contrib.ninja.security import x_session_token_auth
@@ -35,7 +43,12 @@ def _require_authenticated_user(request: HttpRequest) -> User:
 
 @account_router.patch(
     "/profile",
-    response={200: ProfileUpdateOut, 400: ErrorOut, 401: ErrorOut},
+    response={
+        200: ProfileUpdateOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Update profile fields",
     operation_id="account_update_profile",
 )
@@ -77,7 +90,7 @@ def account_status(request: HttpRequest) -> AccountStatusOut:
 
 @account_router.post(
     "/delete",
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
+    response={200: OkOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
     summary="Delete current account",
     operation_id="account_delete_current",
 )
@@ -97,7 +110,7 @@ def account_delete(
 
 @account_router.post(
     "/avatar",
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
+    response={200: OkOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
     summary="Upload/replace user avatar",
     operation_id="account_upload_avatar",
 )
@@ -131,7 +144,7 @@ def list_sessions(request: HttpRequest) -> SessionsOut:
 
 @account_router.post(
     "/sessions/bulk",
-    response={200: RevokeOut, 400: ErrorOut, 401: ErrorOut},
+    response={200: RevokeOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
     summary="Revoke sessions in bulk",
     operation_id="account_revoke_sessions_bulk",
 )
@@ -145,7 +158,7 @@ def revoke_sessions_bulk(
 
 @account_router.post(
     "/sessions/_bulk",
-    response={200: RevokeOut, 400: ErrorOut, 401: ErrorOut},
+    response={200: RevokeOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
     summary="Revoke sessions in bulk (compat)",
     operation_id="account_revoke_sessions_bulk_compat",
 )
@@ -159,18 +172,29 @@ def revoke_sessions_bulk_compat(
 
 @account_router.delete(
     "/sessions/{sid}",
-    response={200: RevokeOut, 401: ErrorOut, 404: ErrorOut},
+    response={200: RevokeOut, 401: ErrorOut, 404: ErrorOut, 422: ErrorOut},
     summary="Revoke single session",
     operation_id="account_revoke_session",
+    openapi_extra={
+        "parameters": [
+            SESSION_ID_OPENAPI_PARAMETER,
+            REVOKE_REASON_OPENAPI_PARAMETER,
+        ],
+    },
 )
 def revoke_session(
     request: HttpRequest,
-    sid: str,
+    sid: SessionIdStr,
 ) -> dict[str, object]:
     _require_authenticated_user(request)
-    reason = request.GET.get("reason")
+    reason = optional_str_query(
+        request,
+        "reason",
+        max_length=REVOKE_REASON_MAX_LENGTH,
+        pattern=REVOKE_REASON_PATTERN,
+    )
     return SessionService.revoke_single(
         request,
         sid=sid,
-        reason=(reason or None),
+        reason=reason,
     )

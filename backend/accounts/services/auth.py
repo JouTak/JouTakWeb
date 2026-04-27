@@ -254,6 +254,8 @@ class AuthService:
         user = User.objects.filter(pk=user_id).first()
         if not user:
             raise HttpError(401, "invalid user")
+        if not getattr(user, "is_active", False):
+            raise HttpError(401, "invalid user")
 
         mapping = (
             UserSessionToken.objects.select_for_update()

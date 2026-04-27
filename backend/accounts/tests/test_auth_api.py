@@ -199,6 +199,19 @@ class HeadlessAuthApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 401, response.content)
 
+    def test_auth_me_rejects_inactive_user(self) -> None:
+        payload = self.signup_and_auth()
+        user = User.objects.get(email=payload["email"].lower())
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        response = self.client.get(
+            self.api("/auth/me"),
+            **self.auth_headers(payload["session_token"]),
+        )
+
+        self.assertEqual(response.status_code, 401, response.content)
+
     def test_logout_revokes_current_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
         session_token = payload["session_token"]
@@ -347,6 +360,23 @@ class HeadlessAuthApiTests(APITestCase):
             response.json()["detail"],
             "session token required for refresh",
         )
+
+    def test_refresh_rejects_inactive_user(self) -> None:
+        payload = self.signup_and_auth()
+        session_token = payload["session_token"]
+        pair = self.jwt_from_session(session_token)
+        user = User.objects.get(email=payload["email"].lower())
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        response = self.post_json(
+            "/auth/refresh",
+            {"refresh": pair.cookies["joutak_refresh"].value},
+            **self.auth_headers(session_token),
+        )
+
+        self.assertEqual(response.status_code, 401, response.content)
+        self.assertEqual(response.json()["detail"], "invalid user")
 
     def test_refresh_updates_existing_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()

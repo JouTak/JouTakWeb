@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { Button, Modal, TextInput, useToaster } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
-import { Modal, Button, TextInput, useToaster } from "@gravity-ui/uikit";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   doLogin,
   doSignupAndLogin,
   me,
   requestPasswordReset,
 } from "../services/api";
+import { extractErrorMessage } from "../services/errors";
 import { needsPersonalization } from "../utils/profileState";
 
 const fieldBlockStyle = {
@@ -25,37 +27,6 @@ function isSafeInternalPath(path) {
   return (
     typeof path === "string" && path.startsWith("/") && !path.startsWith("//")
   );
-}
-
-function extractErrorMessage(error, fallback) {
-  const data = error?.response?.data;
-  if (Array.isArray(data?.errors)) {
-    const firstError = data.errors.find(
-      (entry) =>
-        entry && typeof entry.message === "string" && entry.message.trim(),
-    );
-    if (firstError?.message) return firstError.message;
-  }
-  if (data?.fields && typeof data.fields === "object") {
-    const firstFieldMessage = Object.values(data.fields).find(
-      (value) => typeof value === "string" && value.trim(),
-    );
-    if (firstFieldMessage) return firstFieldMessage;
-  }
-  if (data?.errors && typeof data.errors === "object") {
-    for (const entries of Object.values(data.errors)) {
-      if (!Array.isArray(entries)) continue;
-      const first = entries.find(
-        (entry) =>
-          entry &&
-          typeof entry === "object" &&
-          typeof entry.message === "string" &&
-          entry.message.trim(),
-      );
-      if (first?.message) return first.message;
-    }
-  }
-  return data?.detail || data?.message || fallback;
 }
 
 export default function AuthModal({
@@ -76,10 +47,14 @@ export default function AuthModal({
   const [resetEmail, setResetEmail] = useState("");
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
+  const loginInputRef = useRef(null);
+  const signupEmailInputRef = useRef(null);
+  const resetEmailInputRef = useRef(null);
 
   const toaster = useToaster();
   const isLogin = mode === "login";
   const isResetPassword = mode === "reset-password";
+  const isSignup = mode === "signup";
   const title = useMemo(() => {
     if (isResetPassword) return "Сброс пароля";
     if (isLogin) return "Вход";
@@ -114,6 +89,24 @@ export default function AuthModal({
       setBusy(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const targetControl = isResetPassword
+      ? resetEmailInputRef.current
+      : isLogin
+        ? loginInputRef.current
+        : isSignup
+          ? signupEmailInputRef.current
+          : null;
+    if (!targetControl) return undefined;
+
+    const frameId = requestAnimationFrame(() => {
+      targetControl.focus();
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [isLogin, isResetPassword, isSignup, open]);
 
   const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
@@ -265,7 +258,7 @@ export default function AuthModal({
                 onUpdate={setLogin}
                 name="joutak__login"
                 autoComplete="username"
-                autoFocus
+                controlRef={loginInputRef}
                 disabled={busy}
                 aria-label="Email или старый логин"
               />
@@ -367,7 +360,7 @@ export default function AuthModal({
                     value={resetEmail}
                     onUpdate={setResetEmail}
                     autoComplete="email"
-                    autoFocus
+                    controlRef={resetEmailInputRef}
                     disabled={busy}
                     aria-label="Email"
                   />
@@ -416,6 +409,7 @@ export default function AuthModal({
                 onUpdate={setSuEmail}
                 name="joutak__email"
                 autoComplete="email"
+                controlRef={signupEmailInputRef}
                 disabled={busy}
                 aria-label="Email"
               />

@@ -172,9 +172,17 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Frontend lint caches
+.eslintcache
+.stylelintcache
+
 # PyPI configuration file
 .pypirc
 
+# macOS filesystem metadata
+.DS_Store
 
 .env.development
+.env.production
 .env.production.secrets
+.husky/_

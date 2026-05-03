@@ -1,6 +1,6 @@
+import { Button } from "@gravity-ui/uikit";
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@gravity-ui/uikit";
 
 function safeInternalPath(path) {
   if (typeof path !== "string") return "/joutak";

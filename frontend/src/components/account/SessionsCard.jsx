@@ -1,29 +1,23 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import PropTypes from "prop-types";
 import {
   Button,
-  Label,
-  Switch,
-  Tooltip,
   DropdownMenu,
+  Label,
   Modal,
+  Switch,
   Text,
+  Tooltip,
 } from "@gravity-ui/uikit";
-import {
-  listSessionsHeadless,
-  revokeSessionHeadless,
-  bulkRevokeSessionsHeadless,
-  logout,
-} from "../../services/api";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import {
+  bulkRevokeSessionsHeadless,
+  listSessionsHeadless,
+  logout,
+  revokeSessionHeadless,
+} from "../../services/api";
+import { SectionCard } from "../ui/primitives";
 
 const rowBetween = {
   display: "flex",
@@ -361,7 +355,7 @@ export default function SessionsCard({ initialSessions }) {
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={rowBetween}>
         <h3 style={{ margin: 0, fontSize: 18 }}>Сессии</h3>
         <div
@@ -531,7 +525,7 @@ export default function SessionsCard({ initialSessions }) {
           </div>
         </div>
       </Modal>
-    </section>
+    </SectionCard>
   );
 }
 

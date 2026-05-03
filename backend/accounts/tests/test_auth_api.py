@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from accounts.tests.base import APITestCase
-from core.models import UserSessionMeta, UserSessionToken
+from core.models import (
+    UserSessionMeta,
+    UserSessionToken,
+    session_token_digest,
+)
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.utils import timezone
@@ -128,7 +132,8 @@ class HeadlessAuthApiTests(APITestCase):
 
     def test_refresh_rejects_missing_required_fields(self) -> None:
         response = self.post_json("/auth/refresh", {})
-        self.assertEqual(response.status_code, 422, response.content)
+        self.assertEqual(response.status_code, 401, response.content)
+        self.assertEqual(response.json()["detail"], "refresh required")
 
     def test_jwt_from_session_creates_session_meta_and_refresh_mapping(
         self,
@@ -141,15 +146,21 @@ class HeadlessAuthApiTests(APITestCase):
         data = response.json()
 
         self.assertTrue(data.get("access"))
-        self.assertTrue(data.get("refresh"))
+        self.assertIsNone(data.get("refresh"))
+        refresh = response.cookies.get("joutak_refresh")
+        self.assertIsNotNone(refresh)
+        self.assertTrue(refresh.value)
+        self.assertTrue(refresh["httponly"])
 
         user = User.objects.get(email=payload["email"].lower())
         meta = UserSessionMeta.objects.filter(
-            user=user, session_token=session_token
+            user=user,
+            session_token_digest=session_token_digest(session_token),
         ).first()
         self.assertIsNotNone(meta)
+        self.assertIsNone(meta.session_token)
 
-        refresh_jti = str(RefreshToken(data["refresh"]).get("jti"))
+        refresh_jti = str(RefreshToken(refresh.value).get("jti"))
         self.assertTrue(
             UserSessionToken.objects.filter(
                 user=user,
@@ -188,11 +199,24 @@ class HeadlessAuthApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, 401, response.content)
 
+    def test_auth_me_rejects_inactive_user(self) -> None:
+        payload = self.signup_and_auth()
+        user = User.objects.get(email=payload["email"].lower())
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        response = self.client.get(
+            self.api("/auth/me"),
+            **self.auth_headers(payload["session_token"]),
+        )
+
+        self.assertEqual(response.status_code, 401, response.content)
+
     def test_logout_revokes_current_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
         session_token = payload["session_token"]
-        pair = self.jwt_from_session(session_token).json()
-        refresh = pair["refresh"]
+        pair = self.jwt_from_session(session_token)
+        refresh = pair.cookies["joutak_refresh"].value
         refresh_jti = str(RefreshToken(refresh).get("jti"))
 
         user = User.objects.get(email=payload["email"].lower())
@@ -290,16 +314,17 @@ class HeadlessAuthApiTests(APITestCase):
     def test_refresh_rotates_and_blacklists_old_refresh(self) -> None:
         payload = self.signup_and_auth()
         session_token = payload["session_token"]
-        pair = self.jwt_from_session(session_token).json()
-        old_refresh = pair["refresh"]
+        pair = self.jwt_from_session(session_token)
+        old_refresh = pair.cookies["joutak_refresh"].value
 
         first_refresh = self.post_json(
             "/auth/refresh",
-            {"refresh": old_refresh},
+            {},
             **self.auth_headers(session_token),
         )
         self.assertEqual(first_refresh.status_code, 200, first_refresh.content)
-        new_refresh = first_refresh.json()["refresh"]
+        self.assertIsNone(first_refresh.json().get("refresh"))
+        new_refresh = first_refresh.cookies["joutak_refresh"].value
         self.assertNotEqual(new_refresh, old_refresh)
 
         second_refresh_with_old = self.post_json(
@@ -313,7 +338,7 @@ class HeadlessAuthApiTests(APITestCase):
 
         third_refresh_with_new = self.post_json(
             "/auth/refresh",
-            {"refresh": new_refresh},
+            {},
             **self.auth_headers(session_token),
         )
         self.assertEqual(
@@ -322,12 +347,43 @@ class HeadlessAuthApiTests(APITestCase):
             third_refresh_with_new.content,
         )
 
+    def test_refresh_requires_session_token_header(self) -> None:
+        payload = self.signup_and_auth()
+        session_token = payload["session_token"]
+        pair = self.jwt_from_session(session_token)
+        refresh_token = pair.cookies["joutak_refresh"].value
+        self.client.cookies.clear()
+
+        response = self.post_json("/auth/refresh", {"refresh": refresh_token})
+        self.assertEqual(response.status_code, 401, response.content)
+        self.assertEqual(
+            response.json()["detail"],
+            "session token required for refresh",
+        )
+
+    def test_refresh_rejects_inactive_user(self) -> None:
+        payload = self.signup_and_auth()
+        session_token = payload["session_token"]
+        pair = self.jwt_from_session(session_token)
+        user = User.objects.get(email=payload["email"].lower())
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        response = self.post_json(
+            "/auth/refresh",
+            {"refresh": pair.cookies["joutak_refresh"].value},
+            **self.auth_headers(session_token),
+        )
+
+        self.assertEqual(response.status_code, 401, response.content)
+        self.assertEqual(response.json()["detail"], "invalid user")
+
     def test_refresh_updates_existing_session_refresh_mapping(self) -> None:
         payload = self.signup_and_auth()
         session_token = payload["session_token"]
 
-        pair = self.jwt_from_session(session_token).json()
-        refresh_1 = pair["refresh"]
+        pair = self.jwt_from_session(session_token)
+        refresh_1 = pair.cookies["joutak_refresh"].value
         jti_1 = str(RefreshToken(refresh_1).get("jti"))
         user = User.objects.get(email=payload["email"].lower())
         mapping = UserSessionToken.objects.filter(
@@ -338,11 +394,11 @@ class HeadlessAuthApiTests(APITestCase):
 
         refreshed = self.post_json(
             "/auth/refresh",
-            {"refresh": refresh_1},
+            {},
             **self.auth_headers(session_token),
         )
         self.assertEqual(refreshed.status_code, 200, refreshed.content)
-        refresh_2 = refreshed.json()["refresh"]
+        refresh_2 = refreshed.cookies["joutak_refresh"].value
         jti_2 = str(RefreshToken(refresh_2).get("jti"))
 
         self.assertFalse(

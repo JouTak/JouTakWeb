@@ -1,13 +1,7 @@
-import PropTypes from "prop-types";
 import { Button, Label } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
 
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 
 const headerStyle = {
   display: "flex",
@@ -24,7 +18,7 @@ export default function MfaCard({ profile }) {
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={headerStyle}>
         <h3 style={{ margin: 0, fontSize: 18 }}>
           Двухфакторная аутентификация (TOTP)
@@ -50,7 +44,7 @@ export default function MfaCard({ profile }) {
           {has2fa ? "Управлять 2FA" : "Включить 2FA"}
         </Button>
       </div>
-    </section>
+    </SectionCard>
   );
 }
 

@@ -3,6 +3,7 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY prepare-husky.mjs ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --no-audit --no-fund
 COPY . .
@@ -13,7 +14,7 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine
 USER root
 RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build --chown=101:101 /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chown=101:101 nginx.conf /etc/nginx/conf.d/default.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod 0755 /entrypoint.sh && chown 101:101 /entrypoint.sh
 

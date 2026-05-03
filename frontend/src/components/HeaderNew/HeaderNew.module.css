@@ -1,0 +1,165 @@
+@font-face {
+    font-family: "MinecraftSeven";
+    src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
+  }
+
+.header {
+  width: 100%;
+  background-image: url("/img/header-bg.png");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: top center;
+  font-family: "MinecraftSeven", sans-serif;
+  font-size: 14px;
+}
+
+.container {
+  width: 100%;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  padding: 12px 24px;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.leftSide,
+.rightSide {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.rightSide {
+  justify-content: flex-end;
+}
+
+.centerGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.navButton,
+.logoButton {
+  border: none;
+  background: transparent;
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.logoButton img {
+  height: 71px;
+}
+
+.serversSelectRoot {
+  position: relative;
+}
+
+.serversBlock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+}
+
+.serversToggleBtn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.serversToggleBtn img {
+  display: block;
+  width: 15px;
+  height: auto;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform 0.28s ease;
+}
+
+.serversToggleBtnOpen img {
+  transform: rotate(90deg);
+}
+
+.serversMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  background: #2f669e;
+  display: flex;
+  flex-direction: column;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.32s ease, opacity 0.24s ease;
+  z-index: 20;
+}
+
+.serversMenuOpen {
+  max-height: 220px;
+  opacity: 1;
+}
+
+.serverOption {
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  font-family: "MinecraftSeven", sans-serif;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.serverOption:hover {
+  font-size: 16px;
+}
+
+.accountArea {
+  display: flex;
+  align-items: center;
+}
+
+.avatarButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.avatarOuter {
+  width: 70px;
+  height: 70px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarInner {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #2f669e;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  line-height: 1;
+}

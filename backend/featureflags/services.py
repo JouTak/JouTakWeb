@@ -9,7 +9,6 @@ from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.conf import settings
 from django.core import signing
 from django.http import HttpRequest, HttpResponse
-from openfeature import api
 from openfeature.evaluation_context import (
     EvaluationContext as OpenFeatureEvaluationContext,
 )
@@ -30,13 +29,17 @@ logger = logging.getLogger(__name__)
 FEATURE_OVERRIDE_QUERY_PREFIX = "ff_"
 FEATURE_OVERRIDE_CLEAR_QUERY = "ff_clear_overrides"
 FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v1"
-DEFAULT_FEATURES = {
-    "site_homepage_version": {
-        "kind": FeatureKind.VARIANT,
-        "default": getattr(settings, "FF_SITE_HOMEPAGE_VERSION", "legacy"),
-        "sticky_assignment": False,
+
+
+def _get_default_features() -> dict[str, dict]:
+    """Lazy accessor for default feature specs from settings."""
+    return {
+        "site_homepage_version": {
+            "kind": FeatureKind.VARIANT,
+            "default": getattr(settings, "FF_SITE_HOMEPAGE_VERSION", "legacy"),
+            "sticky_assignment": False,
+        }
     }
-}
 
 
 @dataclass(slots=True, frozen=True)
@@ -347,7 +350,11 @@ def _db_override(
     feature: FeatureDefinition,
     context: RequestEvaluationContext,
 ) -> str | None:
-    for override in feature.overrides.filter(enabled=True):
+    # Iterate .all() to leverage prefetch_related cache.
+    # Using .filter() would bypass the prefetch and hit the DB again.
+    for override in feature.overrides.all():
+        if not override.enabled:
+            continue
         if override.scope_type == FeatureOverrideScope.GLOBAL:
             return override.value
         if (
@@ -383,7 +390,7 @@ def get_feature_spec(key: str) -> FeatureSpec | None:
             sticky_assignment=feature.sticky_assignment,
         )
 
-    default_spec = DEFAULT_FEATURES.get(key)
+    default_spec = _get_default_features().get(key)
     if default_spec is None:
         return None
 
@@ -506,10 +513,7 @@ def from_openfeature_context(
         anonymous_id = identity_key.split(":", 1)[1]
     raw_overrides = attrs.get("overrides") or {}
     request_overrides = (
-        {
-            str(key): str(value)
-            for key, value in dict(raw_overrides).items()
-        }
+        {str(key): str(value) for key, value in dict(raw_overrides).items()}
         if isinstance(raw_overrides, dict)
         else {}
     )
@@ -537,8 +541,10 @@ def resolve_flag_details(
     kind: str,
     default_value: bool | str,
     evaluation_context: OpenFeatureEvaluationContext | None = None,
+    *,
+    definition: FeatureDefinition | None = None,
 ) -> FlagResolutionDetails[bool | str]:
-    feature = _definition_for_key(flag_key)
+    feature = definition or _definition_for_key(flag_key)
     if feature is None:
         return FlagResolutionDetails(
             value=default_value,
@@ -555,35 +561,53 @@ def resolve_flag_details(
     )
 
 
+def _batch_load_definitions(
+    keys: list[str] | tuple[str, ...],
+) -> dict[str, FeatureDefinition]:
+    """Batch load feature definitions in a single query."""
+    return {
+        d.key: d
+        for d in FeatureDefinition.objects.prefetch_related(
+            "rules", "overrides"
+        )
+        .filter(key__in=keys, active=True)
+        .all()
+    }
+
+
 def evaluate_many(
     context: RequestEvaluationContext,
     keys: list[str] | tuple[str, ...],
 ) -> dict[str, bool | str]:
-    client = api.get_client()
-    evaluation_context = to_openfeature_context(context)
+    """
+    Batch evaluate multiple feature flags in a single DB round-trip.
+
+    Uses direct evaluation (bypassing OpenFeature SDK round-trip) for
+    performance. The OpenFeature client is still available for external
+    consumers via the provider interface.
+    """
+    definitions = _batch_load_definitions(keys)
+    defaults = _get_default_features()
     resolved: dict[str, bool | str] = {}
+
     for key in keys:
-        spec = get_feature_spec(key)
-        if spec is None:
-            resolved[key] = False
-            continue
-        if spec.kind == FeatureKind.BOOLEAN:
-            resolved[key] = client.get_boolean_value(
-                key,
-                bool(spec.default_value),
-                evaluation_context=evaluation_context,
+        feature = definitions.get(key)
+        if feature is not None:
+            value, _reason, _variant = _evaluate_definition(feature, context)
+            resolved[key] = value
+        elif key in defaults:
+            default_spec = defaults[key]
+            resolved[key] = _coerce_value(
+                default_spec["kind"], default_spec["default"]
             )
-            continue
-        resolved[key] = client.get_string_value(
-            key,
-            str(spec.default_value),
-            evaluation_context=evaluation_context,
-        )
+        else:
+            resolved[key] = False
+
     return resolved
 
 
 def seed_homepage_feature() -> None:
-    spec = DEFAULT_FEATURES["site_homepage_version"]
+    spec = _get_default_features()["site_homepage_version"]
     FeatureDefinition.objects.get_or_create(
         key="site_homepage_version",
         defaults={

@@ -1,0 +1,49 @@
+{% extends "admin/login.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="/admin/">{{ site_header }}</a></h1>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <form method="post" action="">
+    {% csrf_token %}
+
+    <h2 style="margin-bottom: 16px;">{{ title }}</h2>
+
+    <p style="margin-bottom: 12px;">
+      Enter the verification code from your authenticator app
+      or a recovery code to continue as <strong>{{ username }}</strong>.
+    </p>
+
+    {% if error %}
+    <p class="errornote" style="margin-bottom: 12px;">{{ error }}</p>
+    {% endif %}
+
+    <div class="form-row" style="margin-bottom: 16px;">
+      <label for="id_mfa_code">Verification code:</label>
+      <input type="text"
+             name="mfa_code"
+             id="id_mfa_code"
+             autofocus
+             autocomplete="one-time-code"
+             inputmode="numeric"
+             pattern="[0-9 ]*"
+             placeholder="000 000"
+             style="width: 200px; font-size: 16px; padding: 6px 10px;"
+             required>
+    </div>
+
+    <div class="submit-row" style="margin-top: 16px;">
+      <input type="submit" value="Verify" class="default">
+      <a href="/admin/login/"
+         style="margin-left: 12px; color: var(--link-fg, #447e9b);">
+        Cancel and return to login
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

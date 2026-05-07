@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "corsheaders",
+    "axes",
     "ninja",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
@@ -99,6 +100,7 @@ MIDDLEWARE = [
     "backend.middleware.HostRoutingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "axes.middleware.AxesMiddleware",
     "backend.middleware.AdminMFAEnforcementMiddleware",
     "allauth.usersessions.middleware.UserSessionsMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -148,11 +150,21 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 ACCOUNT_ADAPTER = "accounts.adapters.StrictAccountAdapter"
 ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = False
+
+# ─── django-axes: brute-force login protection ─────────────────────────────
+AXES_FAILURE_LIMIT = config("AXES_FAILURE_LIMIT", cast=int, default=5)
+AXES_COOLOFF_TIME = timedelta(
+    minutes=config("AXES_COOLOFF_MINUTES", cast=int, default=15)
+)
+AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
+AXES_RESET_ON_SUCCESS = True
+AXES_ENABLE_ACCESS_FAILURE_LOG = True
 
 NINJA_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(

@@ -10,9 +10,9 @@ from observability.logging import (
     set_request_log_context,
 )
 
-from backend.admin_site import admin_mfa_is_enabled
+from backend.admin_site import admin_mfa_is_enabled, is_admin_mfa_verified
 
-ADMIN_ALLOWED_PREFIXES = ("/admin/", "/static/", "/media/")
+ADMIN_ALLOWED_PREFIXES = ("/admin/", "/accounts/", "/static/", "/media/")
 API_BLOCKED_PREFIXES = ("/admin/", "/static/admin/")
 REQUEST_ID_HEADER = "X-Request-ID"
 
@@ -41,7 +41,12 @@ def is_admin_path(path: str) -> bool:
 
 
 def is_admin_mfa_path(path: str) -> bool:
-    return path.startswith("/admin/") and not path.startswith("/admin/login/")
+    """Paths that require completed MFA (excludes login and MFA verify)."""
+    return (
+        path.startswith("/admin/")
+        and not path.startswith("/admin/login/")
+        and not path.startswith("/admin/mfa-verify/")
+    )
 
 
 class RequestContextMiddleware:
@@ -92,22 +97,41 @@ class HostRoutingMiddleware:
                 "Admin surface is not available on this host."
             )
 
+        # Block admin paths on unknown hosts (neither admin nor API).
+        # This prevents accidental exposure if ALLOWED_HOSTS is too broad.
+        if not is_admin_host(host) and not is_api_host(host):
+            if path.startswith("/admin/"):
+                return HttpResponseForbidden(
+                    "Admin surface is not available on this host."
+                )
+
         return self.get_response(request)
 
 
 class AdminMFAEnforcementMiddleware:
+    """
+    Post-authentication guard: even if a user is logged in, deny access
+    to admin pages if they haven't completed MFA verification.
+
+    This acts as a defense-in-depth layer on top of the MFA challenge
+    in the admin login flow.
+    """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        user = getattr(request, "user", None)
         if not is_admin_mfa_path(request.path):
             return self.get_response(request)
 
+        user = getattr(request, "user", None)
         if user and user.is_authenticated and user.is_staff:
-            if not admin_mfa_is_enabled(user):
+            if admin_mfa_is_enabled(user) and not is_admin_mfa_verified(
+                request
+            ):
                 return HttpResponseForbidden(
-                    "Admin access requires an enrolled MFA factor."
+                    "Admin access requires MFA verification. "
+                    "Please log in again."
                 )
 
         return self.get_response(request)

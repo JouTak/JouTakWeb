@@ -69,6 +69,7 @@
   align-items: center;
   gap: 8px;
   color: #fff;
+  justify-content: center;
 }
 
 .serversToggleBtn {
@@ -87,13 +88,13 @@
   display: block;
   width: 15px;
   height: auto;
-  transform: rotate(0deg);
+  transform: rotate(90deg);
   transform-origin: center;
   transition: transform 0.28s ease;
 }
 
 .serversToggleBtnOpen img {
-  transform: rotate(90deg);
+  transform: rotate(270deg);
 }
 
 .serversMenu {

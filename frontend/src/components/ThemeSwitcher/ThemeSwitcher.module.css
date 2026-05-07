@@ -1,148 +1,168 @@
-.themeSwitcherGrid {
-  display: grid;
-  grid-template-columns: repeat(54, 1px);
-  grid-template-rows: repeat(24, 1px);
-  gap: 0;
+.switch {
   position: relative;
-  background-color: #0dbdf6;
-  border-radius: 49px;
-  border: 1px solid #1c2135;
-  cursor: pointer;
-  transition: background-color 0.8s ease, border-color 0.8s ease;
-  appearance: none;
+
+  width: 95px;
+  height: 48px;
+
   padding: 0;
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
 }
 
-.nightTheme {
-  background-color: #272a30;
-  border-color: #f0f0e8;
+svg {
+  display: block;
+  shape-rendering: crispEdges;
 }
+
+.contour {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  z-index: 5;
+}
+
+.thumb {
+  position: absolute;
+
+  top: 4px;
+  left: 4px;
+
+  width: 87px;
+  height: 40px;
+
+  z-index: 3;
+
+  transition: transform 0.45s ease;
+}
+
+.thumbBg {
+  width: 100%;
+  height: 100%;
+
+  color: #278cf0;
+
+  transition: color 0.45s ease;
+}
+
+.night .thumbBg {
+  color: #070e14;
+}
+
+.sun,
+.moon {
+  position: absolute;
+
+  width: 30px;
+  height: 30px;
+
+  top: 5px;
+  left: 8px;
+
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+
+/* Облака */
+.clouds {
+  position: absolute;
+
+  left: 25px;
+  top: 20px;
+
+  width: 32px;
+  height: 16px;
+
+  z-index: 4;
+
+  opacity: 1;
+
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+
+.night .clouds {
+  opacity: 0;
+
+  transform: translateY(4px);
+}
+
+/* Солнце */
 
 .sun {
-  background-color: #fabc1c;
-  grid-column: 3 / 23;
-  grid-row: 3 / 23;
-  border-radius: 50%;
-  transition: grid-column 0.8s ease, background-color 0.8s ease;
-  height: 20px;
-}
+  color: #ffc116;
 
-.nightTheme .sun {
-  grid-column: 33 / 53;
-  background-color: #fffdf2;
-}
-
-.moonOverlay {
-  position: absolute;
-  border-radius: 50%;
-  transition: left 0.8s ease, background-color 0.8s ease;
-  z-index: 1;
-  background-color: #0dbdf6;
-}
-
-.nightTheme .moonOverlay {
-  display: block;
-  left: calc(28 / 54 * 100%);
-  top: calc(4 / 29 * 100%);
-  width: 18px;
-  height: 18px;
-  background-color: #272a30;
-}
-
-.cloudBall {
-  background-color: #fffdf2;
-  border-radius: 50%;
-  width: 9px;
-  height: 9px;
-  position: absolute;
-  transition: all 0.8s ease;
-  z-index: 2;
-}
-
-.cloudBallLeft {
-  top: calc((8 / 24) * 100%);
-  left: calc((12 / 54) * 100%);
-}
-
-.cloudBallMiddle {
-  top: calc((8 / 24) * 100%);
-  left: calc((17 / 54) * 100%);
-}
-
-.cloudBallRight {
-  top: calc((8 / 24) * 100%);
-  left: calc((22 / 54) * 100%);
-}
-
-.cloudBallTop {
-  top: calc((6 / 24) * 100%);
-  left: calc((17 / 54) * 100%);
-}
-
-.nightTheme .cloudBallLeft {
-  top: calc((16 / 24) * 100%);
-  left: calc((16 / 54) * 100%);
-  width: 2px;
-  height: 2px;
-}
-
-.nightTheme .cloudBallMiddle {
-  top: calc((3 / 24) * 100%);
-  left: calc((22 / 54) * 100%);
-  width: 2px;
-  height: 2px;
-}
-
-.nightTheme .cloudBallRight {
-  top: calc((10 / 24) * 100%);
-  left: calc((29 / 54) * 100%);
-  width: 2px;
-  height: 2px;
-}
-
-.nightTheme .cloudBallTop {
-  top: calc((5 / 24) * 100%);
-  left: calc((34 / 54) * 100%);
-  width: 2px;
-  height: 2px;
-}
-
-.star1,
-.star2,
-.star3,
-.star4 {
-  background-color: #fffdf2;
-  width: 1px;
-  height: 1px;
-  position: absolute;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  border-radius: 50%;
-}
-
-.star1 {
-  top: calc((7 / 24) * 100%);
-  left: calc((10 / 54) * 100%);
-}
-
-.star2 {
-  top: calc((9 / 24) * 100%);
-  left: calc((16 / 54) * 100%);
-}
-
-.star3 {
-  top: calc((13 / 24) * 100%);
-  left: calc((23 / 54) * 100%);
-}
-
-.star4 {
-  top: calc((18 / 24) * 100%);
-  left: calc((29 / 54) * 100%);
-}
-
-.nightTheme .star1,
-.nightTheme .star2,
-.nightTheme .star3,
-.nightTheme .star4 {
   opacity: 1;
+
+  transform:
+    translateX(0)
+    rotate(0deg)
+    scale(1);
+}
+
+/* Луна */
+
+.moon {
+  color: #278cf0;
+
+  opacity: 0;
+
+  transform:
+    translateX(-40px)
+    rotate(-180deg)
+    scale(0.5);
+}
+
+/* Звезды */
+
+.stars {
+  position: absolute;
+
+  top: 7px;
+  left: 12px;
+
+  width: 40px;
+  height: 35px;
+
+  opacity: 0;
+
+  z-index: 4;
+
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+
+  transform: translateY(4px);
+}
+
+/* Ночная тема */
+
+.night .sun {
+  opacity: 0;
+
+  transform:
+    translateX(40px)
+    rotate(180deg)
+    scale(0.5);
+}
+
+.night .moon {
+  opacity: 1;
+
+  transform:
+    translateX(40px)
+    rotate(0deg)
+    scale(1);
+}
+
+.night .stars {
+  opacity: 1;
+
+  transform: translateY(0);
 }

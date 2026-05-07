@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import ProjectsSection from '../components/ProjectsSection/ProjectsSection'
 import EventsSection from '../components/EventsSection/EventsSection'
-import ImageCarousel from "../components/ImageCarousel";
+// import ImageCarousel from "../components/ImageCarousel";
+import MainSection from "../components/MainSection/MainSection";
 import FAQsection from "../components/FAQsection/FAQsection";
 import GallerySection from "../components/GallerySection/GallerySection";
 
@@ -31,7 +32,7 @@ const JOUTAK_CAROUSEL_ITEMS = [
 const JouTak = () => {
   return (
     <>
-    <div className="text-center">
+    {/* <div className="text-center">
       <ImageCarousel items={JOUTAK_CAROUSEL_ITEMS} />
 
       <div className="p-5 mb-4 rounded-3">
@@ -65,8 +66,8 @@ const JouTak = () => {
           </Link>
         </div>
       </div>
-    </div>
-
+    </div> */}
+    <MainSection />
     <ProjectsSection />
     <EventsSection />
     <GallerySection />

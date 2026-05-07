@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 function Hero({ hero }) {
@@ -43,10 +44,7 @@ Hero.propTypes = {
 function Projects({ items }) {
   return (
     <section className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h3 mb-0">Наши проекты</h2>
-        <span className="text-secondary">Feature-gated v2</span>
-      </div>
+      <h2 className="h3 mb-3">Наши проекты</h2>
       <div className="row g-3">
         {items.map((item) => (
           <div key={item.title} className="col-md-6 col-xl-3">
@@ -100,6 +98,7 @@ function Gallery({ items }) {
               className="img-fluid rounded-4 border"
               src={item}
               alt="JouTak gallery"
+              loading="lazy"
             />
           </div>
         ))}
@@ -112,33 +111,46 @@ Gallery.propTypes = {
   items: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
 
+function FaqItem({ item, isOpen, onToggle }) {
+  return (
+    <div className="accordion-item">
+      <h3 className="accordion-header">
+        <button
+          className={`accordion-button ${isOpen ? "" : "collapsed"}`}
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+        >
+          {item.question}
+        </button>
+      </h3>
+      <div className={`accordion-collapse collapse ${isOpen ? "show" : ""}`}>
+        <div className="accordion-body">{item.answer}</div>
+      </div>
+    </div>
+  );
+}
+
+FaqItem.propTypes = {
+  item: PropTypes.object.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+};
+
 function FAQ({ items }) {
+  const [openIndex, setOpenIndex] = useState(0);
+
   return (
     <section className="mb-4">
       <h2 className="h3 mb-3">FAQ</h2>
-      <div className="accordion" id="homepageFaq">
+      <div className="accordion">
         {items.map((item, index) => (
-          <div key={item.question} className="accordion-item">
-            <h3 className="accordion-header">
-              <button
-                className={`accordion-button ${index > 0 ? "collapsed" : ""}`}
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target={`#faq-${index}`}
-                aria-expanded={index === 0 ? "true" : "false"}
-                aria-controls={`faq-${index}`}
-              >
-                {item.question}
-              </button>
-            </h3>
-            <div
-              id={`faq-${index}`}
-              className={`accordion-collapse collapse ${index === 0 ? "show" : ""}`}
-              data-bs-parent="#homepageFaq"
-            >
-              <div className="accordion-body">{item.answer}</div>
-            </div>
-          </div>
+          <FaqItem
+            key={item.question}
+            item={item}
+            isOpen={openIndex === index}
+            onToggle={() => setOpenIndex(openIndex === index ? -1 : index)}
+          />
         ))}
       </div>
     </section>

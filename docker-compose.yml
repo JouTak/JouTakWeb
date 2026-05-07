@@ -9,6 +9,8 @@ x-backend-environment: &backend-environment
   SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
 
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
+  DJANGO_ADMIN_HOSTS: ${DJANGO_ADMIN_HOSTS:-admin.localhost}
+  DJANGO_API_HOSTS: ${DJANGO_API_HOSTS:-api.localhost}
   DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?DJANGO_CSRF_TRUSTED_ORIGINS is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
@@ -19,6 +21,11 @@ x-backend-environment: &backend-environment
   MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:-}
   AUTH_SESSION_RETENTION_DAYS: ${AUTH_SESSION_RETENTION_DAYS:-30}
   AUTH_TOKEN_RETENTION_DAYS: ${AUTH_TOKEN_RETENTION_DAYS:-30}
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-joutak-backend}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+  OTEL_METRICS_EXPORT_INTERVAL_MS: ${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
   DJANGO_SYNC_SITE: ${DJANGO_SYNC_SITE:-1}
   DJANGO_SYNC_EMAIL_ADDRESSES: ${DJANGO_SYNC_EMAIL_ADDRESSES:-1}
   DJANGO_REENCRYPT_MFA_AUTHENTICATORS: ${DJANGO_REENCRYPT_MFA_AUTHENTICATORS:-1}
@@ -38,6 +45,19 @@ x-backend-environment: &backend-environment
   DJANGO_CHECK_DEPLOY_STRICT: "1"
 
 services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - joutak_net
+
   db:
     image: postgres:16-alpine
     environment:
@@ -45,7 +65,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     healthcheck:
-      test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -62,8 +82,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment: *backend-environment
     healthcheck:
       test:
@@ -81,6 +101,15 @@ services:
       - static_data:/app/staticfiles
     networks:
       - joutak_net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend-api.rule=Host(`api.localhost`)
+      - traefik.http.routers.backend-api.entrypoints=web
+      - traefik.http.routers.backend-api.service=backend
+      - traefik.http.routers.backend-admin.rule=Host(`admin.localhost`)
+      - traefik.http.routers.backend-admin.entrypoints=web
+      - traefik.http.routers.backend-admin.service=backend
+      - traefik.http.services.backend.loadbalancer.server.port=8000
 
   backend-maintenance:
     image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
@@ -100,10 +129,15 @@ services:
     pull_policy: always
     environment:
       REACT_APP_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
-    ports:
-      - "80:8080"
+      OTEL_SERVICE_NAME: ${FRONTEND_OTEL_SERVICE_NAME:-joutak-frontend}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${FRONTEND_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
     networks:
       - joutak_net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend.rule=Host(`localhost`) || Host(`joutak.localhost`)
+      - traefik.http.routers.frontend.entrypoints=web
+      - traefik.http.services.frontend.loadbalancer.server.port=8080
 
 networks:
   joutak_net:

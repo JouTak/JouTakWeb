@@ -4,6 +4,7 @@ from pathlib import Path
 
 from corsheaders.defaults import default_headers
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
 
 from backend.settings.env import apply_env_file_overrides
 
@@ -42,6 +43,16 @@ SITE_NAME = config("DJANGO_SITE_NAME", default="")
 ALLOWED_HOSTS = config(
     "DJANGO_ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv()
 )
+DJANGO_ADMIN_HOSTS = config(
+    "DJANGO_ADMIN_HOSTS",
+    default="admin.joutak.ru,admin.localhost",
+    cast=Csv(),
+)
+DJANGO_API_HOSTS = config(
+    "DJANGO_API_HOSTS",
+    default="api.joutak.ru,api.localhost",
+    cast=Csv(),
+)
 CSRF_TRUSTED_ORIGINS = config(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
     default="http://localhost:5173,http://127.0.0.1:5173",
@@ -50,7 +61,7 @@ CSRF_TRUSTED_ORIGINS = config(
 INTERNAL_IPS = config("DJANGO_INTERNAL_IPS", default="127.0.0.1", cast=Csv())
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    "backend.admin.JouTakAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -73,6 +84,9 @@ INSTALLED_APPS = [
     # Project apps
     "core.apps.CoreConfig",
     "accounts.apps.AccountsConfig",
+    "featureflags.apps.FeatureFlagsConfig",
+    "bff.apps.BffConfig",
+    "observability.apps.ObservabilityConfig",
 ]
 
 MIDDLEWARE = [
@@ -80,9 +94,12 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "backend.middleware.RequestContextMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "backend.middleware.HostRoutingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "backend.middleware.AdminMFAEnforcementMiddleware",
     "allauth.usersessions.middleware.UserSessionsMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -191,11 +208,51 @@ HEADLESS_FRONTEND_URLS = {
 ACCOUNT_CHANGE_EMAIL = True
 
 HEADLESS_ONLY = True
-HEADLESS_CLIENTS = tuple(config("HEADLESS_CLIENTS", default="app", cast=Csv()))
+
+
+def _parse_headless_clients(raw: str) -> tuple[str, ...]:
+    """Validate ``HEADLESS_CLIENTS`` env value.
+
+    allauth's headless app only understands ``app`` and ``browser``. A
+    typo or an empty string silently disables the headless endpoints
+    we rely on, so we fail loudly at import time instead.
+    """
+
+    known = {"app", "browser"}
+    values = tuple(
+        item.strip().lower() for item in raw.split(",") if item.strip()
+    )
+    if not values:
+        raise ImproperlyConfigured(
+            "HEADLESS_CLIENTS must not be empty; allowed values: "
+            f"{sorted(known)}."
+        )
+    unknown = sorted(set(values) - known)
+    if unknown:
+        raise ImproperlyConfigured(
+            "HEADLESS_CLIENTS contains unsupported entries "
+            f"{unknown}; allowed values: {sorted(known)}."
+        )
+    # De-dupe while preserving order.
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return tuple(result)
+
+
+HEADLESS_CLIENTS = _parse_headless_clients(
+    config("HEADLESS_CLIENTS", default="app")
+)
 HEADLESS_SERVE_SPECIFICATION = DEBUG
-HEADLESS_TOKEN_STRATEGY = config(
-    "HEADLESS_TOKEN_STRATEGY",
-    default="accounts.token_strategy.RevocableSessionTokenStrategy",
+# Use the revocable strategy unconditionally: switching it off at runtime
+# silently disables session-token revocation, which is a security
+# regression and must not be configurable from the environment.
+HEADLESS_TOKEN_STRATEGY = (
+    "accounts.token_strategy.RevocableSessionTokenStrategy"
 )
 
 MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
@@ -236,6 +293,33 @@ AUTH_SESSION_RETENTION_DAYS = config(
 )
 AUTH_TOKEN_RETENTION_DAYS = config(
     "AUTH_TOKEN_RETENTION_DAYS", cast=int, default=30
+)
+OTEL_SERVICE_NAME = config("OTEL_SERVICE_NAME", default="joutak-backend")
+OTEL_METRICS_EXPORT_INTERVAL_MS = config(
+    "OTEL_METRICS_EXPORT_INTERVAL_MS",
+    cast=int,
+    default=60000,
+)
+FEATURE_FLAG_ANONYMOUS_ID_COOKIE = config(
+    "FEATURE_FLAG_ANONYMOUS_ID_COOKIE", default="joutak_ffid"
+)
+FEATURE_FLAG_ANONYMOUS_ID_COOKIE_MAX_AGE = config(
+    "FEATURE_FLAG_ANONYMOUS_ID_COOKIE_MAX_AGE",
+    cast=int,
+    default=60 * 60 * 24 * 365,
+)
+FEATURE_FLAG_OVERRIDE_COOKIE = config(
+    "FEATURE_FLAG_OVERRIDE_COOKIE", default="joutak_ff_override"
+)
+FEATURE_FLAG_OVERRIDE_COOKIE_MAX_AGE = config(
+    "FEATURE_FLAG_OVERRIDE_COOKIE_MAX_AGE",
+    cast=int,
+    # 30 days by default — feature overrides are a debug/staff tool, we
+    # do not want a stale signed payload to survive indefinitely.
+    default=60 * 60 * 24 * 30,
+)
+FEATURE_FLAG_OVERRIDE_QUERY_ENABLED = config(
+    "FEATURE_FLAG_OVERRIDE_QUERY_ENABLED", cast=bool, default=DEBUG
 )
 
 LANGUAGE_CODE = "ru-RU"
@@ -298,11 +382,8 @@ FF_PROFILE_PERSONALIZATION_INTERSTITIAL = config(
 FF_PROFILE_PERSONALIZATION_ENFORCE = config(
     "FF_PROFILE_PERSONALIZATION_ENFORCE", cast=bool, default=False
 )
+FF_SITE_HOMEPAGE_VERSION = config("FF_SITE_HOMEPAGE_VERSION", default="legacy")
 
 
 def as_public_settings() -> dict[str, object]:
-    return {
-        name: value
-        for name, value in globals().items()
-        if name.isupper()
-    }
+    return {name: value for name, value in globals().items() if name.isupper()}

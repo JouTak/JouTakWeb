@@ -251,6 +251,7 @@ class ProfileService:
         if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
             raise HttpError(400, "unsupported avatar content type")
 
+        image_format: str | None = None
         try:
             avatar.seek(0)
             with Image.open(avatar) as image:
@@ -264,13 +265,17 @@ class ProfileService:
                     raise HttpError(
                         400, "avatar image dimensions are too large"
                     )
+                # Capture `format` before `verify()`: Pillow leaves the
+                # Image in an unusable state afterwards and subsequent
+                # attribute access is not guaranteed to succeed.
+                image_format = image.format or ""
                 image.verify()
-                extension = AVATAR_FORMAT_EXTENSIONS.get(image.format or "")
         except (OSError, SyntaxError, UnidentifiedImageError) as exc:
             raise HttpError(400, "invalid avatar image") from exc
         finally:
             avatar.seek(0)
 
+        extension = AVATAR_FORMAT_EXTENSIONS.get(image_format or "")
         if not extension:
             raise HttpError(400, "unsupported avatar image format")
         return extension
@@ -302,9 +307,7 @@ class ProfileService:
             extension, normalized_avatar = (
                 ProfileService._normalize_avatar_file(avatar)
             )
-            safe_name = validate_file_name(
-                f"avatar-{uuid4().hex}.{extension}"
-            )
+            safe_name = validate_file_name(f"avatar-{uuid4().hex}.{extension}")
             user.avatar.save(safe_name, normalized_avatar)
             user.save(update_fields=["avatar"])
             return True

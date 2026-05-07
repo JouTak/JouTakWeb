@@ -11,9 +11,27 @@ const row = {
   gap: 12,
 };
 
+function readCsrfToken() {
+  if (typeof document === "undefined") return "";
+  const cookies = document.cookie ? document.cookie.split(";") : [];
+  for (const raw of cookies) {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("csrftoken=")) {
+      return decodeURIComponent(trimmed.slice("csrftoken=".length));
+    }
+  }
+  return "";
+}
+
 export default function OauthCard() {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
+  // We only render the "no providers available" copy after the backend
+  // has *actually* responded successfully. Otherwise a transient error
+  // (or a slow response) briefly flashes the empty state before we
+  // even know whether any providers exist, which looks like a bug to
+  // the user.
+  const [ready, setReady] = useState(false);
   const { add } = useToaster();
 
   useEffect(() => {
@@ -22,7 +40,14 @@ export default function OauthCard() {
       setLoading(true);
       try {
         const list = await getOAuthProviders();
-        if (!cancelled) setProviders(list);
+        if (cancelled) return;
+        setProviders(Array.isArray(list) ? list : []);
+        setReady(true);
+      } catch (error) {
+        void error;
+        // Keep `ready` false so we don't render a misleading empty
+        // state when the request failed. The card will just stay in
+        // its loading shimmer until the next retry/remount.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -36,7 +61,11 @@ export default function OauthCard() {
     const form = document.createElement("form");
     form.method = "POST";
     form.action = url;
-    Object.entries(fields || {}).forEach(([k, v]) => {
+    const csrfToken = readCsrfToken();
+    const mergedFields = csrfToken
+      ? { csrfmiddlewaretoken: csrfToken, ...fields }
+      : { ...fields };
+    Object.entries(mergedFields).forEach(([k, v]) => {
       const input = document.createElement("input");
       input.type = "hidden";
       input.name = k;
@@ -84,7 +113,7 @@ export default function OauthCard() {
   return (
     <SectionCard>
       <h3 style={{ margin: 0, fontSize: 18 }}>Связанные аккаунты</h3>
-      {loading ? (
+      {loading || !ready ? (
         <Loader size="m" />
       ) : providers?.length ? (
         <div style={{ display: "grid", gap: 8 }}>

@@ -11,3 +11,11 @@ export function needsPersonalization(profile) {
   if (profile?.personalization_ui_enabled === false) return false;
   return !isPersonalizedProfile(profile);
 }
+
+export function isLegacyPersonalization(profile) {
+  return profile?.personalization_context === "legacy_required";
+}
+
+export function isNewRegistrationPersonalization(profile) {
+  return profile?.personalization_context === "new_registration";
+}

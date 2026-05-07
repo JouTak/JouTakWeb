@@ -10,6 +10,11 @@ x-backend-environment: &backend-environment
   DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
   DATABASE_URL_FILE: /run/secrets/database_url
   SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-joutak-backend}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+  OTEL_METRICS_EXPORT_INTERVAL_MS: ${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
 
 services:
   traefik:
@@ -45,7 +50,7 @@ services:
       - joutak_net
     deploy:
       placement:
-        constraints: [ node.role == manager ]
+        constraints: [node.role == manager]
 
   backend:
     image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
@@ -75,6 +80,13 @@ services:
         - traefik.http.routers.backend-sec.entrypoints=websecure
         - traefik.http.routers.backend-sec.tls=true
         - traefik.http.routers.backend-sec.tls.certresolver=le
+        - traefik.http.routers.backend-admin.rule=Host(`admin.joutak.ru`)
+        - traefik.http.routers.backend-admin.entrypoints=web
+        - traefik.http.routers.backend-admin.middlewares=redirect-to-https
+        - traefik.http.routers.backend-admin-sec.rule=Host(`admin.joutak.ru`)
+        - traefik.http.routers.backend-admin-sec.entrypoints=websecure
+        - traefik.http.routers.backend-admin-sec.tls=true
+        - traefik.http.routers.backend-admin-sec.tls.certresolver=le
         - traefik.http.services.backend.loadbalancer.server.port=8000
 
   backend-maintenance:
@@ -100,6 +112,8 @@ services:
       - ./.env.production
     environment:
       REACT_APP_API_URL: ${PUBLIC_API_URL}
+      OTEL_SERVICE_NAME: ${FRONTEND_OTEL_SERVICE_NAME:-joutak-frontend}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${FRONTEND_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
     networks:
       - joutak_net
     deploy:
@@ -132,7 +146,6 @@ secrets:
   sentry_dsn:
     external: true
 
-
 networks:
   joutak_net:
     driver: overlay
@@ -141,4 +154,4 @@ volumes:
   postgres_data:
   media_data:
   static_data:
-  letsencrypt: { }
+  letsencrypt: {}

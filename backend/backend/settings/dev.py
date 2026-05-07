@@ -1,3 +1,5 @@
+from observability.logging import build_logging_config
+
 from . import base as base_settings
 
 globals().update(base_settings.as_public_settings())
@@ -6,10 +8,18 @@ DEBUG = True
 if not base_settings.SECRET_KEY:
     SECRET_KEY = "dev-only-insecure-secret-key-change-me"
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    "api.localhost",
+    "admin.localhost",
+]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost",
+    "http://api.localhost",
+    "http://admin.localhost",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 
@@ -35,9 +45,4 @@ STORAGES = {
 HEADLESS_SERVE_SPECIFICATION = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = True
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "DEBUG"},
-}
+LOGGING = build_logging_config(root_level="DEBUG")

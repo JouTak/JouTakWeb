@@ -186,3 +186,16 @@ cython_debug/
 .env.production
 .env.production.secrets
 .husky/_
+
+# Node package managers: the SPA lives under frontend/, so the repo
+# root must never ship node_modules or a stray package.json/-lock.json.
+# They only appear when a tool is accidentally run from the repo root
+# instead of `frontend/`.
+node_modules/
+/package.json
+/package-lock.json
+
+# Local AI/coding-agent session transcripts. These may contain sensitive
+# context (secrets, internal URLs) and must not be committed.
+session-ses_*.md
+session-*.md

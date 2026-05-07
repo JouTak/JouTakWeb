@@ -7,6 +7,7 @@ from unittest.mock import patch
 from accounts.adapters import StrictAccountAdapter
 from accounts.mfa_adapter import EncryptedMFAAdapter
 from accounts.services.account_status import AccountStatusService
+from accounts.services.auth import AuthService
 from accounts.services.email_addresses import sync_user_email_address
 from accounts.services.personalization import (
     missing_personalization_fields,
@@ -95,7 +96,7 @@ class ProfileServiceTests(TestCase):
                 vk_username="valid_vk",
                 minecraft_nick="x",
             )
-        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertEqual(ctx.exception.status_code, 422)
         self.assertIn("minecraft_nick", str(ctx.exception.message))
 
     def test_update_profile_fields_sets_completed_at(self) -> None:
@@ -116,7 +117,7 @@ class ProfileServiceTests(TestCase):
                 self.user,
                 first_name="x" * (max_length + 1),
             )
-        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertEqual(ctx.exception.status_code, 422)
         self.assertIn("first_name", str(ctx.exception.message))
 
     def test_validate_avatar_upload_rejects_non_image_payload(self) -> None:
@@ -376,3 +377,63 @@ class SessionServiceTransactionTests(TransactionTestCase):
         ):
             SessionService.touch(request, self.user)
         self.assertTrue(observed.get("in_atomic", False))
+
+
+class AuthServiceIssuePairTests(TestCase):
+    """Regression coverage for the fallback-key gate in
+    ``AuthService.issue_pair_for_session``.
+
+    Issuing a JWT pair without *any* way to bind it to a session (no
+    Django session key, no `X-Session-Token` header) would create a
+    ``UserSessionMeta`` row whose ``session_key`` is empty and whose
+    refresh token cannot be revoked. The service must reject the
+    request with HTTP 401 instead of silently leaking an unrevocable
+    token.
+    """
+
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(
+            username="issue_pair_user",
+            email="issue_pair_user@example.com",
+            password=TEST_PASSWORD,
+        )
+        self.factory = RequestFactory()
+
+    def _request_without_session_binding(self) -> HttpRequest:
+        request = self.factory.post("/api/auth/login")
+        # Attach a session object but don't save it — `session_key`
+        # stays empty, mirroring the "no cookie yet / cookie cleared"
+        # case in real traffic.
+        middleware = SessionMiddleware(lambda _request: None)
+        middleware.process_request(request)
+        request.user = self.user
+        return request
+
+    def test_rejects_when_fallback_key_missing(self) -> None:
+        request = self._request_without_session_binding()
+
+        with self.assertRaises(HttpError) as ctx:
+            AuthService.issue_pair_for_session(request, self.user)
+
+        self.assertEqual(ctx.exception.status_code, 401)
+        self.assertEqual(str(ctx.exception.message), "session binding missing")
+        self.assertFalse(
+            UserSessionMeta.objects.filter(user=self.user).exists(),
+            "A UserSessionMeta must not be created when binding is missing",
+        )
+
+    def test_accepts_when_session_token_header_is_present(self) -> None:
+        request = self.factory.post(
+            "/api/auth/login", HTTP_X_SESSION_TOKEN="token-for-binding"
+        )
+        middleware = SessionMiddleware(lambda _request: None)
+        middleware.process_request(request)
+        request.user = self.user
+
+        pair = AuthService.issue_pair_for_session(request, self.user)
+
+        self.assertTrue(pair.access)
+        self.assertTrue(pair.refresh)
+        self.assertTrue(
+            UserSessionMeta.objects.filter(user=self.user).exists()
+        )

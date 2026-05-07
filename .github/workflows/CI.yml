@@ -112,7 +112,9 @@ jobs:
 
       - name: Bandit
         run: >
-          uv run bandit -r backend/accounts backend/core backend/backend
+          uv run bandit -r
+          backend/accounts backend/core backend/backend
+          backend/featureflags backend/observability
           -x "*/tests/*,*/migrations/*"
           --skip B104,B105
 
@@ -148,8 +150,10 @@ jobs:
           DATABASE_URL: sqlite:///./testdb.sqlite3
           FRONTEND_BASE_URL: https://joutak.ru
           DB_SSL_REQUIRED: "false"
-          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.joutak.ru
-          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru,https://api.joutak.ru
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.joutak.ru,admin.joutak.ru,api.localhost,admin.localhost
+          DJANGO_ADMIN_HOSTS: admin.joutak.ru,admin.localhost
+          DJANGO_API_HOSTS: api.joutak.ru,api.localhost
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru
           CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru
           USE_X_FORWARDED_PROTO: "false"
           SECURE_SSL_REDIRECT: "false"
@@ -177,13 +181,18 @@ jobs:
           POSTGRES_PASSWORD: ci_password
           DJANGO_SECRET_KEY: ci-secret-key-please-change
           FRONTEND_BASE_URL: https://joutak.ru
-          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
-          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru
+          DJANGO_ADMIN_HOSTS: admin.localhost,admin.joutak.ru
+          DJANGO_API_HOSTS: api.localhost,api.joutak.ru
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru
           CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
-          PUBLIC_API_URL: http://localhost:8000
+          PUBLIC_API_URL: http://api.localhost
         run: |
           docker compose -f docker-compose.yml config >/dev/null
           docker compose -f docker-compose.local.yml config >/dev/null
+          cp .env.example .env.production
+          docker compose -f stack.yml config >/dev/null
+          rm -f .env.production
 
       - name: Build backend image
         run: |
@@ -192,6 +201,63 @@ jobs:
       - name: Build frontend image
         run: |
           docker build -f ./frontend/Dockerfile -t joutakweb:ci ./frontend
+
+  smoke_stack:
+    name: Smoke stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Run smoke without OTEL endpoints
+        env:
+          POSTGRES_DB: smoke_db
+          POSTGRES_USER: smoke_user
+          POSTGRES_PASSWORD: smoke_password
+          DJANGO_SECRET_KEY: smoke-secret-key-change
+          FRONTEND_BASE_URL: http://localhost
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.localhost,admin.localhost,joutak.localhost
+          DJANGO_ADMIN_HOSTS: admin.localhost
+          DJANGO_API_HOSTS: api.localhost
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,http://joutak.localhost
+          CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,http://joutak.localhost
+          PUBLIC_API_URL: http://api.localhost
+        run: |
+          docker compose -f docker-compose.local.yml up -d --build
+          uv run python scripts/smoke_stack.py
+
+      - name: Restart stack with OTEL endpoints enabled
+        env:
+          POSTGRES_DB: smoke_db
+          POSTGRES_USER: smoke_user
+          POSTGRES_PASSWORD: smoke_password
+          DJANGO_SECRET_KEY: smoke-secret-key-change
+          FRONTEND_BASE_URL: http://localhost
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.localhost,admin.localhost,joutak.localhost
+          DJANGO_ADMIN_HOSTS: admin.localhost
+          DJANGO_API_HOSTS: api.localhost
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,http://joutak.localhost
+          CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,http://joutak.localhost
+          PUBLIC_API_URL: http://api.localhost
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
+          FRONTEND_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://127.0.0.1:4318/v1/traces
+        run: |
+          docker compose -f docker-compose.local.yml down -v
+          docker compose -f docker-compose.local.yml up -d --build
+          uv run python scripts/smoke_stack.py
+
+      - name: Shutdown smoke stack
+        if: always()
+        run: docker compose -f docker-compose.local.yml down -v
 
   secret_scan:
     name: Secret scan

@@ -11,12 +11,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../services/api";
 import {
-  getProfileDisplayName,
-  getProfileIdentityKey,
-} from "../utils/accountIdentity";
+  AUTH_STATE_EVENT,
+  hasStoredAuth,
+  logout,
+  me,
+  readStoredTokens,
+} from "../services/api";
+import { getProfileDisplayName } from "../utils/accountIdentity";
 import {
+  getPersonalizationNoticeKey,
+  hasSeenPersonalizationNotice,
+  isPostSignupPersonalizationSession,
+  markPersonalizationNoticeSeen,
+} from "../utils/personalizationNotice";
+import {
+  isLegacyPersonalization,
+  isNewRegistrationPersonalization,
   isPersonalizedProfile,
   needsPersonalization,
 } from "../utils/profileState";
@@ -24,7 +35,13 @@ import { getPathByProject, getProjectByPath } from "../utils/projectUtils";
 import AuthModal from "./AuthModal";
 import DynamicMenu from "./DynamicMenu";
 
-const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
+function isPersonalizationFlowPath(pathname) {
+  return (
+    pathname.startsWith("/account/complete-registration") ||
+    pathname.startsWith("/account/complete-profile") ||
+    pathname.startsWith("/account/onboarding")
+  );
+}
 
 function ProjectSelect() {
   const navigate = useNavigate();
@@ -66,6 +83,8 @@ const Header = () => {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [personalizationModalOpen, setPersonalizationModalOpen] =
     useState(false);
+  const [postSignupBannerDismissed, setPostSignupBannerDismissed] =
+    useState(false);
 
   const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
 
@@ -78,7 +97,17 @@ const Header = () => {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    setPostSignupBannerDismissed(false);
+  }, [profile?.email, profile?.username]);
+
   const loadProfileIfTokens = useCallback(async () => {
+    const tokens = readStoredTokens();
+    if (tokens?.pending_mfa) {
+      setProfile(null);
+      setLoadingProfile(false);
+      return;
+    }
     if (!hasStoredAuth()) {
       setProfile(null);
       return;
@@ -128,19 +157,26 @@ const Header = () => {
     () => isPersonalizedProfile(profile),
     [profile],
   );
+  const legacyPersonalization = isLegacyPersonalization(profile);
+  const showPostSignupBanner =
+    profile &&
+    !authOpen &&
+    !postSignupBannerDismissed &&
+    !isPersonalizationFlowPath(location.pathname) &&
+    needsPersonalization(profile) &&
+    isNewRegistrationPersonalization(profile) &&
+    isPostSignupPersonalizationSession(profile);
 
   const personalizationNoticeKey = useMemo(() => {
-    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${getProfileIdentityKey(profile)}`;
+    return getPersonalizationNoticeKey(profile);
   }, [profile]);
 
   const closePersonalizationModal = useCallback(
     ({ markSeen = true } = {}) => {
-      if (markSeen && getProfileIdentityKey(profile) !== "guest") {
-        localStorage.setItem(personalizationNoticeKey, "1");
-      }
+      if (markSeen) markPersonalizationNoticeSeen(profile);
       setPersonalizationModalOpen(false);
     },
-    [personalizationNoticeKey, profile],
+    [profile],
   );
 
   const openPersonalizationFlow = useCallback(() => {
@@ -148,16 +184,30 @@ const Header = () => {
     navigate("/account/complete-profile");
   }, [closePersonalizationModal, navigate]);
 
+  const openRegistrationSetup = useCallback(() => {
+    navigate("/account/complete-registration");
+  }, [navigate]);
+
   useEffect(() => {
     if (!profile || authOpen) return;
-    if (location.pathname.startsWith("/account/complete-registration")) return;
-    if (location.pathname.startsWith("/account/complete-profile")) return;
-    if (location.pathname.startsWith("/account/onboarding")) return;
+    if (isPersonalizationFlowPath(location.pathname)) return;
     if (!needsPersonalization(profile)) return;
     if (profile?.personalization_interstitial_enabled === false) return;
-    if (localStorage.getItem(personalizationNoticeKey) === "1") return;
+    if (
+      !isLegacyPersonalization(profile) &&
+      isPostSignupPersonalizationSession(profile)
+    ) {
+      return;
+    }
+    if (hasSeenPersonalizationNotice(profile)) return;
     setPersonalizationModalOpen(true);
   }, [authOpen, location.pathname, personalizationNoticeKey, profile]);
+
+  useEffect(() => {
+    if (isPersonalizationFlowPath(location.pathname)) {
+      setPersonalizationModalOpen(false);
+    }
+  }, [location.pathname]);
 
   const renderAccountSwitcher = (switcherProps) => (
     <Button
@@ -246,6 +296,45 @@ const Header = () => {
             </div>
           </div>
         </nav>
+        {showPostSignupBanner && (
+          <div
+            style={{
+              borderBottom: "1px solid rgba(255, 190, 92, 0.35)",
+              background: "rgba(255, 163, 0, 0.12)",
+              padding: "10px 16px",
+            }}
+          >
+            <div
+              className="container-fluid"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "grid", gap: 2 }}>
+                <b>Аккаунт создан. Осталось завершить регистрацию.</b>
+                <span style={{ opacity: 0.85 }}>
+                  Публичные разделы доступны, а профиль и персональные функции
+                  откроются после 2 коротких шагов.
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button view="action" onClick={openRegistrationSetup}>
+                  Завершить
+                </Button>
+                <Button
+                  view="flat"
+                  onClick={() => setPostSignupBannerDismissed(true)}
+                >
+                  Позже
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       <Offcanvas
@@ -277,11 +366,14 @@ const Header = () => {
       >
         <div style={{ padding: 24, display: "grid", gap: 12 }}>
           <h3 id="personalization-modal-title" style={{ margin: 0 }}>
-            Обязательная персонализация профиля
+            {legacyPersonalization
+              ? "Нужно обновить данные профиля"
+              : "Завершите регистрацию"}
           </h3>
           <p style={{ margin: 0, opacity: 0.9 }}>
-            Мы обновили требования профиля. Чтобы использовать часть функций,
-            нужно заполнить обязательные данные аккаунта.
+            {legacyPersonalization
+              ? "Мы обновили требования профиля. Чтобы использовать часть функций, нужно заполнить обязательные данные аккаунта."
+              : "Чтобы открыть профиль и персональные функции, заполните 2 коротких шага персонализации."}
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Label theme="warning" size="s">
@@ -309,7 +401,7 @@ const Header = () => {
               Позже
             </Button>
             <Button view="action" onClick={openPersonalizationFlow}>
-              Заполнить сейчас
+              {legacyPersonalization ? "Заполнить сейчас" : "Завершить"}
             </Button>
           </div>
         </div>

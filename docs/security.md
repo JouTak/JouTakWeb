@@ -62,6 +62,46 @@ trusted proxy CIDRs до того, как доверять forwarded client IP d
 third-party assets. Сужение `style-src 'unsafe-inline'` зависит от удаления
 inline style blocks.
 
+### Follow-up: сужение `style-src 'unsafe-inline'`
+
+Gravity UI и часть наших React-компонентов генерируют inline `style={...}`
+атрибуты, из-за которых на фронтенде пока нельзя отказаться от
+`'unsafe-inline'` в `style-src`. Это ослабляет защиту от XSS и считается
+techincal debt.
+
+План перехода (не блокер этого релиза, но must-have для следующего
+security milestone'а):
+
+1. Аудит inline-стилей: найти компоненты, где inline-стиль реально
+   зависит от runtime-данных (динамические цвета, вычисленные размеры)
+   и перенести остальные в CSS-классы/модули.
+2. Для остаточных динамических стилей включить CSP nonce: выдавать
+   per-request nonce через `django-csp` (или аналог), передавать его в
+   SSR-шаблон, подмешивать в inline `<style>` и в атрибут.
+3. Заменить в `frontend/nginx.conf` `'unsafe-inline'` на
+   `'nonce-{NONCE}'` + `'strict-dynamic'`.
+4. Прогнать smoke-стек и визуальные regression-тесты, т.к. часть
+   сторонних компонентов может поломаться — тогда fallback через
+   allowlist hash'ей.
+
+## MFA Encryption
+
+TOTP/WebAuthn секреты в `allauth.mfa.Authenticator.data` шифруются
+`accounts.mfa_adapter.EncryptedMFAAdapter`. Ключи:
+
+- `MFA_ENCRYPTION_KEYS` — список Fernet-совместимых ключей; первый из них
+  используется для новых шифрований, остальные применяются при
+  расшифровке и ротации.
+- `SECRET_KEY` включается в набор ключей через
+  `MFA_ENCRYPTION_INCLUDE_LEGACY_SECRET_KEY=True` (значение по умолчанию)
+  ради обратной совместимости со старыми инсталляциями, где MFA секреты
+  шифровались Django secret key'ом.
+
+Если ротируете `DJANGO_SECRET_KEY`, сначала добавьте новый ключ в
+`MFA_ENCRYPTION_KEYS`, запустите `manage.py reencrypt_mfa_authenticators`,
+и только потом удаляйте старый secret key. Иначе существующие TOTP
+секреты окажутся нерасшифровываемыми.
+
 ## Reporting
 
 Сообщайте о vulnerabilities приватно maintainers. Не открывайте публичные

@@ -7,7 +7,7 @@ const firstLine = message.split(/\r?\n/, 1)[0] || "";
 const allowedMergePrefixes = [
   "Merge branch ",
   "Merge pull request ",
-  "Revert \"",
+  'Revert "',
 ];
 
 const conventionalPattern =

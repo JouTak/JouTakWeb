@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  allauthAppRequest,
   HARD_LOGOUT_REASONS,
   requestWithSession,
   setupAxiosInterceptors,
@@ -96,5 +97,35 @@ describe("sessionClient", () => {
     expect(hardLogout).toHaveBeenCalledWith({
       reason: HARD_LOGOUT_REASONS.REFRESH_FAILED,
     });
+  });
+
+  it("can call allauth app endpoints without stored auth headers", async () => {
+    tokenStore.set({ session_token: "session", access: "access-token" });
+    const request = vi
+      .spyOn(bareClient, "request")
+      .mockResolvedValueOnce(response({ ok: true }));
+
+    await allauthAppRequest("get", "/auth/email/verify", {
+      headers: { "X-Email-Verification-Key": "key" },
+      includeSession: false,
+    });
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          Authorization: "Bearer access-token",
+          "X-Session-Token": "session",
+        }),
+      }),
+    );
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-Allauth-Client": "app",
+          "X-Client": "app",
+          "X-Email-Verification-Key": "key",
+        }),
+      }),
+    );
   });
 });

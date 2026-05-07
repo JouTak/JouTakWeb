@@ -11,35 +11,47 @@ from bff.services import (
 )
 
 
+def _build_bff_response(request, *, page, build_payload):
+    """
+    Construct a BFF JSON response with feature-flag cookies attached.
+
+    The response is created empty first so that ``build_context`` can
+    attach Set-Cookie headers (anonymous ID, override cookies). After
+    context is ready, the payload is serialized into the response body.
+    """
+    response = JsonResponse({}, content_type="application/json")
+    context, _created = build_context(request, page=page, response=response)
+    payload = build_payload(request=request, context=context)
+    response.content = JsonResponse(payload).content
+    return response
+
+
 @require_GET
 def bootstrap(request):
-    response = JsonResponse({})
-    context, _created = build_context(
-        request, page="homepage", response=response
+    return _build_bff_response(
+        request,
+        page="homepage",
+        build_payload=lambda request, context: (
+            build_bootstrap_payload(request, context)
+        ),
     )
-    response.content = JsonResponse(
-        build_bootstrap_payload(request, context)
-    ).content
-    return response
 
 
 @require_GET
 def homepage(request):
-    response = JsonResponse({})
-    context, _created = build_context(
-        request, page="homepage", response=response
+    return _build_bff_response(
+        request,
+        page="homepage",
+        build_payload=lambda request, context: build_home_payload(context),
     )
-    response.content = JsonResponse(build_home_payload(context)).content
-    return response
 
 
 @require_GET
 def account_summary(request):
-    response = JsonResponse({})
-    context, _created = build_context(
-        request, page="account", response=response
+    return _build_bff_response(
+        request,
+        page="account",
+        build_payload=lambda request, context: (
+            build_account_summary_payload(request, context)
+        ),
     )
-    response.content = JsonResponse(
-        build_account_summary_payload(request, context)
-    ).content
-    return response

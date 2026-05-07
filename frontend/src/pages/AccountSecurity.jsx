@@ -9,8 +9,6 @@ import EmailCard from "../components/account/EmailCard";
 import MfaCard from "../components/account/MfaCard";
 import PasswordCard from "../components/account/PasswordCard";
 import ProfileCard from "../components/account/ProfileCard";
-// import PasskeysCard from '../components/account/PasskeysCard';
-// import OauthCard from '../components/account/OauthCard';
 import SessionsCard from "../components/account/SessionsCard";
 import { getEmailStatus, listSessionsHeadless, me } from "../services/api";
 import { needsPersonalization } from "../utils/profileState";
@@ -416,8 +414,6 @@ export default function AccountSecurity() {
       <EmailCard initialStatus={emailStatus || fallbackEmailStatus(profile)} />
       <PasswordCard identityHint={profile?.email || profile?.username || ""} />
       <MfaCard profile={profile} />
-      {/*<PasskeysCard />*/}
-      {/*<OauthCard />*/}
       <SessionsCard initialSessions={sessionsPayload || { sessions: [] }} />
       <DeleteAccountCard />
     </div>

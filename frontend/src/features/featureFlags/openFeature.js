@@ -5,16 +5,17 @@ let initialized = false;
 
 function toFlagConfiguration(features) {
   return Object.fromEntries(
-    Object.entries(features || {}).map(([key, value]) => [
-      key,
-      {
-        disabled: false,
-        variants: {
-          enabled: value,
+    Object.entries(features || {}).map(([key, value]) => {
+      const variant = String(value);
+      return [
+        key,
+        {
+          disabled: false,
+          variants: { [variant]: variant },
+          defaultVariant: variant,
         },
-        defaultVariant: "enabled",
-      },
-    ]),
+      ];
+    }),
   );
 }
 

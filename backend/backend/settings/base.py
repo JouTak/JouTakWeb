@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     # Third-party
     "corsheaders",
     "axes",
+    "simple_history",
     "ninja",
     "ninja_jwt",
     "ninja_jwt.token_blacklist",
@@ -105,6 +106,7 @@ MIDDLEWARE = [
     "allauth.usersessions.middleware.UserSessionsMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
 

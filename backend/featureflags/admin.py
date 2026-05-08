@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from django.contrib import admin
 from django.db.models import Count
+from simple_history.admin import SimpleHistoryAdmin
 
 from featureflags.models import (
     ExperimentAssignment,
     FeatureDefinition,
+    FeatureGroup,
     FeatureOverride,
     FeatureRule,
 )
@@ -21,6 +23,7 @@ class FeatureRuleInline(admin.TabularInline):
         "value",
         "page",
         "actor_ids",
+        "group_ids",
         "percentage",
         "enabled",
     )
@@ -43,7 +46,7 @@ class FeatureOverrideInline(admin.TabularInline):
 
 
 @admin.register(FeatureDefinition)
-class FeatureDefinitionAdmin(admin.ModelAdmin):
+class FeatureDefinitionAdmin(SimpleHistoryAdmin):
     list_display = (
         "key",
         "kind",
@@ -82,7 +85,7 @@ class FeatureDefinitionAdmin(admin.ModelAdmin):
 
 
 @admin.register(FeatureRule)
-class FeatureRuleAdmin(admin.ModelAdmin):
+class FeatureRuleAdmin(SimpleHistoryAdmin):
     list_display = (
         "feature",
         "name",
@@ -99,7 +102,7 @@ class FeatureRuleAdmin(admin.ModelAdmin):
 
 
 @admin.register(FeatureOverride)
-class FeatureOverrideAdmin(admin.ModelAdmin):
+class FeatureOverrideAdmin(SimpleHistoryAdmin):
     list_display = (
         "feature",
         "scope_type",
@@ -135,3 +138,23 @@ class ExperimentAssignmentAdmin(admin.ModelAdmin):
     search_fields = ("feature__key", "subject_key", "value")
     list_select_related = ("feature",)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(FeatureGroup)
+class FeatureGroupAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "member_count", "created_at")
+    search_fields = ("name", "slug", "description")
+    prepopulated_fields = {"slug": ("name",)}
+    filter_horizontal = ("members",)
+    readonly_fields = ("created_at", "updated_at")
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(_member_count=Count("members", distinct=True))
+        )
+
+    @admin.display(description="Members", ordering="_member_count")
+    def member_count(self, obj) -> int:
+        return int(getattr(obj, "_member_count", 0))

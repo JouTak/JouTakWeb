@@ -18,6 +18,7 @@ from featureflags.models import (
     AssignmentSubjectType,
     ExperimentAssignment,
     FeatureDefinition,
+    FeatureGroup,
     FeatureKind,
     FeatureOverrideScope,
     FeatureRule,
@@ -298,6 +299,15 @@ def _rule_matches(
         return user_id is not None
     if rule.rule_type == FeatureRuleType.STAFF:
         return context.is_staff
+    if rule.rule_type == FeatureRuleType.GROUP:
+        if user_id is None:
+            return False
+        group_ids = [int(gid) for gid in rule.group_ids if gid]
+        if not group_ids:
+            return False
+        return FeatureGroup.objects.filter(
+            pk__in=group_ids, members__pk=user_id
+        ).exists()
     if rule.rule_type == FeatureRuleType.USER_ALLOWLIST:
         return user_id is not None and str(user_id) in {
             str(v) for v in rule.actor_ids

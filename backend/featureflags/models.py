@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.conf import settings
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class FeatureKind(models.TextChoices):
@@ -13,6 +14,7 @@ class FeatureRuleType(models.TextChoices):
     EVERYONE = "everyone", "Everyone"
     AUTHENTICATED = "authenticated", "Authenticated"
     STAFF = "staff", "Staff"
+    GROUP = "group", "Group membership"
     USER_ALLOWLIST = "user_allowlist", "User allowlist"
     USER_DENYLIST = "user_denylist", "User denylist"
     ANONYMOUS_ALLOWLIST = "anonymous_allowlist", "Anonymous allowlist"
@@ -44,6 +46,7 @@ class FeatureDefinition(models.Model):
     sticky_assignment = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ["key"]
@@ -67,10 +70,16 @@ class FeatureRule(models.Model):
     value = models.CharField(max_length=64)
     page = models.CharField(max_length=64, blank=True, default="")
     actor_ids = models.JSONField(default=list, blank=True)
+    group_ids = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of FeatureGroup IDs for GROUP rule type.",
+    )
     percentage = models.PositiveSmallIntegerField(null=True, blank=True)
     enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ["priority", "id"]
@@ -103,6 +112,7 @@ class FeatureOverride(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = (("feature", "scope_type", "scope_value"),)
@@ -139,3 +149,30 @@ class ExperimentAssignment(models.Model):
             f"{self.feature.key}:{self.subject_type}:"
             f"{self.subject_key}:{self.page}"
         )
+
+
+class FeatureGroup(models.Model):
+    """
+    A named segment of users for group-based feature flag targeting.
+
+    Unlike Django's built-in auth.Group (which is permissions-focused),
+    FeatureGroup is designed specifically for feature rollout segmentation
+    and can be managed independently by non-superuser staff.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.TextField(blank=True, default="")
+    members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="feature_groups",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name

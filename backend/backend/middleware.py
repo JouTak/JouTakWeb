@@ -12,7 +12,7 @@ from observability.logging import (
 
 from backend.admin_site import admin_mfa_is_enabled, is_admin_mfa_verified
 
-ADMIN_ALLOWED_PREFIXES = ("/admin/", "/accounts/", "/static/", "/media/")
+ADMIN_ALLOWED_PREFIXES = ("/admin/", "/static/", "/media/")
 API_BLOCKED_PREFIXES = ("/admin/", "/static/admin/")
 REQUEST_ID_HEADER = "X-Request-ID"
 

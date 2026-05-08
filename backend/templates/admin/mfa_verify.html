@@ -9,41 +9,174 @@
 
 {% block content %}
 <div id="content-main">
+  <h2 style="margin-bottom: 16px;">{{ title }}</h2>
+
+  <p style="margin-bottom: 16px; color: var(--body-quiet-fg, #666);">
+    Подтвердите вход как <strong>{{ username }}</strong>
+  </p>
+
+  {% if has_passkeys %}
+  <div id="passkey-section" style="margin-bottom: 24px; padding: 16px; border: 1px solid var(--hairline-color, #ddd); border-radius: 8px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C9.24 2 7 4.24 7 7C7 9.76 9.24 12 12 12C14.76 12 17 9.76 17 7C17 4.24 14.76 2 12 2ZM12 10C10.34 10 9 8.66 9 7C9 5.34 10.34 4 12 4C13.66 4 15 5.34 15 7C15 8.66 13.66 10 12 10Z" fill="currentColor"/>
+        <path d="M13 14H11C7.69 14 5 16.69 5 20V22H7V20C7 17.79 8.79 16 11 16H13C13.55 16 14.08 16.11 14.57 16.3L15.83 14.67C14.98 14.24 14.02 14 13 14Z" fill="currentColor"/>
+        <path d="M18 16L16 18L18 20L16 22H22V20L20 18L22 16H18Z" fill="currentColor"/>
+      </svg>
+      <strong style="font-size: 15px;">Вход с Passkey</strong>
+    </div>
+    <button type="button" id="passkey-btn"
+            style="width: 100%; padding: 10px 16px; font-size: 14px; font-weight: 500;
+                   background: var(--button-bg, #417690); color: #fff; border: none;
+                   border-radius: 6px; cursor: pointer;"
+            onclick="startPasskeyAuth()">
+      Использовать Passkey
+    </button>
+    <p id="passkey-error" style="color: var(--error-fg, #ba2121); margin-top: 8px; display: none;"></p>
+    <p id="passkey-loading" style="color: var(--body-quiet-fg, #666); margin-top: 8px; display: none;">
+      Ожидание ответа от аутентификатора...
+    </p>
+  </div>
+
+  <div style="text-align: center; margin-bottom: 16px; color: var(--body-quiet-fg, #666); font-size: 13px;">
+    — или введите код из приложения —
+  </div>
+  {% endif %}
+
   <form method="post" action="">
     {% csrf_token %}
-
-    <h2 style="margin-bottom: 16px;">{{ title }}</h2>
-
-    <p style="margin-bottom: 12px;">
-      Enter the verification code from your authenticator app
-      or a recovery code to continue as <strong>{{ username }}</strong>.
-    </p>
 
     {% if error %}
     <p class="errornote" style="margin-bottom: 12px;">{{ error }}</p>
     {% endif %}
 
     <div class="form-row" style="margin-bottom: 16px;">
-      <label for="id_mfa_code">Verification code:</label>
+      <label for="id_mfa_code">Код подтверждения:</label>
       <input type="text"
              name="mfa_code"
              id="id_mfa_code"
-             autofocus
+             {% if not has_passkeys %}autofocus{% endif %}
              autocomplete="one-time-code"
              inputmode="numeric"
-             pattern="[0-9 ]*"
+             pattern="[0-9a-zA-Z ]*"
              placeholder="000 000"
              style="width: 200px; font-size: 16px; padding: 6px 10px;"
-             required>
+             >
+      <p style="margin-top: 6px; font-size: 12px; color: var(--body-quiet-fg, #666);">
+        Код из приложения-аутентификатора или код восстановления
+      </p>
     </div>
 
     <div class="submit-row" style="margin-top: 16px;">
-      <input type="submit" value="Verify" class="default">
+      <input type="submit" value="Подтвердить">
       <a href="/admin/login/"
          style="margin-left: 12px; color: var(--link-fg, #447e9b);">
-        Cancel and return to login
+        Отмена
       </a>
     </div>
   </form>
 </div>
+
+{% if has_passkeys %}
+<script>
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return '';
+}
+
+function base64urlToBuffer(base64url) {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = base64.length % 4 === 0 ? '' : '='.repeat(4 - (base64.length % 4));
+  const binary = atob(base64 + pad);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function bufferToBase64url(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function startPasskeyAuth() {
+  const btn = document.getElementById('passkey-btn');
+  const errEl = document.getElementById('passkey-error');
+  const loadEl = document.getElementById('passkey-loading');
+  errEl.style.display = 'none';
+  loadEl.style.display = 'block';
+  btn.disabled = true;
+
+  try {
+    // 1. Get challenge from server
+    const optResp = await fetch('/admin/mfa-verify/webauthn-options/', {
+      method: 'GET',
+      headers: {'X-CSRFToken': getCookie('csrftoken')},
+      credentials: 'same-origin',
+    });
+    if (!optResp.ok) throw new Error('Не удалось получить параметры');
+    const options = await optResp.json();
+
+    // 2. Prepare publicKey options
+    const publicKey = options.publicKey || options;
+    publicKey.challenge = base64urlToBuffer(publicKey.challenge);
+    if (publicKey.allowCredentials) {
+      publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({
+        ...c,
+        id: base64urlToBuffer(c.id),
+      }));
+    }
+
+    // 3. Call WebAuthn API
+    loadEl.textContent = 'Подтвердите на устройстве...';
+    const credential = await navigator.credentials.get({publicKey});
+
+    // 4. Serialize response
+    const body = {
+      id: credential.id,
+      rawId: bufferToBase64url(credential.rawId),
+      type: credential.type,
+      response: {
+        authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+        signature: bufferToBase64url(credential.response.signature),
+        userHandle: credential.response.userHandle
+          ? bufferToBase64url(credential.response.userHandle)
+          : null,
+      },
+    };
+
+    // 5. Send to server for verification
+    const verifyResp = await fetch('/admin/mfa-verify/webauthn-complete/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(body),
+    });
+
+    const result = await verifyResp.json();
+    if (result.ok && result.redirect) {
+      window.location.href = result.redirect;
+    } else {
+      throw new Error(result.error || 'Верификация не пройдена');
+    }
+  } catch (e) {
+    loadEl.style.display = 'none';
+    btn.disabled = false;
+    if (e.name === 'NotAllowedError') {
+      errEl.textContent = 'Операция отменена пользователем.';
+    } else {
+      errEl.textContent = e.message || 'Ошибка Passkey аутентификации';
+    }
+    errEl.style.display = 'block';
+  }
+}
+</script>
+{% endif %}
 {% endblock %}

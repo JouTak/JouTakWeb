@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 
 from allauth.mfa.adapter import get_adapter as get_mfa_adapter
@@ -10,7 +11,12 @@ from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login as auth_login
 from django.core.exceptions import ValidationError
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseRedirect,
+    JsonResponse,
+)
 from django.shortcuts import render
 from django.urls import path
 from django.utils.html import format_html
@@ -35,14 +41,16 @@ def is_admin_mfa_verified(request: HttpRequest) -> bool:
     return request.session.get(SESSION_KEY_ADMIN_MFA_VERIFIED, False) is True
 
 
+def _user_has_webauthn(user) -> bool:
+    """Check if the user has any WebAuthn authenticators enrolled."""
+    return Authenticator.objects.filter(
+        user=user, type=Authenticator.Type.WEBAUTHN
+    ).exists()
+
+
 class AdminMFAAuthenticationForm(AdminAuthenticationForm):
     """
     Admin login form that blocks staff without MFA enrollment.
-
-    Staff users who have NOT enrolled any MFA factor cannot log in
-    and are directed to the frontend security settings page.
-    Staff users who HAVE MFA pass form validation — the MFA code
-    challenge happens on a separate intermediate page after this.
     """
 
     def confirm_login_allowed(self, user) -> None:
@@ -50,17 +58,15 @@ class AdminMFAAuthenticationForm(AdminAuthenticationForm):
         if not getattr(user, "is_staff", False):
             return
         if admin_mfa_is_enabled(user):
-            # User has MFA: credentials are valid, MFA step comes next.
             return
-        # Staff without MFA: block login entirely.
         mfa_setup_url = (
             f"{settings.FRONTEND_BASE_URL.rstrip('/')}/account/security#mfa"
         )
         raise ValidationError(
             format_html(
-                "Admin access requires a configured MFA factor. "
-                '<a href="{}">Open account security settings</a> '
-                "and add an authenticator app code or passkey first.",
+                "Для доступа в админку необходим настроенный 2FA. "
+                '<a href="{}">Откройте настройки безопасности</a> '
+                "и добавьте приложение-аутентификатор или Passkey.",
                 mfa_setup_url,
             ),
             code="admin_mfa_required",
@@ -75,11 +81,6 @@ class JouTakAdminSite(AdminSite):
     login_form = AdminMFAAuthenticationForm
 
     def has_permission(self, request) -> bool:
-        """
-        Strict permission check: staff must be MFA-verified if they
-        have MFA enrolled. This prevents any bypass path from granting
-        admin access without 2FA completion.
-        """
         user = getattr(request, "user", None)
         if not (
             user and user.is_active and user.is_authenticated and user.is_staff
@@ -91,25 +92,15 @@ class JouTakAdminSite(AdminSite):
 
     def login(self, request: HttpRequest, extra_context=None) -> HttpResponse:
         """
-        Complete override of admin login. On POST:
-
-        1. Validate credentials via AdminMFAAuthenticationForm
-        2. If user has MFA enrolled -> DO NOT call auth_login(), store
-           user PK in session, redirect to /admin/mfa-verify/
-        3. If user has no MFA -> blocked by confirm_login_allowed()
-        4. If form invalid -> show errors, never delegate to super()
-
-        super().login() is ONLY used for GET (render empty form).
-        This prevents Django's LoginView.form_valid() from calling
-        auth_login() and bypassing the MFA challenge.
+        Complete override of admin login POST. Never delegates to
+        super().login() on POST to prevent LoginView.form_valid()
+        from calling auth_login() and bypassing MFA.
         """
         if request.method == "POST":
             form = self.login_form(request, data=request.POST)
             if form.is_valid():
                 user = form.get_user()
                 if admin_mfa_is_enabled(user):
-                    # DO NOT call auth_login(). The user is NOT
-                    # authenticated until they pass TOTP/recovery.
                     request.session[SESSION_KEY_ADMIN_MFA_PENDING_USER] = (
                         user.pk
                     )
@@ -120,19 +111,15 @@ class JouTakAdminSite(AdminSite):
                         user.pk,
                     )
                     return HttpResponseRedirect("/admin/mfa-verify/")
-                # No MFA enrolled (should not reach here due to
-                # confirm_login_allowed, but handle defensively).
                 auth_login(
                     request,
                     user,
-                    backend="django.contrib.auth.backends.ModelBackend",
+                    backend=("django.contrib.auth.backends.ModelBackend"),
                 )
                 request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
                 return HttpResponseRedirect(
                     request.POST.get("next", "/admin/")
                 )
-            # Invalid form: render with errors. Do NOT delegate to
-            # super().login() which has its own auth_login() path.
             context = self.each_context(request)
             context.update(
                 {
@@ -144,7 +131,6 @@ class JouTakAdminSite(AdminSite):
             )
             return render(request, "admin/login.html", context)
 
-        # GET: delegate to standard admin login view rendering.
         return super().login(request, extra_context=extra_context)
 
     def get_urls(self):
@@ -154,81 +140,137 @@ class JouTakAdminSite(AdminSite):
                 never_cache(csrf_protect(self.mfa_verify_view)),
                 name="admin_mfa_verify",
             ),
+            path(
+                "mfa-verify/webauthn-options/",
+                never_cache(csrf_protect(self.webauthn_options_view)),
+                name="admin_mfa_webauthn_options",
+            ),
+            path(
+                "mfa-verify/webauthn-complete/",
+                never_cache(csrf_protect(self.webauthn_complete_view)),
+                name="admin_mfa_webauthn_complete",
+            ),
         ]
         return custom_urls + super().get_urls()
 
-    def mfa_verify_view(self, request: HttpRequest) -> HttpResponse:
-        """
-        MFA verification page: TOTP or recovery code input.
-
-        This view is NOT wrapped in admin_view() (which calls
-        has_permission and would create a catch-22 since permission
-        requires MFA to be verified). Access is guarded by the
-        SESSION_KEY_ADMIN_MFA_PENDING_USER session key.
-        """
+    def _get_pending_user(self, request):
+        """Resolve and validate the pending MFA user from session."""
         user_model = get_user_model()
         pending_pk = request.session.get(SESSION_KEY_ADMIN_MFA_PENDING_USER)
-
         if not pending_pk:
-            return HttpResponseRedirect("/admin/login/")
-
+            return None
         try:
-            user = user_model.objects.get(
+            return user_model.objects.get(
                 pk=pending_pk, is_staff=True, is_active=True
             )
         except user_model.DoesNotExist:
             request.session.pop(SESSION_KEY_ADMIN_MFA_PENDING_USER, None)
+            return None
+
+    def _complete_mfa_login(self, request, user):
+        """Finalize admin login after MFA verification."""
+        request.session.pop(SESSION_KEY_ADMIN_MFA_PENDING_USER, None)
+        auth_login(
+            request,
+            user,
+            backend="django.contrib.auth.backends.ModelBackend",
+        )
+        request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
+        logger.info(
+            "Admin MFA verification successful for user=%s",
+            user.pk,
+        )
+
+    def mfa_verify_view(self, request: HttpRequest) -> HttpResponse:
+        """MFA verification page: TOTP, recovery code, or Passkey."""
+        user = self._get_pending_user(request)
+        if not user:
             return HttpResponseRedirect("/admin/login/")
+
+        has_passkeys = _user_has_webauthn(user)
 
         error = ""
         if request.method == "POST":
             code = request.POST.get("mfa_code", "").strip()
             if not code:
-                error = "Please enter a verification code."
+                error = "Введите код подтверждения."
             elif self._verify_mfa_code(user, code):
-                # MFA verified: NOW we call auth_login() for the first
-                # time in this entire flow.
-                request.session.pop(SESSION_KEY_ADMIN_MFA_PENDING_USER, None)
-                auth_login(
-                    request,
-                    user,
-                    backend="django.contrib.auth.backends.ModelBackend",
-                )
-                request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
-                logger.info(
-                    "Admin MFA verification successful for user=%s",
-                    user.pk,
-                )
+                self._complete_mfa_login(request, user)
                 return HttpResponseRedirect("/admin/")
             else:
-                error = "Invalid code. Please try again."
+                error = "Неверный код. Попробуйте ещё раз."
                 logger.warning(
                     "Admin MFA verification failed for user=%s",
                     user.pk,
                 )
 
         context = {
-            "title": "Two-Factor Authentication",
+            "title": "Двухфакторная аутентификация",
             "username": user.get_username(),
             "error": error,
+            "has_passkeys": has_passkeys,
             "site_header": self.site_header,
             "site_title": self.site_title,
         }
         return render(request, "admin/mfa_verify.html", context)
 
+    def webauthn_options_view(self, request: HttpRequest) -> HttpResponse:
+        """Return WebAuthn authentication options (challenge) as JSON."""
+        from allauth.core import context as allauth_context
+        from allauth.mfa.webauthn.internal.auth import (
+            begin_authentication,
+        )
+
+        user = self._get_pending_user(request)
+        if not user:
+            return JsonResponse({"error": "No pending user"}, status=403)
+
+        # allauth's webauthn uses context.request for session state
+        allauth_context.request = request
+        try:
+            options = begin_authentication(user=user)
+        finally:
+            allauth_context.request = None
+
+        return JsonResponse(options)
+
+    def webauthn_complete_view(self, request: HttpRequest) -> HttpResponse:
+        """Verify a WebAuthn authentication response."""
+        from allauth.core import context as allauth_context
+        from allauth.mfa.webauthn.internal.auth import (
+            complete_authentication,
+        )
+
+        user = self._get_pending_user(request)
+        if not user:
+            return JsonResponse({"error": "No pending user"}, status=403)
+
+        try:
+            body = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        allauth_context.request = request
+        try:
+            complete_authentication(user, body)
+        except Exception:
+            logger.warning(
+                "Admin WebAuthn verification failed for user=%s",
+                user.pk,
+            )
+            return JsonResponse({"error": "Verification failed"}, status=400)
+        finally:
+            allauth_context.request = None
+
+        self._complete_mfa_login(request, user)
+        return JsonResponse({"ok": True, "redirect": "/admin/"})
+
     @staticmethod
     def _verify_mfa_code(user, code: str) -> bool:
         """
-        Verify a TOTP or recovery code against the user's allauth.mfa
+        Verify a TOTP or recovery code against allauth.mfa
         enrolled authenticators.
-
-        Uses authenticator.wrap().validate_code() which handles:
-        - Secret decryption (via EncryptedMFAAdapter)
-        - TOTP time-window tolerance
-        - Code reuse prevention
-        - Recovery code single-use consumption
         """
-        # TOTP authenticators
         totp_authenticators = Authenticator.objects.filter(
             user=user, type=Authenticator.Type.TOTP
         )
@@ -237,7 +279,6 @@ class JouTakAdminSite(AdminSite):
             if instance.validate_code(code):
                 return True
 
-        # Recovery codes (single-use, consumed on success)
         recovery_authenticators = Authenticator.objects.filter(
             user=user, type=Authenticator.Type.RECOVERY_CODES
         )

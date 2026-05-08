@@ -6,7 +6,7 @@ from openfeature import api
 class FeatureFlagsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "featureflags"
-    verbose_name = "Feature Flags"
+    verbose_name = "Фича-флаги"
 
     def ready(self) -> None:
         provider_cls = import_string(

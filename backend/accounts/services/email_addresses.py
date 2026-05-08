@@ -45,4 +45,3 @@ def sync_user_email_address(user) -> EmailAddressSyncResult:
         result.updated_user_email = True
 
     return result
-

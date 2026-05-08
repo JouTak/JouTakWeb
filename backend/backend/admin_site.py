@@ -122,7 +122,11 @@ class JouTakAdminSite(AdminSite):
                     return HttpResponseRedirect("/admin/mfa-verify/")
                 # No MFA enrolled (should not reach here due to
                 # confirm_login_allowed, but handle defensively).
-                auth_login(request, user)
+                auth_login(
+                    request,
+                    user,
+                    backend="django.contrib.auth.backends.ModelBackend",
+                )
                 request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
                 return HttpResponseRedirect(
                     request.POST.get("next", "/admin/")
@@ -185,7 +189,11 @@ class JouTakAdminSite(AdminSite):
                 # MFA verified: NOW we call auth_login() for the first
                 # time in this entire flow.
                 request.session.pop(SESSION_KEY_ADMIN_MFA_PENDING_USER, None)
-                auth_login(request, user)
+                auth_login(
+                    request,
+                    user,
+                    backend="django.contrib.auth.backends.ModelBackend",
+                )
                 request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
                 logger.info(
                     "Admin MFA verification successful for user=%s",

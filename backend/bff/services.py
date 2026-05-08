@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from accounts.services.auth import AuthService
 from django.http import HttpRequest
+from featureflags.registry import get_flags_for_page
 from featureflags.services import RequestEvaluationContext, evaluate_many
 
 LEGACY_HOMEPAGE = {
@@ -157,7 +158,8 @@ def build_bootstrap_payload(
     request: HttpRequest,
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
-    features = evaluate_many(context, ["site_homepage_version"])
+    keys = get_flags_for_page(context.page)
+    features = evaluate_many(context, keys)
     return {
         "viewer": viewer_summary(request, context.user),
         "features": features,
@@ -166,18 +168,22 @@ def build_bootstrap_payload(
         },
         "layout": {
             "default_project": "jou_tak",
-            "homepage_variant": features["site_homepage_version"],
+            "homepage_variant": features.get(
+                "site_homepage_version", "legacy"
+            ),
         },
     }
 
 
 def build_home_payload(context: RequestEvaluationContext) -> dict[str, object]:
-    features = evaluate_many(context, ["site_homepage_version"])
-    variant = str(features["site_homepage_version"])
+    keys = get_flags_for_page(context.page)
+    features = evaluate_many(context, keys)
+    variant = str(features.get("site_homepage_version", "legacy"))
     payload = LEGACY_HOMEPAGE if variant == "legacy" else V2_HOMEPAGE
     return {
         "variant": variant,
         "content": payload,
+        "features": features,
     }
 
 
@@ -185,7 +191,8 @@ def build_account_summary_payload(
     request: HttpRequest,
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
+    keys = get_flags_for_page(context.page)
     return {
         "viewer": viewer_summary(request, context.user),
-        "features": evaluate_many(context, ["site_homepage_version"]),
+        "features": evaluate_many(context, keys),
     }

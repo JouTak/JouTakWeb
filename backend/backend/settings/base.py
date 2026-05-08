@@ -336,6 +336,20 @@ FEATURE_FLAG_OVERRIDE_QUERY_ENABLED = config(
     "FEATURE_FLAG_OVERRIDE_QUERY_ENABLED", cast=bool, default=DEBUG
 )
 
+# ─── Caching ────────────────────────────────────────────────────────────────
+# DatabaseCache is used as the shared backend for django-ratelimit counters.
+# It works across Gunicorn workers without requiring Redis.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "joutak_cache_table",
+    }
+}
+
+# ─── Rate limiting (django-ratelimit) ──────────────────────────────────────
+RATELIMIT_USE_CACHE = "default"
+RATELIMIT_FAIL_OPEN = config("RATELIMIT_FAIL_OPEN", cast=bool, default=False)
+
 LANGUAGE_CODE = "ru-RU"
 TIME_ZONE = config("DJANGO_TIME_ZONE", default="UTC")
 USE_I18N = True

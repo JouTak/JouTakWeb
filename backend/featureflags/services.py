@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -24,6 +25,19 @@ from featureflags.models import (
     FeatureRule,
     FeatureRuleType,
 )
+from featureflags.registry import (
+    get_default_value,
+    get_valid_variants,
+    is_valid_override_value,
+)
+
+logger = logging.getLogger(__name__)
+
+FEATURE_OVERRIDE_QUERY_PREFIX = "ff_"
+FEATURE_OVERRIDE_CLEAR_QUERY = "ff_clear_overrides"
+FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v1"
+ANONYMOUS_ID_SIGNING_SALT = "featureflags.anonymous_id.v1"
+_UUID_HEX_RE = re.compile(r"^[0-9a-f]{32}$")
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +47,21 @@ FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v1"
 
 
 def _get_default_features() -> dict[str, dict]:
-    """Lazy accessor for default feature specs from settings."""
-    return {
-        "site_homepage_version": {
-            "kind": FeatureKind.VARIANT,
-            "default": getattr(settings, "FF_SITE_HOMEPAGE_VERSION", "legacy"),
-            "sticky_assignment": False,
+    """Lazy accessor for default feature specs from registry."""
+    from featureflags.registry import FEATURE_REGISTRY
+
+    result = {}
+    for key, spec in FEATURE_REGISTRY.items():
+        result[key] = {
+            "kind": (
+                FeatureKind.VARIANT
+                if spec["kind"] == "variant"
+                else FeatureKind.BOOLEAN
+            ),
+            "default": get_default_value(key),
+            "sticky_assignment": spec.get("sticky", False),
         }
-    }
+    return result
 
 
 @dataclass(slots=True, frozen=True)
@@ -124,10 +145,44 @@ def resolve_optional_user(request: HttpRequest) -> object | None:
 
 
 def extract_or_create_anonymous_id(request: HttpRequest) -> tuple[str, bool]:
+    """Extract anonymous ID from cookie, or create a new one.
+
+    Supports graceful migration: accepts both signed (new) and unsigned
+    (legacy UUID hex) cookies. Legacy cookies are re-signed on the next
+    response via ensure_anonymous_cookie().
+    """
     cookie_name = settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE
-    current = (request.COOKIES.get(cookie_name) or "").strip()
-    if current:
-        return current, False
+    raw = (request.COOKIES.get(cookie_name) or "").strip()
+    if not raw:
+        return uuid4().hex, True
+
+    # Try signed cookie first (new format)
+    max_age = settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE_MAX_AGE
+    try:
+        value = signing.loads(
+            raw,
+            salt=ANONYMOUS_ID_SIGNING_SALT,
+            max_age=max_age,
+        )
+        if isinstance(value, str) and _UUID_HEX_RE.match(value):
+            return value, False
+    except signing.BadSignature:
+        pass
+
+    # Graceful migration: accept legacy unsigned UUID hex cookies.
+    # We mark created=True so the cookie is re-set in signed form.
+    if _UUID_HEX_RE.match(raw):
+        logger.info(
+            "featureflags.anonymous_id.legacy_migration",
+            extra={"anonymous_id": raw[:8] + "..."},
+        )
+        return raw, True  # created=True triggers re-signing
+
+    # Invalid cookie value — generate fresh ID
+    logger.warning(
+        "featureflags.anonymous_id.invalid_cookie",
+        extra={"raw_length": len(raw)},
+    )
     return uuid4().hex, True
 
 
@@ -177,23 +232,72 @@ def sync_override_cookie(
     *,
     user: object | None,
 ) -> dict[str, str]:
+    """Sync feature flag override cookie from query params.
+
+    Validates override values against the registry and logs changes
+    for audit purposes.
+    """
     existing = read_override_cookie(request)
     if not _can_use_request_overrides(user):
         return existing
 
     if request.GET.get(FEATURE_OVERRIDE_CLEAR_QUERY) == "1":
         response.delete_cookie(settings.FEATURE_FLAG_OVERRIDE_COOKIE)
+        logger.info(
+            "featureflags.override.cleared",
+            extra={
+                "user_id": (
+                    getattr(user, "pk", None)
+                    if user and getattr(user, "is_authenticated", False)
+                    else None
+                ),
+                "ip": request.META.get("REMOTE_ADDR"),
+            },
+        )
         return {}
 
-    updates = {
-        key[len(FEATURE_OVERRIDE_QUERY_PREFIX) :]: value
-        for key, value in request.GET.items()
-        if key.startswith(FEATURE_OVERRIDE_QUERY_PREFIX) and value
-    }
+    updates = {}
+    rejected = {}
+    for key, value in request.GET.items():
+        if not key.startswith(FEATURE_OVERRIDE_QUERY_PREFIX) or not value:
+            continue
+        flag_key = key[len(FEATURE_OVERRIDE_QUERY_PREFIX) :]
+        if is_valid_override_value(flag_key, value):
+            updates[flag_key] = value
+        else:
+            rejected[flag_key] = value
+            logger.warning(
+                "featureflags.override.invalid_value",
+                extra={
+                    "flag": flag_key,
+                    "value": value,
+                    "valid_variants": get_valid_variants(flag_key),
+                    "ip": request.META.get("REMOTE_ADDR"),
+                },
+            )
+
     if not updates:
         return existing
 
     merged = {**existing, **updates}
+
+    # Audit log: record what changed
+    user_id = (
+        getattr(user, "pk", None)
+        if user and getattr(user, "is_authenticated", False)
+        else None
+    )
+    logger.info(
+        "featureflags.override.updated",
+        extra={
+            "user_id": user_id,
+            "ip": request.META.get("REMOTE_ADDR"),
+            "updates": updates,
+            "rejected": rejected or None,
+            "resulting_overrides": merged,
+        },
+    )
+
     max_age = getattr(
         settings,
         "FEATURE_FLAG_OVERRIDE_COOKIE_MAX_AGE",
@@ -213,11 +317,16 @@ def sync_override_cookie(
 def ensure_anonymous_cookie(
     response: HttpResponse, anonymous_id: str, *, created: bool
 ) -> None:
+    """Set the anonymous ID cookie in signed form.
+
+    Only writes if `created=True` (new ID or legacy migration).
+    """
     if not created:
         return
+    signed_value = signing.dumps(anonymous_id, salt=ANONYMOUS_ID_SIGNING_SALT)
     response.set_cookie(
         settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE,
-        anonymous_id,
+        signed_value,
         max_age=settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE_MAX_AGE,
         httponly=True,
         samesite="Lax",

@@ -7,8 +7,8 @@ from accounts.api.errors import raise_structured_error
 from accounts.services.personalization import personalization_complete
 from allauth.account.models import EmailAddress
 from core.models import UserProfile
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from featureflags.registry import get_default_value
 
 User = get_user_model()
 PROFILE_PERSONALIZATION_REQUIRED = "PROFILE_PERSONALIZATION_REQUIRED"
@@ -71,15 +71,13 @@ class AccountStatusService:
             ),
             "blocking_reasons": blocking_reasons,
             "personalization_ui_enabled": bool(
-                getattr(settings, "FF_PROFILE_PERSONALIZATION_UI", True)
+                get_default_value("profile_personalization_ui")
             ),
             "personalization_interstitial_enabled": bool(
-                getattr(
-                    settings, "FF_PROFILE_PERSONALIZATION_INTERSTITIAL", True
-                )
+                get_default_value("profile_personalization_interstitial")
             ),
             "personalization_enforce_enabled": bool(
-                getattr(settings, "FF_PROFILE_PERSONALIZATION_ENFORCE", False)
+                get_default_value("profile_personalization_enforce")
             ),
             "personalization_context": personalization_context,
             "personalization_prompt_variant": personalization_prompt_variant,

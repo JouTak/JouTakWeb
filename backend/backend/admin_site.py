@@ -4,7 +4,6 @@ import logging
 
 from allauth.mfa.adapter import get_adapter as get_mfa_adapter
 from allauth.mfa.models import Authenticator
-from allauth.mfa.totp import validate_totp_code
 from django.conf import settings
 from django.contrib.admin import AdminSite
 from django.contrib.admin.forms import AdminAuthenticationForm
@@ -15,6 +14,8 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
 from django.utils.html import format_html
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ class JouTakAdminSite(AdminSite):
         custom_urls = [
             path(
                 "mfa-verify/",
-                self.admin_view(self.mfa_verify_view, cacheable=False),
+                never_cache(csrf_protect(self.mfa_verify_view)),
                 name="admin_mfa_verify",
             ),
         ]
@@ -164,16 +165,16 @@ class JouTakAdminSite(AdminSite):
         Verify a TOTP or recovery code against the user's enrolled
         authenticators via allauth.mfa infrastructure.
         """
+        # Try TOTP authenticators
         totp_authenticators = Authenticator.objects.filter(
             user=user, type=Authenticator.Type.TOTP
         )
-        for _authenticator in totp_authenticators:
-            try:
-                if validate_totp_code(user, code):
-                    return True
-            except Exception:
-                continue
+        for authenticator in totp_authenticators:
+            instance = authenticator.wrap()
+            if instance.validate_code(code):
+                return True
 
+        # Try recovery codes
         recovery_authenticators = Authenticator.objects.filter(
             user=user, type=Authenticator.Type.RECOVERY_CODES
         )

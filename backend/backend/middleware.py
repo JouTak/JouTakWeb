@@ -129,9 +129,8 @@ class AdminMFAEnforcementMiddleware:
             if admin_mfa_is_enabled(user) and not is_admin_mfa_verified(
                 request
             ):
-                return HttpResponseForbidden(
-                    "Admin access requires MFA verification. "
-                    "Please log in again."
-                )
+                # Redirect to login so MFA flow can be triggered,
+                # instead of a dead-end 403.
+                return redirect("/admin/login/?next=" + request.path)
 
         return self.get_response(request)

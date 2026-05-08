@@ -82,25 +82,46 @@ class JouTakAdminSite(AdminSite):
 
     def login(self, request: HttpRequest, extra_context=None) -> HttpResponse:
         """
-        Override login to inject a TOTP/recovery-code challenge after
-        successful password authentication for users with MFA enrolled.
+        Full override of admin login with MFA challenge injection.
+
+        On POST we never delegate to super().login() because Django's
+        built-in LoginView.form_valid() calls auth_login() directly,
+        bypassing our MFA gate. We handle the entire POST flow ourselves
+        and only delegate GET rendering to super().
         """
         if request.method == "POST":
             form = self.login_form(request, data=request.POST)
             if form.is_valid():
                 user = form.get_user()
                 if admin_mfa_is_enabled(user):
+                    # Credentials valid, MFA enrolled — park user in
+                    # session and redirect to TOTP verification page.
+                    # DO NOT call auth_login() here.
                     request.session[SESSION_KEY_ADMIN_MFA_PENDING_USER] = (
                         user.pk
                     )
                     request.session.save()
                     return HttpResponseRedirect("/admin/mfa-verify/")
+                # No MFA enrolled: complete login immediately.
                 auth_login(request, user)
                 request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
                 return HttpResponseRedirect(
                     request.POST.get("next", "/admin/")
                 )
+            # Form invalid (wrong credentials, account locked, etc.)
+            # Render login page with errors — never fall through to
+            # super() which would re-evaluate the form independently.
+            context = {
+                "form": form,
+                "title": "Log in",
+                "app_path": request.get_full_path(),
+                "site_header": self.site_header,
+                "site_title": self.site_title,
+                **(extra_context or {}),
+            }
+            return render(request, "admin/login.html", context)
 
+        # GET requests: show the login form via Django's standard view.
         return super().login(request, extra_context=extra_context)
 
     def get_urls(self):

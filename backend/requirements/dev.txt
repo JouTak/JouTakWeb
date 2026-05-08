@@ -114,7 +114,7 @@ phonenumberslite==9.0.12
     # via django-phonenumber-field
 pillow==12.2.0
     # via backend
-pip==26.0.1
+pip==26.1
     # via pip-api
 pip-api==0.0.34
     # via pip-audit

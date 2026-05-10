@@ -109,10 +109,6 @@ function isUnverifiedEmailError(error) {
 export default function MfaCard({ profile = null }) {
   const { add } = useToaster();
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState({
-    supported_types: [],
-    passkey_login_enabled: false,
-  });
   const [authenticators, setAuthenticators] = useState([]);
   const [totpStatus, setTotpStatus] = useState(null);
   const [totpCode, setTotpCode] = useState("");
@@ -154,19 +150,16 @@ export default function MfaCard({ profile = null }) {
     async function load() {
       setLoading(true);
       try {
-        const [nextConfig, nextAuthenticators, nextTotp] = await Promise.all([
-          getMfaConfigSafe(),
+        const [nextAuthenticators, nextTotp] = await Promise.all([
           listAuthenticatorsSafe(),
           getTotpSafe(),
         ]);
         if (cancelled) return;
-        setConfig(nextConfig);
         setAuthenticators(nextAuthenticators);
         setTotpStatus(nextTotp);
       } catch (error) {
         if (!cancelled) {
           if (isUnverifiedEmailError(error)) {
-            setConfig({ supported_types: [], passkey_login_enabled: false });
             setAuthenticators([]);
             setTotpStatus({
               ...EMPTY_TOTP,
@@ -285,14 +278,16 @@ export default function MfaCard({ profile = null }) {
   // ── TOTP handlers ─────────────────────────────────────────────────────
 
   async function handleStartTotpSetup() {
-    // If provisioning data already loaded (secret from initial 404), use it.
-    if (totpStatus?.totp_url) {
+    // If provisioning data already present and TOTP not active, use it.
+    if (totpStatus?.totp_url && !totpStatus?.enabled) {
       setTotpSetupActive(true);
       return;
     }
+    // Need to fetch fresh provisioning data.
     setTotpProvisioning(true);
     try {
       let totp = await getTotpSafe();
+      // Some allauth versions require a second GET to provision the secret.
       if (!totp.totp_url) totp = await getTotpSafe();
       setTotpStatus(totp);
       setTotpSetupActive(true);
@@ -389,8 +384,10 @@ export default function MfaCard({ profile = null }) {
 
   async function handleAddPasskey() {
     await runProtectedAction("add-passkey", async () => {
+      // Fetch MFA config lazily (only needed for passkey_login_enabled).
+      const mfaConfig = await getMfaConfigSafe();
       const options = await getWebAuthnRegistrationOptions({
-        passwordless: config?.passkey_login_enabled === true,
+        passwordless: mfaConfig?.passkey_login_enabled === true,
       });
       const credential = await createWebAuthnCredential({ publicKey: options });
       const result = await addWebAuthnCredential({

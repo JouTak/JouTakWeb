@@ -45,7 +45,16 @@ async function getTotpSafe() {
   try {
     return await getTotpStatus();
   } catch (error) {
-    if (error?.response?.status === 404) return EMPTY_TOTP;
+    const status = error?.response?.status;
+    if (status === 404) {
+      // allauth returns 404 with provisioning data (secret + totp_url)
+      // when TOTP is not yet activated — extract it.
+      const meta = error.response?.data?.meta || error.response?.data?.data;
+      if (meta?.secret || meta?.totp_url) {
+        return { ...EMPTY_TOTP, secret: meta.secret, totp_url: meta.totp_url };
+      }
+      return EMPTY_TOTP;
+    }
     throw error;
   }
 }
@@ -54,7 +63,9 @@ async function getMfaConfigSafe() {
   try {
     return await getMfaConfig();
   } catch (error) {
-    if (error?.response?.status === 404) {
+    const status = error?.response?.status;
+    // 401 = not in MFA flow, 404 = endpoint not applicable — both normal.
+    if (status === 401 || status === 404) {
       return { supported_types: [], passkey_login_enabled: false };
     }
     throw error;
@@ -273,6 +284,11 @@ export default function MfaCard({ profile = null }) {
   // ── TOTP handlers ─────────────────────────────────────────────────────
 
   async function handleStartTotpSetup() {
+    // If provisioning data already loaded (secret from initial 404), use it.
+    if (totpStatus?.totp_url) {
+      setTotpSetupActive(true);
+      return;
+    }
     setTotpProvisioning(true);
     try {
       let totp = await getTotpSafe();

@@ -218,6 +218,8 @@ export default function MfaCard({ profile = null }) {
   const [reauthError, setReauthError] = useState("");
   const [recoveryExpanded, setRecoveryExpanded] = useState(false);
   const [passkeysExpanded, setPasskeysExpanded] = useState(false);
+  const [totpSetupActive, setTotpSetupActive] = useState(false);
+  const [totpProvisioning, setTotpProvisioning] = useState(false);
 
   const webauthnAuthenticators = useMemo(
     () => authenticators.filter((auth) => auth.type === "webauthn"),
@@ -323,6 +325,27 @@ export default function MfaCard({ profile = null }) {
     setTotpStatus(nextTotp);
   }
 
+  async function handleStartTotpSetup() {
+    setTotpProvisioning(true);
+    try {
+      const totp = await getTotpStatus();
+      setTotpStatus(totp);
+      setTotpSetupActive(true);
+    } catch (error) {
+      add({
+        name: "mfa-totp-provision-error",
+        title: "Ошибка",
+        content: extractErrorMessage(
+          error,
+          "Не удалось подготовить аутентификатор.",
+        ),
+        theme: "danger",
+      });
+    } finally {
+      setTotpProvisioning(false);
+    }
+  }
+
   function openReauth(error, retry) {
     const pending = extractReauthFlows(error);
     if (!pending.password && !pending.mfa) {
@@ -397,6 +420,7 @@ export default function MfaCard({ profile = null }) {
     await runProtectedAction("activate-totp", async () => {
       const result = await activateTotp(totpCode);
       setTotpCode("");
+      setTotpSetupActive(false);
       await refreshState();
       add({
         name: "mfa-totp-activated",
@@ -413,6 +437,7 @@ export default function MfaCard({ profile = null }) {
     await runProtectedAction("deactivate-totp", async () => {
       await deactivateTotp();
       setRecoveryCodes([]);
+      setTotpSetupActive(false);
       await refreshState();
       add({
         name: "mfa-totp-deactivated",
@@ -568,7 +593,7 @@ export default function MfaCard({ profile = null }) {
                 </Button>
               </div>
             </>
-          ) : (
+          ) : totpSetupActive && totpStatus?.totp_url ? (
             <>
               <div style={{ opacity: 0.84 }}>
                 Откройте приложение (Google Authenticator, Яндекс Ключ или
@@ -600,16 +625,41 @@ export default function MfaCard({ profile = null }) {
                   onUpdate={setTotpCode}
                   autoComplete="one-time-code"
                 />
-                <Button
-                  view="action"
-                  loading={busyKey === "activate-totp"}
-                  onClick={handleActivateTotp}
-                  disabled={mfaBlockedByUnverifiedEmail}
-                >
-                  Подключить аутентификатор
-                </Button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <Button
+                    view="action"
+                    loading={busyKey === "activate-totp"}
+                    onClick={handleActivateTotp}
+                    disabled={mfaBlockedByUnverifiedEmail}
+                  >
+                    Подключить аутентификатор
+                  </Button>
+                  <Button
+                    view="flat"
+                    onClick={() => {
+                      setTotpSetupActive(false);
+                      setTotpCode("");
+                    }}
+                  >
+                    Отмена
+                  </Button>
+                </div>
               </div>
             </>
+          ) : (
+            <div style={rowBetweenStyle}>
+              <div style={{ opacity: 0.84 }}>
+                Одноразовые коды из приложения для подтверждения входа.
+              </div>
+              <Button
+                view="action"
+                loading={totpProvisioning}
+                onClick={handleStartTotpSetup}
+                disabled={mfaBlockedByUnverifiedEmail}
+              >
+                Настроить
+              </Button>
+            </div>
           )}
         </ActionBlock>
 

@@ -2,14 +2,7 @@ import {
   create as createWebAuthnCredential,
   get as getWebAuthnCredential,
 } from "@github/webauthn-json";
-import {
-  Button,
-  Label,
-  Loader,
-  Modal,
-  TextInput,
-  useToaster,
-} from "@gravity-ui/uikit";
+import { Label, Loader, useToaster } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useState } from "react";
@@ -31,29 +24,50 @@ import {
   renameWebAuthnCredential,
 } from "../../services/api";
 import { extractErrorMessage } from "../../services/errors";
-import { ConfirmDialog, SectionCard } from "../ui/primitives";
+import { SectionCard } from "../ui/primitives";
+import PasskeysSection from "./mfa/PasskeysSection";
+import ReauthModal from "./mfa/ReauthModal";
+import RecoveryCodesSection from "./mfa/RecoveryCodesSection";
+import { rowBetweenStyle, warningBoxStyle } from "./mfa/shared";
+import TotpSection from "./mfa/TotpSection";
 
-const rowBetweenStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
-  flexWrap: "wrap",
+// ─── Safe API wrappers (treat 404 as "not configured") ─────────────────────
+
+const EMPTY_TOTP = {
+  enabled: false,
+  authenticator: null,
+  recovery_codes_generated: false,
+  secret: "",
+  totp_url: "",
 };
 
-const blockStyle = {
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 8,
-  padding: 14,
-  display: "grid",
-  gap: 12,
-};
+async function getTotpSafe() {
+  try {
+    return await getTotpStatus();
+  } catch (error) {
+    if (error?.response?.status === 404) return EMPTY_TOTP;
+    throw error;
+  }
+}
 
-function formatTimestamp(value) {
-  if (!value) return "Никогда";
-  const date = new Date(Number(value) * 1000);
-  if (Number.isNaN(date.getTime())) return "Никогда";
-  return date.toLocaleString("ru-RU");
+async function getMfaConfigSafe() {
+  try {
+    return await getMfaConfig();
+  } catch (error) {
+    if (error?.response?.status === 404) {
+      return { supported_types: [], passkey_login_enabled: false };
+    }
+    throw error;
+  }
+}
+
+async function listAuthenticatorsSafe() {
+  try {
+    return await listAuthenticators();
+  } catch (error) {
+    if (error?.response?.status === 404) return [];
+    throw error;
+  }
 }
 
 function extractReauthFlows(error) {
@@ -79,121 +93,7 @@ function isUnverifiedEmailError(error) {
   );
 }
 
-function ActionBlock({ title, children, badge = null }) {
-  return (
-    <div style={blockStyle}>
-      <div style={rowBetweenStyle}>
-        <h4 style={{ margin: 0, fontSize: 16 }}>{title}</h4>
-        {badge}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-ActionBlock.propTypes = {
-  title: PropTypes.string.isRequired,
-  children: PropTypes.node.isRequired,
-  badge: PropTypes.node,
-};
-
-function ReauthModal({
-  open,
-  pending,
-  loading,
-  error,
-  password,
-  onPasswordChange,
-  code,
-  onCodeChange,
-  onClose,
-  onPasswordSubmit,
-  onCodeSubmit,
-  onPasskeySubmit,
-}) {
-  if (!open || !pending) return null;
-  const canUsePasskey =
-    typeof window !== "undefined" &&
-    "PublicKeyCredential" in window &&
-    pending.webauthn;
-
-  return (
-    <Modal open={open} onClose={onClose}>
-      <div style={{ padding: 20, display: "grid", gap: 14, maxWidth: 480 }}>
-        <h3 style={{ margin: 0 }}>Подтвердите действие</h3>
-        <p style={{ margin: 0, opacity: 0.82 }}>
-          Для этой операции сервер требует недавнее подтверждение личности.
-        </p>
-        {pending.password ? (
-          <form
-            onSubmit={onPasswordSubmit}
-            style={{ display: "grid", gap: 10 }}
-          >
-            <TextInput
-              size="l"
-              type="password"
-              label="Пароль"
-              value={password}
-              onUpdate={onPasswordChange}
-              autoComplete="current-password"
-              disabled={loading}
-            />
-            <Button view="action" type="submit" loading={loading}>
-              Подтвердить паролем
-            </Button>
-          </form>
-        ) : null}
-        {pending.mfa ? (
-          <form onSubmit={onCodeSubmit} style={{ display: "grid", gap: 10 }}>
-            <TextInput
-              size="l"
-              label="Код аутентификатора"
-              value={code}
-              onUpdate={onCodeChange}
-              autoComplete="one-time-code"
-              disabled={loading}
-            />
-            <Button view="outlined" type="submit" loading={loading}>
-              Подтвердить кодом
-            </Button>
-          </form>
-        ) : null}
-        {canUsePasskey ? (
-          <Button view="outlined" loading={loading} onClick={onPasskeySubmit}>
-            Подтвердить через passkey
-          </Button>
-        ) : null}
-        {error ? (
-          <div style={{ color: "#ff8e8e", fontSize: 13 }}>{error}</div>
-        ) : null}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Button view="flat" disabled={loading} onClick={onClose}>
-            Отмена
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-ReauthModal.propTypes = {
-  open: PropTypes.bool.isRequired,
-  pending: PropTypes.shape({
-    password: PropTypes.bool,
-    mfa: PropTypes.bool,
-    webauthn: PropTypes.bool,
-  }),
-  loading: PropTypes.bool.isRequired,
-  error: PropTypes.string.isRequired,
-  password: PropTypes.string.isRequired,
-  onPasswordChange: PropTypes.func.isRequired,
-  code: PropTypes.string.isRequired,
-  onCodeChange: PropTypes.func.isRequired,
-  onClose: PropTypes.func.isRequired,
-  onPasswordSubmit: PropTypes.func.isRequired,
-  onCodeSubmit: PropTypes.func.isRequired,
-  onPasskeySubmit: PropTypes.func.isRequired,
-};
+// ─── MfaCard (orchestrator) ────────────────────────────────────────────────
 
 export default function MfaCard({ profile = null }) {
   const { add } = useToaster();
@@ -235,15 +135,17 @@ export default function MfaCard({ profile = null }) {
       (auth) => auth.type === "totp" || auth.type === "webauthn",
     );
 
+  // ── Initial load ──────────────────────────────────────────────────────
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
         const [nextConfig, nextAuthenticators, nextTotp] = await Promise.all([
-          getMfaConfig(),
-          listAuthenticators(),
-          getTotpStatus(),
+          getMfaConfigSafe(),
+          listAuthenticatorsSafe(),
+          getTotpSafe(),
         ]);
         if (cancelled) return;
         setConfig(nextConfig);
@@ -252,18 +154,11 @@ export default function MfaCard({ profile = null }) {
       } catch (error) {
         if (!cancelled) {
           if (isUnverifiedEmailError(error)) {
-            setConfig({
-              supported_types: [],
-              passkey_login_enabled: false,
-            });
+            setConfig({ supported_types: [], passkey_login_enabled: false });
             setAuthenticators([]);
             setTotpStatus({
-              enabled: false,
-              authenticator: null,
-              recovery_codes_generated: false,
+              ...EMPTY_TOTP,
               blocked_by_email_verification: true,
-              secret: "",
-              totp_url: "",
             });
             setLoading(false);
             return;
@@ -276,9 +171,7 @@ export default function MfaCard({ profile = null }) {
           });
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
     load();
@@ -286,6 +179,8 @@ export default function MfaCard({ profile = null }) {
       cancelled = true;
     };
   }, [add]);
+
+  // ── QR code generation ────────────────────────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
@@ -296,61 +191,33 @@ export default function MfaCard({ profile = null }) {
     QRCode.toDataURL(totpStatus.totp_url, {
       margin: 0,
       width: 200,
-      color: {
-        dark: "#f4f7fb",
-        light: "#0000",
-      },
+      color: { dark: "#f4f7fb", light: "#0000" },
     })
       .then((value) => {
-        if (!cancelled) {
-          setQrDataUrl(value);
-        }
+        if (!cancelled) setQrDataUrl(value);
       })
       .catch(() => {
-        if (!cancelled) {
-          setQrDataUrl("");
-        }
+        if (!cancelled) setQrDataUrl("");
       });
     return () => {
       cancelled = true;
     };
   }, [totpStatus]);
 
+  // ── Shared helpers ────────────────────────────────────────────────────
+
   async function refreshState() {
     const [nextAuthenticators, nextTotp] = await Promise.all([
-      listAuthenticators(),
-      getTotpStatus(),
+      listAuthenticatorsSafe(),
+      getTotpSafe(),
     ]);
     setAuthenticators(nextAuthenticators);
     setTotpStatus(nextTotp);
   }
 
-  async function handleStartTotpSetup() {
-    setTotpProvisioning(true);
-    try {
-      const totp = await getTotpStatus();
-      setTotpStatus(totp);
-      setTotpSetupActive(true);
-    } catch (error) {
-      add({
-        name: "mfa-totp-provision-error",
-        title: "Ошибка",
-        content: extractErrorMessage(
-          error,
-          "Не удалось подготовить аутентификатор.",
-        ),
-        theme: "danger",
-      });
-    } finally {
-      setTotpProvisioning(false);
-    }
-  }
-
   function openReauth(error, retry) {
     const pending = extractReauthFlows(error);
-    if (!pending.password && !pending.mfa) {
-      throw error;
-    }
+    if (!pending.password && !pending.mfa) throw error;
     setReauthState({ pending, retry });
     setReauthPassword("");
     setReauthCode("");
@@ -380,9 +247,7 @@ export default function MfaCard({ profile = null }) {
         theme: "danger",
       });
     } finally {
-      if (!reauthState) {
-        setBusyKey("");
-      }
+      if (!reauthState) setBusyKey("");
     }
   }
 
@@ -395,15 +260,37 @@ export default function MfaCard({ profile = null }) {
       setReauthPassword("");
       setReauthCode("");
       setReauthError("");
-      if (retry) {
-        await retry();
-      }
+      if (retry) await retry();
     } catch (error) {
       setReauthError(
         extractErrorMessage(error, "Не удалось подтвердить действие."),
       );
     } finally {
       setBusyKey("");
+    }
+  }
+
+  // ── TOTP handlers ─────────────────────────────────────────────────────
+
+  async function handleStartTotpSetup() {
+    setTotpProvisioning(true);
+    try {
+      let totp = await getTotpSafe();
+      if (!totp.totp_url) totp = await getTotpSafe();
+      setTotpStatus(totp);
+      setTotpSetupActive(true);
+    } catch (error) {
+      add({
+        name: "mfa-totp-provision-error",
+        title: "Ошибка",
+        content: extractErrorMessage(
+          error,
+          "Не удалось подготовить аутентификатор.",
+        ),
+        theme: "danger",
+      });
+    } finally {
+      setTotpProvisioning(false);
     }
   }
 
@@ -448,6 +335,8 @@ export default function MfaCard({ profile = null }) {
     });
   }
 
+  // ── Recovery codes handler ────────────────────────────────────────────
+
   async function handleRegenerateRecoveryCodes() {
     await runProtectedAction("regenerate-recovery", async () => {
       const data = await regenerateRecoveryCodes();
@@ -461,6 +350,8 @@ export default function MfaCard({ profile = null }) {
       });
     });
   }
+
+  // ── Passkey handlers ──────────────────────────────────────────────────
 
   async function handleAddPasskey() {
     await runProtectedAction("add-passkey", async () => {
@@ -516,9 +407,13 @@ export default function MfaCard({ profile = null }) {
     });
   }
 
+  // ── Derived state ─────────────────────────────────────────────────────
+
   const emailVerified = profile?.email_verified !== false;
-  const mfaBlockedByUnverifiedEmail =
+  const mfaBlocked =
     !emailVerified || totpStatus?.blocked_by_email_verification === true;
+
+  // ── Render ────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -548,16 +443,7 @@ export default function MfaCard({ profile = null }) {
         </div>
 
         {!emailVerified ? (
-          <div
-            style={{
-              border: "1px solid rgba(255, 163, 0, 0.45)",
-              borderRadius: 8,
-              padding: 12,
-              background: "rgba(255, 163, 0, 0.12)",
-              display: "grid",
-              gap: 8,
-            }}
-          >
+          <div style={warningBoxStyle}>
             <strong>Email не подтверждён</strong>
             <div style={{ opacity: 0.84 }}>
               Сначала подтвердите email, затем можно включить двухфакторную
@@ -566,342 +452,65 @@ export default function MfaCard({ profile = null }) {
           </div>
         ) : null}
 
-        {/* ── Приложение-аутентификатор (TOTP) ── always visible ── */}
-        <ActionBlock
-          title="Приложение-аутентификатор"
-          badge={
-            totpStatus?.enabled ? <Label theme="success">Активен</Label> : null
-          }
-        >
-          {mfaBlockedByUnverifiedEmail ? (
-            <div style={{ opacity: 0.84 }}>
-              Двухфакторная защита недоступна, пока email не подтверждён.
-            </div>
-          ) : totpStatus?.enabled ? (
-            <>
-              <div style={{ opacity: 0.84 }}>
-                Последнее использование:{" "}
-                {formatTimestamp(totpStatus.authenticator?.last_used_at)}
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Button
-                  view="outlined"
-                  loading={busyKey === "deactivate-totp"}
-                  onClick={handleDeactivateTotp}
-                >
-                  Отключить аутентификатор
-                </Button>
-              </div>
-            </>
-          ) : totpSetupActive && totpStatus?.totp_url ? (
-            <>
-              <div style={{ opacity: 0.84 }}>
-                Откройте приложение (Google Authenticator, Яндекс Ключ или
-                аналог), отсканируйте QR-код и введите полученный код.
-              </div>
-              {qrDataUrl ? (
-                <img
-                  src={qrDataUrl}
-                  alt="TOTP QR"
-                  style={{ width: 200, height: 200, borderRadius: 8 }}
-                />
-              ) : null}
-              {totpStatus?.secret ? (
-                <div
-                  style={{
-                    fontFamily: "monospace",
-                    wordBreak: "break-all",
-                    opacity: 0.92,
-                  }}
-                >
-                  {totpStatus.secret}
-                </div>
-              ) : null}
-              <div style={{ display: "grid", gap: 10, maxWidth: 360 }}>
-                <TextInput
-                  size="l"
-                  label="Код из приложения"
-                  value={totpCode}
-                  onUpdate={setTotpCode}
-                  autoComplete="one-time-code"
-                />
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Button
-                    view="action"
-                    loading={busyKey === "activate-totp"}
-                    onClick={handleActivateTotp}
-                    disabled={mfaBlockedByUnverifiedEmail}
-                  >
-                    Подключить аутентификатор
-                  </Button>
-                  <Button
-                    view="flat"
-                    onClick={() => {
-                      setTotpSetupActive(false);
-                      setTotpCode("");
-                    }}
-                  >
-                    Отмена
-                  </Button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div style={rowBetweenStyle}>
-              <div style={{ opacity: 0.84 }}>
-                Одноразовые коды из приложения для подтверждения входа.
-              </div>
-              <Button
-                view="action"
-                loading={totpProvisioning}
-                onClick={handleStartTotpSetup}
-                disabled={mfaBlockedByUnverifiedEmail}
-              >
-                Настроить
-              </Button>
-            </div>
-          )}
-        </ActionBlock>
+        <TotpSection
+          totpStatus={totpStatus}
+          totpSetupActive={totpSetupActive}
+          totpProvisioning={totpProvisioning}
+          totpCode={totpCode}
+          qrDataUrl={qrDataUrl}
+          busyKey={busyKey}
+          mfaBlocked={mfaBlocked}
+          onTotpCodeChange={setTotpCode}
+          onStartSetup={handleStartTotpSetup}
+          onCancelSetup={() => {
+            setTotpSetupActive(false);
+            setTotpCode("");
+          }}
+          onActivate={handleActivateTotp}
+          onDeactivate={handleDeactivateTotp}
+        />
 
-        {/* ── Резервные коды ── collapsible ── */}
-        <ActionBlock
-          title="Резервные коды"
-          badge={
-            recoverySummary ? (
-              <Label theme="info">
-                Осталось {recoverySummary.unused_code_count} из{" "}
-                {recoverySummary.total_code_count}
-              </Label>
-            ) : null
-          }
-        >
-          {recoveryExpanded ? (
-            <>
-              {recoveryCodes.length ? (
-                <>
-                  <div
-                    style={{
-                      border: "1px solid rgba(255, 163, 0, 0.45)",
-                      borderRadius: 8,
-                      padding: 12,
-                      background: "rgba(255, 163, 0, 0.12)",
-                      display: "grid",
-                      gap: 8,
-                    }}
-                  >
-                    <strong>Сохраните коды в безопасное место</strong>
-                    <div style={{ opacity: 0.84 }}>
-                      Коды показываются только сейчас. После закрытия этого
-                      раздела просмотреть их снова будет невозможно.
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 6,
-                      fontFamily: "monospace",
-                      fontSize: 14,
-                    }}
-                  >
-                    {recoveryCodes.map((code) => (
-                      <div key={code}>{code}</div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div style={{ opacity: 0.84 }}>
-                  Одноразовые коды для входа, если приложение-аутентификатор или
-                  ключ недоступны.
-                </div>
-              )}
-              {recoverySummary ? (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Button
-                    view="outlined"
-                    loading={busyKey === "regenerate-recovery"}
-                    onClick={handleRegenerateRecoveryCodes}
-                    disabled={mfaBlockedByUnverifiedEmail}
-                  >
-                    Сгенерировать новые коды
-                  </Button>
-                  <Button
-                    view="flat"
-                    onClick={() => {
-                      setRecoveryExpanded(false);
-                      setRecoveryCodes([]);
-                    }}
-                  >
-                    Свернуть
-                  </Button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <div style={{ opacity: 0.84 }}>
-                    Резервные коды создаются автоматически после подключения
-                    аутентификатора или ключа безопасности.
-                  </div>
-                  <Button
-                    view="flat"
-                    onClick={() => setRecoveryExpanded(false)}
-                  >
-                    Свернуть
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div style={rowBetweenStyle}>
-              <div style={{ opacity: 0.84 }}>
-                Одноразовые коды для входа, если основное устройство недоступно.
-              </div>
-              <Button view="outlined" onClick={() => setRecoveryExpanded(true)}>
-                Управление
-              </Button>
-            </div>
-          )}
-        </ActionBlock>
+        <RecoveryCodesSection
+          recoverySummary={recoverySummary}
+          recoveryCodes={recoveryCodes}
+          expanded={recoveryExpanded}
+          busyKey={busyKey}
+          mfaBlocked={mfaBlocked}
+          onExpand={() => setRecoveryExpanded(true)}
+          onCollapse={() => {
+            setRecoveryExpanded(false);
+            setRecoveryCodes([]);
+          }}
+          onRegenerate={handleRegenerateRecoveryCodes}
+        />
 
-        {/* ── Ключи безопасности (Passkeys) ── collapsible ── */}
-        <ActionBlock
-          title="Ключи безопасности"
-          badge={
-            webauthnAuthenticators.length ? (
-              <Label theme="success">{webauthnAuthenticators.length} шт.</Label>
-            ) : null
-          }
-        >
-          {passkeysExpanded ? (
-            <>
-              <div style={{ opacity: 0.84 }}>
-                Аппаратные ключи или биометрия устройства для быстрого и
-                безопасного входа.
-              </div>
-              <div style={{ display: "grid", gap: 10, maxWidth: 420 }}>
-                <TextInput
-                  size="l"
-                  label="Название нового ключа"
-                  value={newPasskeyName}
-                  onUpdate={setNewPasskeyName}
-                />
-                <Button
-                  view="action"
-                  loading={busyKey === "add-passkey"}
-                  onClick={handleAddPasskey}
-                  disabled={mfaBlockedByUnverifiedEmail}
-                >
-                  Добавить ключ безопасности
-                </Button>
-              </div>
-              {webauthnAuthenticators.length ? (
-                <div style={{ display: "grid", gap: 10 }}>
-                  {webauthnAuthenticators.map((auth) => (
-                    <div key={auth.id} style={blockStyle}>
-                      <div style={rowBetweenStyle}>
-                        <div style={{ display: "grid", gap: 6 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <strong>{auth.name || `Ключ ${auth.id}`}</strong>
-                            {auth.is_passwordless ? (
-                              <Label theme="success">Passkey</Label>
-                            ) : null}
-                          </div>
-                          <div style={{ opacity: 0.76, fontSize: 13 }}>
-                            Последнее использование:{" "}
-                            {formatTimestamp(auth.last_used_at)}
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <Button
-                            view="outlined"
-                            onClick={() => {
-                              setRenamingId(auth.id);
-                              setRenamingName(auth.name || "");
-                            }}
-                            disabled={mfaBlockedByUnverifiedEmail}
-                          >
-                            Переименовать
-                          </Button>
-                          <Button
-                            view="flat"
-                            onClick={() => setDeleteTarget(auth)}
-                            disabled={mfaBlockedByUnverifiedEmail}
-                          >
-                            Удалить
-                          </Button>
-                        </div>
-                      </div>
-                      {renamingId === auth.id ? (
-                        <div
-                          style={{
-                            display: "grid",
-                            gap: 8,
-                            maxWidth: 360,
-                          }}
-                        >
-                          <TextInput
-                            size="l"
-                            value={renamingName}
-                            onUpdate={setRenamingName}
-                          />
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <Button
-                              view="action"
-                              loading={busyKey === `rename-passkey-${auth.id}`}
-                              onClick={() => handleRenamePasskey(auth.id)}
-                              disabled={mfaBlockedByUnverifiedEmail}
-                            >
-                              Сохранить
-                            </Button>
-                            <Button
-                              view="flat"
-                              onClick={() => {
-                                setRenamingId(null);
-                                setRenamingName("");
-                              }}
-                            >
-                              Отмена
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button view="flat" onClick={() => setPasskeysExpanded(false)}>
-                  Свернуть
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div style={rowBetweenStyle}>
-              <div style={{ opacity: 0.84 }}>
-                Аппаратные ключи или биометрия для входа без ввода кода.
-              </div>
-              <Button view="outlined" onClick={() => setPasskeysExpanded(true)}>
-                Управление
-              </Button>
-            </div>
-          )}
-        </ActionBlock>
+        <PasskeysSection
+          webauthnAuthenticators={webauthnAuthenticators}
+          expanded={passkeysExpanded}
+          newPasskeyName={newPasskeyName}
+          renamingId={renamingId}
+          renamingName={renamingName}
+          busyKey={busyKey}
+          deleteTarget={deleteTarget}
+          mfaBlocked={mfaBlocked}
+          onExpand={() => setPasskeysExpanded(true)}
+          onCollapse={() => setPasskeysExpanded(false)}
+          onNewNameChange={setNewPasskeyName}
+          onAdd={handleAddPasskey}
+          onStartRename={(auth) => {
+            setRenamingId(auth.id);
+            setRenamingName(auth.name || "");
+          }}
+          onRenamingNameChange={setRenamingName}
+          onConfirmRename={handleRenamePasskey}
+          onCancelRename={() => {
+            setRenamingId(null);
+            setRenamingName("");
+          }}
+          onRequestDelete={setDeleteTarget}
+          onConfirmDelete={handleDeletePasskey}
+          onCancelDelete={() => setDeleteTarget(null)}
+        />
       </SectionCard>
 
       <ReauthModal
@@ -940,25 +549,6 @@ export default function MfaCard({ profile = null }) {
           })
         }
       />
-
-      <ConfirmDialog
-        open={Boolean(deleteTarget)}
-        title="Удалить ключ безопасности?"
-        confirmText="Удалить"
-        cancelText="Отмена"
-        loading={busyKey === `delete-passkey-${deleteTarget?.id}`}
-        onConfirm={handleDeletePasskey}
-        onCancel={() => setDeleteTarget(null)}
-      >
-        {deleteTarget ? (
-          <div>
-            Ключ <strong>{deleteTarget.name || deleteTarget.id}</strong> больше
-            нельзя будет использовать для подтверждения входа.
-          </div>
-        ) : (
-          <div />
-        )}
-      </ConfirmDialog>
     </>
   );
 }
@@ -966,5 +556,6 @@ export default function MfaCard({ profile = null }) {
 MfaCard.propTypes = {
   profile: PropTypes.shape({
     has_2fa: PropTypes.bool,
+    email_verified: PropTypes.bool,
   }),
 };

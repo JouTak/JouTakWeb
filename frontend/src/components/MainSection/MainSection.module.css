@@ -1,0 +1,20 @@
+.mainSection {
+    background-image: url('/img/main-image.png');
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    width: 100%;
+    height: 100vh;
+
+    position: relative;
+
+    display: flex;
+    justify-content: center;
+}
+
+.mainSectionInner img {
+    width: 1168px;
+    margin-top: 420px;
+}

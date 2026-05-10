@@ -3,10 +3,11 @@ import styles from "./Footer.module.css";
 
 const CustomFooter = () => {
   return (
+    <>
     <footer className={styles.footer}>
       <div className={styles.inner}>
         <div className={styles.logoWrap}>
-          <img src="/img/Logo-itmocraft.png" alt="ITMOcraft" className={styles.logo} />
+          <img src="/img/logo-maxi.svg" alt="ITMOcraft" className={styles.logo} />
         </div>
 
         <div className={styles.navCol}>
@@ -43,6 +44,8 @@ const CustomFooter = () => {
         </div>
       </div>
     </footer>
+    <img src="img/footer.svg" alt="" />
+    </>
   );
 };
 

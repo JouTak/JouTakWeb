@@ -200,15 +200,17 @@ export default function HeaderNew() {
             </div>
 
             <div className={styles.centerGroup}>
-              <button
-                type="button"
-                className={styles.navButton}
-                onClick={() => navigate("/itmocraft")}
-              >
-                ITMOcraft
-              </button>
+              <div className={styles.leftNavGroup}>
+                <button
+                  type="button"
+                  className={styles.navButton}
+                  onClick={() => navigate("/itmocraft")}
+                >
+                  ITMOcraft
+                </button>
 
-              <ProjectSelect />
+                <ProjectSelect />
+              </div>
 
               <button
                 type="button"
@@ -218,13 +220,15 @@ export default function HeaderNew() {
                 <img src="/img/logo-mini.svg" alt="Logo" />
               </button>
 
-              <button type="button" className={styles.navButton}>
-                Календарь
-              </button>
+              <div className={styles.rightNavGroup}>
+                <button type="button" className={styles.navButton}>
+                  Календарь
+                </button>
 
-              <button type="button" className={styles.navButton}>
-                Новости
-              </button>
+                <button type="button" className={styles.navButton}>
+                  Новости
+                </button>
+              </div>
 
             </div>
 

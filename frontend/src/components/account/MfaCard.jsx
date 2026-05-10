@@ -24,7 +24,7 @@ import {
   renameWebAuthnCredential,
 } from "../../services/api";
 import { extractErrorMessage } from "../../services/errors";
-import { SectionCard } from "../ui/primitives";
+import { ConfirmDialog, SectionCard } from "../ui/primitives";
 import PasskeysSection from "./mfa/PasskeysSection";
 import ReauthModal from "./mfa/ReauthModal";
 import RecoveryCodesSection from "./mfa/RecoveryCodesSection";
@@ -131,6 +131,7 @@ export default function MfaCard({ profile = null }) {
   const [passkeysExpanded, setPasskeysExpanded] = useState(false);
   const [totpSetupActive, setTotpSetupActive] = useState(false);
   const [totpProvisioning, setTotpProvisioning] = useState(false);
+  const [confirmDeactivateTotp, setConfirmDeactivateTotp] = useState(false);
 
   const webauthnAuthenticators = useMemo(
     () => authenticators.filter((auth) => auth.type === "webauthn"),
@@ -325,14 +326,30 @@ export default function MfaCard({ profile = null }) {
       setTotpCode("");
       setTotpSetupActive(false);
       await refreshState();
-      add({
-        name: "mfa-totp-activated",
-        title: "Защита включена",
-        content: result?.recovery_codes_generated
-          ? "Аутентификатор подключён. Резервные коды созданы — сохраните их."
-          : "Аутентификатор подключён.",
-        theme: "success",
-      });
+      // Auto-show recovery codes after first MFA activation
+      if (result?.recovery_codes_generated) {
+        try {
+          const data = await regenerateRecoveryCodes();
+          setRecoveryCodes(data?.unused_codes || []);
+          setRecoveryExpanded(true);
+          await refreshState();
+        } catch {
+          // Non-critical — codes were created, user can regenerate later
+        }
+        add({
+          name: "mfa-totp-activated",
+          title: "Защита включена",
+          content: "Аутентификатор подключён. Сохраните резервные коды ниже.",
+          theme: "success",
+        });
+      } else {
+        add({
+          name: "mfa-totp-activated",
+          title: "Защита включена",
+          content: "Аутентификатор подключён.",
+          theme: "success",
+        });
+      }
     });
   }
 
@@ -341,6 +358,7 @@ export default function MfaCard({ profile = null }) {
       await deactivateTotp();
       setRecoveryCodes([]);
       setTotpSetupActive(false);
+      setConfirmDeactivateTotp(false);
       await refreshState();
       add({
         name: "mfa-totp-deactivated",
@@ -483,7 +501,7 @@ export default function MfaCard({ profile = null }) {
             setTotpCode("");
           }}
           onActivate={handleActivateTotp}
-          onDeactivate={handleDeactivateTotp}
+          onDeactivate={() => setConfirmDeactivateTotp(true)}
         />
 
         <RecoveryCodesSection
@@ -528,6 +546,22 @@ export default function MfaCard({ profile = null }) {
           onCancelDelete={() => setDeleteTarget(null)}
         />
       </SectionCard>
+
+      <ConfirmDialog
+        open={confirmDeactivateTotp}
+        title="Отключить аутентификатор?"
+        confirmText="Отключить"
+        cancelText="Отмена"
+        loading={busyKey === "deactivate-totp"}
+        onConfirm={handleDeactivateTotp}
+        onCancel={() => setConfirmDeactivateTotp(false)}
+      >
+        <div>
+          После отключения вход через приложение-аутентификатор станет
+          невозможен. Для повторного подключения потребуется заново
+          отсканировать QR-код.
+        </div>
+      </ConfirmDialog>
 
       <ReauthModal
         open={Boolean(reauthState)}

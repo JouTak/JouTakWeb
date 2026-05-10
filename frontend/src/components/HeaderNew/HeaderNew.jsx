@@ -215,7 +215,7 @@ export default function HeaderNew() {
                 className={styles.logoButton}
                 onClick={() => navigate("/joutak")}
               >
-                <img src="/img/logo-itmocraft.svg" alt="Logo" />
+                <img src="/img/logo-mini.svg" alt="Logo" />
               </button>
 
               <button type="button" className={styles.navButton}>

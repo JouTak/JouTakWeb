@@ -1,10 +1,12 @@
 import styles from './MainSection.module.css';
+import Notification from '../Notification/Notification';
 
 export default function MainSection() {
   return (
     <div className={styles.mainSection}>
       <div className={styles.mainSectionInner}>
-        <h1 className={styles.mainSectionTitle}>Main Section</h1>
+        <img src="/img/logo-maxi.svg" alt="ITMO CRAFT" />
+        <Notification upperText="Комьюнити" lowerText="Больше, чем просто сервер!"/>
       </div>
     </div>
   );

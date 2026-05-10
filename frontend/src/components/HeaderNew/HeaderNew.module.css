@@ -3,19 +3,27 @@
     src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
   }
 
-.header {
-  width: 100%;
-  background-image: url("/img/header-bg.png");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  background-position: top center;
-  font-family: "MinecraftSeven", sans-serif;
-  font-size: 14px;
-}
+  .header {
+    position: absolute;
+    top: 0;
+    left: 0;
+  
+    width: 100%;
+    z-index: 1000;
+  
+    background-image: url("/img/header-bg.png");
+    background-repeat: no-repeat;
+  
+    background-size: cover;
+    background-position: center;
+  
+    font-family: "MinecraftSeven", sans-serif;
+    font-size: 14px;
+  }
 
 .container {
   width: 100%;
-  min-height: 96px;
+  min-height: 126px;
   display: flex;
   align-items: center;
   padding: 12px 24px;

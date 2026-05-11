@@ -114,7 +114,7 @@ phonenumberslite==9.0.12
     # via django-phonenumber-field
 pillow==12.2.0
     # via backend
-pip==26.0.1
+pip==26.1
     # via pip-api
 pip-api==0.0.34
     # via pip-audit
@@ -199,7 +199,7 @@ tzdata==2025.2 ; sys_platform == 'win32'
     # via
     #   django
     #   psycopg
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 whitenoise==6.9.0
     # via backend

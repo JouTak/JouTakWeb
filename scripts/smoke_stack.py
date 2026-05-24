@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from dataclasses import dataclass
+from http.client import RemoteDisconnected
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -53,7 +54,7 @@ def fetch(
                 body=body,
                 headers=dict(exc.headers.items()),
             )
-        except URLError as exc:
+        except (RemoteDisconnected, ConnectionResetError, URLError) as exc:
             if method == "GET" and attempt < retries:
                 time.sleep(1 + attempt)
                 continue

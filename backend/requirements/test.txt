@@ -75,7 +75,7 @@ googleapis-common-protos==1.74.0
     # via opentelemetry-exporter-otlp-proto-http
 gunicorn==23.0.0
     # via backend
-idna==3.10
+idna==3.15
     # via requests
 importlib-metadata==8.7.1
     # via opentelemetry-api
@@ -203,7 +203,7 @@ tzdata==2025.2 ; sys_platform == 'win32'
     # via
     #   django
     #   psycopg
-urllib3==2.6.3
+urllib3==2.7.0
     # via requests
 whitenoise==6.9.0
     # via backend

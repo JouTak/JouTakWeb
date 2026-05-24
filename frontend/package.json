@@ -36,7 +36,7 @@
     "@opentelemetry/resources": "^2.7.0",
     "@opentelemetry/sdk-trace-base": "^2.7.0",
     "@opentelemetry/sdk-trace-web": "^2.7.0",
-    "axios": "^1.15.0",
+    "axios": "^1.15.2",
     "bootstrap": "^5.3.3",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",

@@ -6,6 +6,7 @@ asgiref==3.9.1
     # via
     #   django
     #   django-allauth
+    #   django-axes
     #   django-cors-headers
     #   django-ninja-extra
 certifi==2025.8.3
@@ -27,11 +28,12 @@ cryptography==46.0.7
     #   pyjwt
 dj-database-url==3.0.1
     # via backend
-django==5.2.13
+django==5.2.14
     # via
     #   backend
     #   dj-database-url
     #   django-allauth
+    #   django-axes
     #   django-cors-headers
     #   django-formtools
     #   django-ninja
@@ -39,8 +41,11 @@ django==5.2.13
     #   django-ninja-jwt
     #   django-otp
     #   django-phonenumber-field
+    #   django-simple-history
     #   django-two-factor-auth
 django-allauth==65.14.1
+    # via backend
+django-axes==8.3.1
     # via backend
 django-cors-headers==4.7.0
     # via backend
@@ -64,6 +69,10 @@ django-phonenumber-field==8.1.0
     # via
     #   backend
     #   django-two-factor-auth
+django-ratelimit==4.1.0
+    # via backend
+django-simple-history==3.11.0
+    # via backend
 django-two-factor-auth==1.17.0
     # via backend
 fido2==2.0.0
@@ -72,7 +81,7 @@ googleapis-common-protos==1.74.0
     # via opentelemetry-exporter-otlp-proto-http
 gunicorn==23.0.0
     # via backend
-idna==3.15
+idna==3.16
     # via requests
 importlib-metadata==8.7.1
     # via opentelemetry-api

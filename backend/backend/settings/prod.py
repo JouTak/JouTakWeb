@@ -89,6 +89,15 @@ STORAGES = {
     },
 }
 
+# CI/test runs use SQLite with this production settings module. Django admin
+# templates need the collected manifest there, but the test jobs do not run
+# collectstatic. Fall back to plain static files storage in that case only.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    STORAGES["staticfiles"] = {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    }
+    WHITENOISE_MANIFEST_STRICT = False
+
 HEADLESS_SERVE_SPECIFICATION = False
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = False
 

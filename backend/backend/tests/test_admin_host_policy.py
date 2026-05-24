@@ -58,7 +58,7 @@ class AdminHostPolicyTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Admin access requires a configured MFA factor.",
+            "Для доступа в админку необходим настроенный 2FA.",
         )
         self.assertContains(
             response,

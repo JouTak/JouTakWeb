@@ -36,9 +36,7 @@ def bootstrap(request):
     return _build_bff_response(
         request,
         page="homepage",
-        build_payload=lambda request, context: (
-            build_bootstrap_payload(request, context)
-        ),
+        build_payload=build_bootstrap_payload,
     )
 
 
@@ -67,7 +65,5 @@ def account_summary(request):
     return _build_bff_response(
         request,
         page="account",
-        build_payload=lambda request, context: (
-            build_account_summary_payload(request, context)
-        ),
+        build_payload=build_account_summary_payload,
     )

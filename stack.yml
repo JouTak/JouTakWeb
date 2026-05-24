@@ -10,6 +10,7 @@ x-backend-environment: &backend-environment
   DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
   DATABASE_URL_FILE: /run/secrets/database_url
   SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+  ACCOUNT_TRUST_PROXY_HEADERS: "true"
   OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-joutak-backend}
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}

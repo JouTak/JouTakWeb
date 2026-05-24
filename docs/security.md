@@ -67,7 +67,7 @@ inline style blocks.
 Gravity UI и часть наших React-компонентов генерируют inline `style={...}`
 атрибуты, из-за которых на фронтенде пока нельзя отказаться от
 `'unsafe-inline'` в `style-src`. Это ослабляет защиту от XSS и считается
-techincal debt.
+technical debt.
 
 План перехода (не блокер этого релиза, но must-have для следующего
 security milestone'а):

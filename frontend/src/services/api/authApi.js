@@ -66,10 +66,8 @@ export async function loginApp({ login, password }) {
     const sessionToken = extractSessionToken(error?.response);
     const pending = extractPendingMfa(error?.response?.data);
     if (pending && sessionToken) {
-      mergeStoredTokens(
-        { session_token: sessionToken, pending_mfa: true },
-        { emit: false },
-      );
+      mergeStoredTokens({ session_token: sessionToken }, { emit: false });
+      markPendingMfaSession(true);
       return {
         ...pending,
         session_token: sessionToken,

@@ -58,7 +58,7 @@ export default function FeatureGate({
 }
 
 function BooleanGate({ flag, expect, fallback, children }) {
-  const value = useBooleanFlagValue(flag, !expect);
+  const value = useBooleanFlagValue(flag, false);
   return value === expect ? children : fallback;
 }
 

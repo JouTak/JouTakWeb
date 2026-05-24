@@ -39,12 +39,6 @@ FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v1"
 ANONYMOUS_ID_SIGNING_SALT = "featureflags.anonymous_id.v1"
 _UUID_HEX_RE = re.compile(r"^[0-9a-f]{32}$")
 
-logger = logging.getLogger(__name__)
-
-FEATURE_OVERRIDE_QUERY_PREFIX = "ff_"
-FEATURE_OVERRIDE_CLEAR_QUERY = "ff_clear_overrides"
-FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v1"
-
 
 def _get_default_features() -> dict[str, dict]:
     """Lazy accessor for default feature specs from registry."""
@@ -167,7 +161,10 @@ def extract_or_create_anonymous_id(request: HttpRequest) -> tuple[str, bool]:
         if isinstance(value, str) and _UUID_HEX_RE.match(value):
             return value, False
     except signing.BadSignature:
-        pass
+        logger.debug(
+            "featureflags.anonymous_id.invalid_signed_cookie",
+            extra={"raw_length": len(raw)},
+        )
 
     # Graceful migration: accept legacy unsigned UUID hex cookies.
     # We mark created=True so the cookie is re-set in signed form.

@@ -20,13 +20,13 @@ User = get_user_model()
 
 class FeatureFlagServiceTests(TestCase):
     def homepage_feature(self) -> FeatureDefinition:
-        feature, _created = FeatureDefinition.objects.get_or_create(
+        feature = FeatureDefinition.objects.get_or_create(
             key="site_homepage_version",
             defaults={
                 "kind": FeatureKind.VARIANT,
                 "default_value": "legacy",
             },
-        )
+        )[0]
         feature.kind = FeatureKind.VARIANT
         feature.default_value = "legacy"
         feature.save(update_fields=["kind", "default_value"])

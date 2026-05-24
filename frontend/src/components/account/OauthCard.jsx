@@ -17,7 +17,12 @@ function readCsrfToken() {
   for (const raw of cookies) {
     const trimmed = raw.trim();
     if (trimmed.startsWith("csrftoken=")) {
-      return decodeURIComponent(trimmed.slice("csrftoken=".length));
+      const rawValue = trimmed.slice("csrftoken=".length);
+      try {
+        return decodeURIComponent(rawValue);
+      } catch {
+        return rawValue;
+      }
     }
   }
   return "";

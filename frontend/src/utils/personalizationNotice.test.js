@@ -43,7 +43,7 @@ describe("personalization notice state", () => {
 
     expect(isPostSignupPersonalizationSession(profile)).toBe(false);
 
-    markPostSignupPersonalizationSession(profile);
+    markPostSignupPersonalizationSession();
 
     expect(isPostSignupPersonalizationSession(profile)).toBe(true);
     expect(hasSeenPersonalizationNotice(profile)).toBe(false);

@@ -344,7 +344,7 @@ export default function AuthModal({
       });
       const profile = await me();
       if (needsPersonalization(profile)) {
-        markPostSignupPersonalizationSession(profile);
+        markPostSignupPersonalizationSession();
         close({ notifyParent: !safeSuccessRedirectTo });
         navigate("/account/complete-registration", { replace: true });
         return;

@@ -25,13 +25,13 @@ from featureflags.models import (
 class BffViewTests(APITestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.feature, _created = FeatureDefinition.objects.get_or_create(
+        self.feature = FeatureDefinition.objects.get_or_create(
             key="site_homepage_version",
             defaults={
                 "kind": FeatureKind.VARIANT,
                 "default_value": "legacy",
             },
-        )
+        )[0]
         self.feature.kind = FeatureKind.VARIANT
         self.feature.default_value = "legacy"
         self.feature.save(update_fields=["kind", "default_value"])

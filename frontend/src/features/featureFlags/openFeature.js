@@ -3,7 +3,7 @@ import { InMemoryProvider, OpenFeature } from "@openfeature/react-sdk";
 const provider = new InMemoryProvider({});
 let initialized = false;
 
-function toFlagConfiguration(features) {
+export function toFlagConfiguration(features) {
   return Object.fromEntries(
     Object.entries(features || {}).map(([key, value]) => {
       const variant = String(value);
@@ -11,7 +11,7 @@ function toFlagConfiguration(features) {
         key,
         {
           disabled: false,
-          variants: { [variant]: variant },
+          variants: { [variant]: value },
           defaultVariant: variant,
         },
       ];

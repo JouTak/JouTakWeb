@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { doLogin } from "../api/authApi";
-import { tokenStore } from "../auth/tokenStore";
+import { AUTH_STATE_EVENT, tokenStore } from "../auth/tokenStore";
 import { bareClient } from "../http/client";
 
 function httpError(status, data = {}, headers = {}) {
@@ -18,6 +18,8 @@ describe("authApi MFA login", () => {
   });
 
   it("returns pending_mfa and preserves the session token from allauth", async () => {
+    const authStateListener = vi.fn();
+    window.addEventListener(AUTH_STATE_EVENT, authStateListener);
     vi.spyOn(bareClient, "request").mockRejectedValueOnce(
       httpError(401, {
         status: 401,
@@ -45,6 +47,8 @@ describe("authApi MFA login", () => {
 
     expect(tokenStore.get().session_token).toBe("mfa-session-token");
     expect(tokenStore.get().pending_mfa).toBe(true);
+    expect(authStateListener).toHaveBeenCalled();
     expect(refreshSpy).not.toHaveBeenCalled();
+    window.removeEventListener(AUTH_STATE_EVENT, authStateListener);
   });
 });

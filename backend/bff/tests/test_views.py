@@ -11,6 +11,7 @@ from featureflags.models import (
 
 
 @override_settings(
+    ACCOUNT_EMAIL_VERIFICATION="none",
     FEATURE_FLAG_OVERRIDE_QUERY_ENABLED=True,
     DJANGO_ALLOWED_HOSTS=(
         "localhost",
@@ -87,3 +88,57 @@ class BffViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+    def test_homepage_variant_is_targeted_per_account(self):
+        allowed_user = self.create_legacy_user(
+            email=self.unique_email("allowed")
+        )
+        denied_user = self.create_legacy_user(
+            email=self.unique_email("denied")
+        )
+
+        FeatureRule.objects.create(
+            feature=self.feature,
+            name="allowlisted-v2",
+            priority=10,
+            rule_type=FeatureRuleType.USER_ALLOWLIST,
+            value="v2",
+            actor_ids=[str(allowed_user.pk)],
+        )
+
+        self.client.force_login(allowed_user)
+        allowed_bootstrap = self.client.get(
+            "/bff/bootstrap",
+            HTTP_HOST="api.localhost",
+        ).json()
+        allowed_home = self.client.get(
+            "/bff/pages/home",
+            HTTP_HOST="api.localhost",
+        ).json()
+
+        self.client.logout()
+        self.client.force_login(denied_user)
+        denied_bootstrap = self.client.get(
+            "/bff/bootstrap",
+            HTTP_HOST="api.localhost",
+        ).json()
+        denied_home = self.client.get(
+            "/bff/pages/home",
+            HTTP_HOST="api.localhost",
+        ).json()
+
+        self.assertEqual(allowed_bootstrap["layout"]["homepage_variant"], "v2")
+        self.assertEqual(
+            allowed_bootstrap["features"]["site_homepage_version"], "v2"
+        )
+        self.assertEqual(allowed_home["variant"], "v2")
+
+        self.assertEqual(
+            denied_bootstrap["layout"]["homepage_variant"],
+            "legacy",
+        )
+        self.assertEqual(
+            denied_bootstrap["features"]["site_homepage_version"],
+            "legacy",
+        )
+        self.assertEqual(denied_home["variant"], "legacy")

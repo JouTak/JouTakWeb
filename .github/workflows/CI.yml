@@ -257,6 +257,18 @@ jobs:
 
       - name: Shutdown smoke stack
         if: always()
+        env:
+          POSTGRES_DB: smoke_db
+          POSTGRES_USER: smoke_user
+          POSTGRES_PASSWORD: smoke_password
+          DJANGO_SECRET_KEY: smoke-secret-key-change
+          FRONTEND_BASE_URL: http://localhost
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.localhost,admin.localhost,joutak.localhost
+          DJANGO_ADMIN_HOSTS: admin.localhost
+          DJANGO_API_HOSTS: api.localhost
+          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,http://joutak.localhost
+          CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,http://joutak.localhost
+          PUBLIC_API_URL: http://api.localhost
         run: docker compose -f docker-compose.local.yml down -v
 
   secret_scan:

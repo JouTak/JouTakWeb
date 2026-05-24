@@ -24,6 +24,7 @@ def fetch(
     data: dict[str, object] | None = None,
     headers: dict[str, str] | None = None,
     timeout: float = 10.0,
+    retries: int = 0,
 ) -> SmokeResponse:
     payload = None
     request_headers = {"Host": host, **(headers or {})}
@@ -36,23 +37,31 @@ def fetch(
         headers=request_headers,
         method=method,
     )
-    try:
-        with urlopen(request, timeout=timeout) as response:
-            body = response.read().decode("utf-8")
+    for attempt in range(retries + 1):
+        try:
+            with urlopen(request, timeout=timeout) as response:
+                body = response.read().decode("utf-8")
+                return SmokeResponse(
+                    status=response.status,
+                    body=body,
+                    headers=dict(response.headers.items()),
+                )
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
             return SmokeResponse(
-                status=response.status,
+                status=exc.code,
                 body=body,
-                headers=dict(response.headers.items()),
+                headers=dict(exc.headers.items()),
             )
-    except HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        return SmokeResponse(
-            status=exc.code,
-            body=body,
-            headers=dict(exc.headers.items()),
-        )
-    except URLError as exc:
-        raise RuntimeError(f"request failed for {host}{path}: {exc}") from exc
+        except URLError as exc:
+            if method == "GET" and attempt < retries:
+                time.sleep(1 + attempt)
+                continue
+            raise RuntimeError(
+                f"request failed for {host}{path}: {exc}"
+            ) from exc
+
+    raise RuntimeError(f"request failed for {host}{path}: exhausted retries")
 
 
 def assert_status(
@@ -77,6 +86,7 @@ def wait_for_health() -> None:
                 host="api.localhost",
                 port=8000,
                 timeout=2,
+                retries=3,
             )
         except RuntimeError:
             time.sleep(2)
@@ -90,13 +100,17 @@ def wait_for_health() -> None:
 def run_smoke() -> None:
     wait_for_health()
 
-    frontend = fetch("/", host="localhost", port=8080)
+    frontend = fetch("/", host="localhost", port=8080, retries=3)
     assert_status(frontend, expected=200, label="frontend /")
 
-    health = fetch("/health/", host="api.localhost", port=8000)
+    health = fetch(
+        "/health/", host="api.localhost", port=8000, retries=3
+    )
     assert_status(health, expected=200, label="api health")
 
-    bootstrap = fetch("/bff/bootstrap", host="api.localhost", port=8000)
+    bootstrap = fetch(
+        "/bff/bootstrap", host="api.localhost", port=8000, retries=3
+    )
     assert_status(bootstrap, expected=200, label="bff bootstrap")
     bootstrap_payload = json.loads(bootstrap.body)
     assert "features" in bootstrap_payload
@@ -106,6 +120,7 @@ def run_smoke() -> None:
         "/admin/login/",
         host="admin.localhost",
         port=8000,
+        retries=3,
     )
     assert_status(admin_login, expected=200, label="admin login")
     assert "JouTak Staff Admin" in admin_login.body
@@ -114,6 +129,7 @@ def run_smoke() -> None:
         "/bff/bootstrap",
         host="admin.localhost",
         port=8000,
+        retries=3,
     )
     assert_status(admin_block, expected=403, label="admin host bff block")
 
@@ -143,6 +159,7 @@ def run_smoke() -> None:
         host="api.localhost",
         port=8000,
         headers={"X-Session-Token": session_token},
+        retries=3,
     )
     assert_status(account_summary, expected=200, label="bff account summary")
     account_payload = json.loads(account_summary.body)

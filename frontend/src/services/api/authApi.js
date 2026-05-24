@@ -3,6 +3,7 @@ import {
   extractSessionToken,
   sessionGet,
   sessionPost,
+  setSessionToken,
 } from "../auth/sessionClient";
 import {
   clearAuthStorage,
@@ -57,7 +58,7 @@ export async function loginApp({ login, password }) {
       throw new Error("No session token returned on login");
     }
 
-    mergeStoredTokens({ session_token: sessionToken }, { emit: true });
+    setSessionToken(sessionToken, { emit: true });
     return {
       status: "authenticated",
       session_token: sessionToken,
@@ -66,7 +67,7 @@ export async function loginApp({ login, password }) {
     const sessionToken = extractSessionToken(error?.response);
     const pending = extractPendingMfa(error?.response?.data);
     if (pending && sessionToken) {
-      mergeStoredTokens({ session_token: sessionToken }, { emit: false });
+      setSessionToken(sessionToken, { emit: false });
       markPendingMfaSession(true);
       return {
         ...pending,
@@ -93,7 +94,7 @@ export async function signupApp({ email, password }) {
     throw new Error("No session token returned on signup");
   }
 
-  mergeStoredTokens({ session_token: sessionToken }, { emit: true });
+  setSessionToken(sessionToken, { emit: true });
   return sessionToken;
 }
 

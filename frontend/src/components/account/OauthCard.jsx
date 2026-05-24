@@ -1,5 +1,5 @@
 import { Button, DropdownMenu, Loader, useToaster } from "@gravity-ui/uikit";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getOAuthLink, getOAuthProviders } from "../../services/api";
 import { SectionCard } from "../ui/primitives";
@@ -31,36 +31,58 @@ function readCsrfToken() {
 export default function OauthCard() {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
-  // We only render the "no providers available" copy after the backend
-  // has *actually* responded successfully. Otherwise a transient error
-  // (or a slow response) briefly flashes the empty state before we
-  // even know whether any providers exist, which looks like a bug to
-  // the user.
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const requestSeqRef = useRef(0);
+  const mountedRef = useRef(false);
+  const isCancelledRef = useRef(false);
   const { add } = useToaster();
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const list = await getOAuthProviders();
-        if (cancelled) return;
-        setProviders(Array.isArray(list) ? list : []);
-        setReady(true);
-      } catch (error) {
-        void error;
-        // Keep `ready` false so we don't render a misleading empty
-        // state when the request failed. The card will just stay in
-        // its loading shimmer until the next retry/remount.
-      } finally {
-        if (!cancelled) setLoading(false);
+  const loadProviders = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const list = await getOAuthProviders();
+      if (
+        !mountedRef.current ||
+        isCancelledRef.current ||
+        requestSeq !== requestSeqRef.current
+      ) {
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setProviders(Array.isArray(list) ? list : []);
+      setReady(true);
+    } catch (error) {
+      if (
+        !mountedRef.current ||
+        isCancelledRef.current ||
+        requestSeq !== requestSeqRef.current
+      ) {
+        return;
+      }
+      setReady(true);
+      setLoadError(error);
+    } finally {
+      if (
+        mountedRef.current &&
+        !isCancelledRef.current &&
+        requestSeq === requestSeqRef.current
+      ) {
+        setLoading(false);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    isCancelledRef.current = false;
+    void loadProviders();
+    return () => {
+      mountedRef.current = false;
+      isCancelledRef.current = true;
+    };
+  }, [loadProviders]);
 
   function submitPost(url, fields = {}) {
     const form = document.createElement("form");
@@ -120,6 +142,38 @@ export default function OauthCard() {
       <h3 style={{ margin: 0, fontSize: 18 }}>Связанные аккаунты</h3>
       {loading || !ready ? (
         <Loader size="m" />
+      ) : loadError ? (
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ opacity: 0.8 }}>
+            Не удалось загрузить список провайдеров.
+          </div>
+          <Button view="outlined" onClick={() => void loadProviders()}>
+            Повторить
+          </Button>
+          {providers?.length ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              {providers.map((p) => (
+                <div key={p.id} style={row}>
+                  <div style={{ textTransform: "capitalize" }}>{p.name}</div>
+                  <DropdownMenu
+                    size="m"
+                    renderSwitcher={(props) => (
+                      <Button {...props} view="outlined">
+                        Действия
+                      </Button>
+                    )}
+                    items={[
+                      {
+                        text: "Связать",
+                        action: () => connectProvider(p.id),
+                      },
+                    ]}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : providers?.length ? (
         <div style={{ display: "grid", gap: 8 }}>
           {providers.map((p) => (

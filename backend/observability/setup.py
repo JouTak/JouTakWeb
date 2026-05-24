@@ -83,6 +83,7 @@ def setup_observability() -> None:
         RequestsInstrumentor().instrument()
 
         set_meter_provider(meter_provider)
+        setup_observability._is_setup = True
 
 
 setup_observability._is_setup = False

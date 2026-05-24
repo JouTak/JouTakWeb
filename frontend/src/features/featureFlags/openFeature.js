@@ -6,7 +6,7 @@ let initialized = false;
 export function toFlagConfiguration(features) {
   return Object.fromEntries(
     Object.entries(features || {}).map(([key, value]) => {
-      const variant = String(value);
+      const variant = typeof value === "string" ? value : String(value);
       return [
         key,
         {

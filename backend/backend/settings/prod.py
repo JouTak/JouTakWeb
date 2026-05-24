@@ -96,7 +96,6 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
     STORAGES["staticfiles"] = {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
     }
-    WHITENOISE_MANIFEST_STRICT = False
 
 HEADLESS_SERVE_SPECIFICATION = False
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = False

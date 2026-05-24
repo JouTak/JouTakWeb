@@ -1,6 +1,6 @@
 import { OpenFeatureProvider } from "@openfeature/react-sdk";
 import PropTypes from "prop-types";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getBootstrap,
@@ -23,60 +23,73 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
     loading: true,
     error: null,
   });
+  const requestSeqRef = useRef(0);
+  const mountedRef = useRef(false);
+
+  const loadBootstrap = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
+    setState((current) => ({
+      bootstrap: current.bootstrap,
+      loading: true,
+      error: null,
+    }));
+
+    try {
+      const params = pickFeatureOverrideParams(window.location.search);
+      const bootstrap = await getBootstrap(params);
+      await updateFeatureConfiguration(bootstrap?.features || {});
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+        return;
+      }
+      setState({
+        bootstrap,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+        return;
+      }
+      setState({
+        bootstrap: null,
+        loading: false,
+        error,
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current = true;
     initializeOpenFeature();
-
-    async function loadBootstrap() {
-      setState((current) => ({
-        bootstrap: current.bootstrap,
-        loading: true,
-        error: null,
-      }));
-
-      try {
-        const params = pickFeatureOverrideParams(window.location.search);
-        const bootstrap = await getBootstrap(params);
-        await updateFeatureConfiguration(bootstrap?.features || {});
-        if (!cancelled) {
-          setState({
-            bootstrap,
-            loading: false,
-            error: null,
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setState({
-            bootstrap: null,
-            loading: false,
-            error,
-          });
-        }
-      }
-    }
-
-    loadBootstrap();
+    void loadBootstrap();
 
     const handleAuthStateChange = () => {
-      loadBootstrap();
+      void loadBootstrap();
     };
     window.addEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
 
     return () => {
-      cancelled = true;
+      mountedRef.current = false;
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
     };
-  }, []);
+  }, [loadBootstrap]);
 
   const value = useMemo(
     () => ({
       ...state,
       reload: async () => {
+        const requestSeq = ++requestSeqRef.current;
+        setState((current) => ({
+          bootstrap: current.bootstrap,
+          loading: true,
+          error: null,
+        }));
         const params = pickFeatureOverrideParams(window.location.search);
         const bootstrap = await getBootstrap(params);
         await updateFeatureConfiguration(bootstrap?.features || {});
+        if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+          return bootstrap;
+        }
         setState({
           bootstrap,
           loading: false,

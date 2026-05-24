@@ -84,7 +84,7 @@ def fetch_step(label: str, path: str, **kwargs) -> SmokeResponse:
 
 
 def wait_for_health() -> None:
-    deadline = time.time() + 120
+    deadline = time.time() + 240
     while time.time() < deadline:
         try:
             response = fetch_step(

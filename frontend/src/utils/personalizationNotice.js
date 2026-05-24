@@ -1,13 +1,22 @@
-const SEEN_KEY_PREFIX = "joutak_personalization_seen:";
+export const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_seen:";
 const SIGNUP_SESSION_FLAG = "joutak_post_signup_personalization";
+
+function getProfileIdentity(profile) {
+  const identity = profile?.id ?? profile?.username ?? null;
+  if (identity === null || identity === undefined) {
+    return null;
+  }
+  const normalized = String(identity).trim().toLowerCase();
+  return normalized || null;
+}
 
 /**
  * Derive a stable key to track whether the user has seen the personalization
  * notice. Uses user ID so each user is tracked independently in localStorage.
  */
 export function getPersonalizationNoticeKey(profile) {
-  const userId = profile?.id || profile?.username || "anonymous";
-  return `${SEEN_KEY_PREFIX}${userId}`;
+  const userId = getProfileIdentity(profile) || "anonymous";
+  return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${userId}`;
 }
 
 /**
@@ -38,6 +47,9 @@ export function markPostSignupPersonalizationSession() {
  * Check if the user has already dismissed the personalization notice.
  */
 export function hasSeenPersonalizationNotice(profile) {
+  if (!getProfileIdentity(profile)) {
+    return false;
+  }
   const key = getPersonalizationNoticeKey(profile);
   try {
     return localStorage.getItem(key) === "1";
@@ -50,6 +62,9 @@ export function hasSeenPersonalizationNotice(profile) {
  * Record that the user has seen/dismissed the personalization notice.
  */
 export function markPersonalizationNoticeSeen(profile) {
+  if (!getProfileIdentity(profile)) {
+    return;
+  }
   const key = getPersonalizationNoticeKey(profile);
   try {
     localStorage.setItem(key, "1");

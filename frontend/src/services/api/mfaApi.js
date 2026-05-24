@@ -1,5 +1,14 @@
 import { allauthAppRequest } from "../auth/sessionClient";
 
+const EMPTY_TOTP = {
+  enabled: false,
+  authenticator: null,
+  recovery_codes_generated: false,
+  blocked_by_email_verification: false,
+  secret: "",
+  totp_url: "",
+};
+
 // ─── MFA Configuration ──────────────────────────────────────────────────────
 
 /**
@@ -60,11 +69,26 @@ export async function authenticateWithWebAuthnCredential(usage, credential) {
  * Get current TOTP authenticator status (provisioning URI if not active).
  */
 export async function getTotpStatus() {
-  const { data } = await allauthAppRequest(
-    "get",
-    "/account/authenticators/totp",
-  );
-  return data?.data || data;
+  try {
+    const { data } = await allauthAppRequest(
+      "get",
+      "/account/authenticators/totp",
+    );
+    return data?.data || data;
+  } catch (error) {
+    if (error?.response?.status !== 404) {
+      throw error;
+    }
+    const meta = error?.response?.data?.meta || error?.response?.data?.data;
+    if (!meta?.secret && !meta?.totp_url) {
+      return EMPTY_TOTP;
+    }
+    return {
+      ...EMPTY_TOTP,
+      secret: meta.secret || "",
+      totp_url: meta.totp_url || "",
+    };
+  }
 }
 
 /**

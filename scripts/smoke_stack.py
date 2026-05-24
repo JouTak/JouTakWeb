@@ -54,7 +54,12 @@ def fetch(
                 body=body,
                 headers=dict(exc.headers.items()),
             )
-        except (RemoteDisconnected, ConnectionResetError, URLError) as exc:
+        except (
+            RemoteDisconnected,
+            ConnectionResetError,
+            TimeoutError,
+            URLError,
+        ) as exc:
             if method == "GET" and attempt < retries:
                 time.sleep(1 + attempt)
                 continue

@@ -77,11 +77,17 @@ def assert_status(
         )
 
 
+def fetch_step(label: str, path: str, **kwargs) -> SmokeResponse:
+    sys.stderr.write(f"Smoke step: {label} -> {kwargs.get('host')}{path}\n")
+    return fetch(path, **kwargs)
+
+
 def wait_for_health() -> None:
     deadline = time.time() + 120
     while time.time() < deadline:
         try:
-            response = fetch(
+            response = fetch_step(
+                "health",
                 "/health/",
                 host="api.localhost",
                 port=8000,
@@ -100,23 +106,34 @@ def wait_for_health() -> None:
 def run_smoke() -> None:
     wait_for_health()
 
-    frontend = fetch("/", host="localhost", port=8080, retries=3)
+    frontend = fetch_step(
+        "frontend", "/", host="localhost", port=8080, retries=3
+    )
     assert_status(frontend, expected=200, label="frontend /")
 
-    health = fetch(
-        "/health/", host="api.localhost", port=8000, retries=3
+    health = fetch_step(
+        "api health",
+        "/health/",
+        host="api.localhost",
+        port=8000,
+        retries=3,
     )
     assert_status(health, expected=200, label="api health")
 
-    bootstrap = fetch(
-        "/bff/bootstrap", host="api.localhost", port=8000, retries=3
+    bootstrap = fetch_step(
+        "bootstrap",
+        "/bff/bootstrap",
+        host="api.localhost",
+        port=8000,
+        retries=3,
     )
     assert_status(bootstrap, expected=200, label="bff bootstrap")
     bootstrap_payload = json.loads(bootstrap.body)
     assert "features" in bootstrap_payload
     assert "layout" in bootstrap_payload
 
-    admin_login = fetch(
+    admin_login = fetch_step(
+        "admin login",
         "/admin/login/",
         host="admin.localhost",
         port=8000,
@@ -125,7 +142,8 @@ def run_smoke() -> None:
     assert_status(admin_login, expected=200, label="admin login")
     assert "JouTak Staff Admin" in admin_login.body
 
-    admin_block = fetch(
+    admin_block = fetch_step(
+        "admin bootstrap block",
         "/bff/bootstrap",
         host="admin.localhost",
         port=8000,
@@ -133,7 +151,8 @@ def run_smoke() -> None:
     )
     assert_status(admin_block, expected=403, label="admin host bff block")
 
-    signup = fetch(
+    signup = fetch_step(
+        "signup",
         "/api/auth/flow/app/v1/auth/signup",
         host="api.localhost",
         port=8000,
@@ -154,7 +173,8 @@ def run_smoke() -> None:
     if not session_token:
         raise AssertionError("signup did not return session token")
 
-    account_summary = fetch(
+    account_summary = fetch_step(
+        "account summary",
         "/bff/account/summary",
         host="api.localhost",
         port=8000,

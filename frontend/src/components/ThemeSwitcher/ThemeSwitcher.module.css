@@ -1,0 +1,168 @@
+.switch {
+  position: relative;
+
+  width: 95px;
+  height: 48px;
+
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
+}
+
+svg {
+  display: block;
+  shape-rendering: crispEdges;
+}
+
+.contour {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  z-index: 5;
+}
+
+.thumb {
+  position: absolute;
+
+  top: 4px;
+  left: 4px;
+
+  width: 87px;
+  height: 40px;
+
+  z-index: 3;
+
+  transition: transform 0.45s ease;
+}
+
+.thumbBg {
+  width: 100%;
+  height: 100%;
+
+  color: #278cf0;
+
+  transition: color 0.45s ease;
+}
+
+.night .thumbBg {
+  color: #070e14;
+}
+
+.sun,
+.moon {
+  position: absolute;
+
+  width: 30px;
+  height: 30px;
+
+  top: 5px;
+  left: 8px;
+
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+
+/* Облака */
+.clouds {
+  position: absolute;
+
+  left: 25px;
+  top: 20px;
+
+  width: 32px;
+  height: 16px;
+
+  z-index: 4;
+
+  opacity: 1;
+
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+}
+
+.night .clouds {
+  opacity: 0;
+
+  transform: translateY(4px);
+}
+
+/* Солнце */
+
+.sun {
+  color: #ffc116;
+
+  opacity: 1;
+
+  transform:
+    translateX(0)
+    rotate(0deg)
+    scale(1);
+}
+
+/* Луна */
+
+.moon {
+  color: #278cf0;
+
+  opacity: 0;
+
+  transform:
+    translateX(-40px)
+    rotate(-180deg)
+    scale(0.5);
+}
+
+/* Звезды */
+
+.stars {
+  position: absolute;
+
+  top: 7px;
+  left: 12px;
+
+  width: 40px;
+  height: 35px;
+
+  opacity: 0;
+
+  z-index: 4;
+
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s ease;
+
+  transform: translateY(4px);
+}
+
+/* Ночная тема */
+
+.night .sun {
+  opacity: 0;
+
+  transform:
+    translateX(40px)
+    rotate(180deg)
+    scale(0.5);
+}
+
+.night .moon {
+  opacity: 1;
+
+  transform:
+    translateX(40px)
+    rotate(0deg)
+    scale(1);
+}
+
+.night .stars {
+  opacity: 1;
+
+  transform: translateY(0);
+}

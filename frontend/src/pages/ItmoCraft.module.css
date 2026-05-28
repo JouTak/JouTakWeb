@@ -1,0 +1,52 @@
+@font-face {
+  font-family: "GeologicaFont";
+  src: url("/img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf")
+    format("truetype");
+}
+
+@font-face {
+  font-family: "MinecraftTenFont";
+  src: url("/img/fonts/minecraft-ten-font-cyrillic.ttf") format("truetype");
+}
+
+.ctaInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+  padding-bottom: 32px;
+}
+
+.title {
+  margin: 0;
+  font-family: "GeologicaFont", sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  color: rgba(39, 140, 240, 1);
+}
+
+.title a {
+  color: inherit;
+}
+
+.subtitle {
+  padding: 60px 0 20px 0;
+  margin: 0;
+  font-family: "MinecraftTenFont", sans-serif;
+  font-size: 48px;
+  font-weight: 400;
+  color: rgba(236, 247, 255, 1);
+}
+
+.ctaButton {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .title,
+  .subtitle {
+    font-size: 32px;
+  }
+}

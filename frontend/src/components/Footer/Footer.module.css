@@ -76,6 +76,28 @@
   font-size: 27px;
 }
 
+.socialIcon a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+  background: transparent;
+  border-radius: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.socialIcon a:visited {
+  color: inherit;
+}
+
+.socialIcon a:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 55%);
+  outline-offset: 3px;
+}
+
 .copyright {
   color: rgba(255, 255, 255, 0.75);
   margin: 0;

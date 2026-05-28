@@ -7,14 +7,19 @@ export default function ProjectCard({
     description,
     image,
     to,
-    extended = false
+    extended = false,
+    imageHeight
 }) {
+    const imageStyle = imageHeight
+        ? { height: imageHeight, aspectRatio: "auto" }
+        : undefined
+
     return (
     <Link to={to} 
           className={clsx(styles.card, {[styles.extended]: extended})}>
 
         <div className={styles.imageWrapper}>
-            <img src={image} alt={title} />
+            <img src={image} alt={title} style={imageStyle} />
         </div>
 
         <div className={styles.projectInfo}>

@@ -63,10 +63,10 @@ function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes location={background || location}>
-        <Route path="/" element={<Navigate to="/joutak" replace />} />
-        <Route path="/joutak" element={<JouTak />} />
+        <Route path="/" element={<Navigate to="/itmocraft" replace />} />
+        <Route path="/joutak" element={<ItmoCraft />} />
         <Route path="/legacy" element={<Legacy />} />
-        <Route path="/itmocraft" element={<ItmoCraft />} />
+        <Route path="/itmocraft" element={<JouTak />} />
         <Route path="/minigames" element={<MiniGames />} />
         <Route path="/contact" element={<Contact />} />
         <Route

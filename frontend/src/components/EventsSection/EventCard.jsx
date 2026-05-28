@@ -10,6 +10,7 @@ export default function EventCard({
     image,
     date,
     to,
+    imageWidth,
 }) {
 
     const formattedDate = new Date(date).toLocaleString("ru-RU", {
@@ -18,6 +19,11 @@ export default function EventCard({
         hour: "2-digit",
         minute: "2-digit",
     });
+
+    const eventImageStyle = imageWidth
+        ? { width: imageWidth, maxWidth: imageWidth, flex: `0 0 ${imageWidth}` }
+        : undefined;
+
     return (
         <div className={styles.card}>
             <div className={styles.text}>
@@ -31,7 +37,7 @@ export default function EventCard({
                     регистрация
                 </MinecraftButton>
             </div>
-            <img className={styles.eventImg} src={image} width="739" />
+            <img className={styles.eventImg} src={image} width="739" style={eventImageStyle} />
         </div>
     )
 }

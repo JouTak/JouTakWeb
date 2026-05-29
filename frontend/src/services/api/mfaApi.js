@@ -246,7 +246,7 @@ export async function reauthenticateWithPassword(password) {
  * Re-authenticate with a TOTP/recovery code (for sensitive operations).
  */
 export async function reauthenticateWithMfaCode(code) {
-  const { data } = await allauthAppRequest("post", "/auth/reauthenticate", {
+  const { data } = await allauthAppRequest("post", "/auth/2fa/reauthenticate", {
     data: { code: String(code || "").trim() },
   });
   return data;

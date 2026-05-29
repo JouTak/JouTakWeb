@@ -7,6 +7,7 @@ import {
   getTotpStatus,
   getWebAuthnRegistrationOptions,
   getWebAuthnRequestOptions,
+  reauthenticateWithMfaCode,
 } from "../api/mfaApi";
 import { tokenStore } from "../auth/tokenStore";
 import { bareClient } from "../http/client";
@@ -65,6 +66,30 @@ describe("mfaApi", () => {
     });
 
     expect(tokenStore.get().session_token).toBe("mfa-session-token");
+  });
+
+  it("routes MFA reauthentication codes to the MFA reauth endpoint", async () => {
+    const requestSpy = vi.spyOn(bareClient, "request").mockResolvedValueOnce({
+      data: {
+        data: {
+          status: "ok",
+        },
+      },
+    });
+
+    await expect(reauthenticateWithMfaCode(" 123456 ")).resolves.toEqual({
+      data: {
+        status: "ok",
+      },
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: "auth/flow/app/v1/auth/2fa/reauthenticate",
+        data: { code: "123456" },
+      }),
+    );
   });
 
   it("reads MFA config from the headless config endpoint", async () => {

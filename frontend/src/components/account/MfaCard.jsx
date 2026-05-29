@@ -389,7 +389,7 @@ export default function MfaCard({ profile = null }) {
       const options = await getWebAuthnRegistrationOptions({
         passwordless: mfaConfig?.passkey_login_enabled === true,
       });
-      const credential = await createWebAuthnCredential({ publicKey: options });
+      const credential = await createWebAuthnCredential(options);
       const result = await addWebAuthnCredential({
         name: newPasskeyName,
         credential,
@@ -586,9 +586,7 @@ export default function MfaCard({ profile = null }) {
         onPasskeySubmit={() =>
           handleReauthRetry(async () => {
             const options = await getWebAuthnRequestOptions("reauthenticate");
-            const credential = await getWebAuthnCredential({
-              publicKey: options,
-            });
+            const credential = await getWebAuthnCredential(options);
             await authenticateWithWebAuthnCredential(
               "reauthenticate",
               credential,

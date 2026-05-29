@@ -26,7 +26,31 @@ function normalizeBackendRoot(value) {
   return trimmed.endsWith("/api") ? trimmed.slice(0, -4) : trimmed;
 }
 
-export const BACKEND_ROOT_URL = normalizeBackendRoot(BACKEND_URL);
+const LOCAL_BACKEND_FALLBACK_URL = "http://127.0.0.1:8000";
+
+function isRuntimePlaceholder(value) {
+  const raw = String(value || "").trim();
+  return raw.startsWith("__JOUTAK_RUNTIME_") && raw.endsWith("__");
+}
+
+export function resolveBackendRoot(value) {
+  const normalized = normalizeBackendRoot(value);
+  if (!normalized || isRuntimePlaceholder(normalized)) {
+    return LOCAL_BACKEND_FALLBACK_URL;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.hostname === "localhost" && !parsed.port) {
+      return LOCAL_BACKEND_FALLBACK_URL;
+    }
+    return normalized;
+  } catch {
+    return LOCAL_BACKEND_FALLBACK_URL;
+  }
+}
+
+export const BACKEND_ROOT_URL = resolveBackendRoot(BACKEND_URL);
 export const API_BASE = `${BACKEND_ROOT_URL}/api`;
 export const OTEL_EXPORTER_TRACES_URL =
   normalizeOptionalRuntimeValue(OTEL_TRACES_URL);

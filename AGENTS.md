@@ -1,47 +1,18 @@
-# AGENTS.md
+# AGENTS.md instructions for /Users/mihhailmatvejev/PycharmProjects/JouTakWeb
 
-Инструкции для любых агентов, работающих с этим репозиторием.
+## Git Commits
 
-## Приоритет
+Use Conventional Commits for git commits by default.
 
-- Сначала следуй ближайшему `AGENTS.md` в текущей папке или выше по дереву.
-- Если локальная инструкция конфликтует с более общей, приоритет у более близкого файла.
-- Затем используй `CONTRIBUTING.md` и релевантные документы в `docs/`.
-- Не выдумывай стек, команды или правила: проверяй по файлам репозитория.
+Required format:
+`type(scope): description`
 
-## Карта репозитория
+Preferred types:
+`feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `ci`, `build`, `perf`, `style`, `revert`.
 
-- `frontend/` - Vite React приложение.
-- `backend/` - Django backend, API и сервисы.
-- `docs/` - архитектура, frontend и API conventions, безопасность.
-- `scripts/` - служебные проверки и утилиты.
-- `docker-compose*.yml`, `stack.yml` - локальный и production Docker.
+Do not create non-canonical commit messages unless the user explicitly asks for a different format.
 
-## Общие правила работы
+## Pull Requests
 
-- Сначала исследуй соседние файлы, тесты и конвенции, потом меняй код.
-- Держи изменения минимальными и целевыми.
-- Не смешивай несвязанные изменения в одном PR или коммите.
-- Не удаляй и не перезаписывай чужие незапрошенные изменения.
-- Не используй destructive git-команды вроде `git reset --hard` или `git checkout --`, если это не было прямо запрошено.
-- Если контекст недостаточен, зафиксируй допущение или задай короткий уточняющий вопрос.
-
-## Качество и проверка
-
-- Запускай только релевантные проверки, но не пропускай их без причины.
-- Для UI-изменений добавляй визуальную проверку или screenshot note.
-- Для изменений контрактов, зависимостей или окружения обновляй соответствующую документацию.
-- Если меняется поведение, проверь связанные тесты до завершения задачи.
-
-## Git и коммиты
-
-- Ветки для разработки делай короткими и scoped, с префиксом `dev/`.
-- Коммиты оформляй по Conventional Commits: `type(scope): description`.
-- Допустимые типы: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `ci`, `build`, `perf`, `style`, `revert`.
-- `git commit --no-verify` используй только для emergency work и с явным объяснением причины.
-
-## Что читать дополнительно
-
-- Для frontend-работы смотри [`frontend/AGENTS.md`](./frontend/AGENTS.md).
-- Для backend-работы смотри [`backend/AGENTS.md`](./backend/AGENTS.md).
-- Для общих правил контрибьюта смотри [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Do not prefix pull request titles with `[codex]`.
+Use a plain Conventional Commits-style PR title or another repository-approved title format that does not interfere with branch or PR naming logic.

@@ -13,17 +13,30 @@ const EMPTY_TOTP = {
 
 /**
  * Fetch global MFA configuration (passkey login support, supported types).
- * Falls back to allauth headless config endpoint.
+ * Reads the headless config endpoint so the authenticated account pages
+ * do not need to hit an MFA challenge route just to learn feature flags.
  */
 export async function getMfaConfig() {
-  const { data } = await allauthAppRequest("get", "/auth/2fa/authenticate", {
-    includeSession: false,
-  });
-  const config = data?.data || {};
-  return {
-    passkey_login_enabled: config?.passkey_login_enabled ?? false,
-    supported_types: config?.types || [],
-  };
+  try {
+    const { data } = await allauthAppRequest("get", "/config");
+    const config = data?.data?.mfa || data?.data || {};
+    return {
+      passkey_login_enabled: config?.passkey_login_enabled ?? false,
+      supported_types: config?.supported_types || config?.types || [],
+    };
+  } catch (error) {
+    if (error?.response?.status !== 401) {
+      throw error;
+    }
+    const flows =
+      error?.response?.data?.data?.flows || error?.response?.data?.flows || [];
+    return {
+      passkey_login_enabled: flows.some(
+        (flow) => flow?.id === "mfa_login_webauthn",
+      ),
+      supported_types: [],
+    };
+  }
 }
 
 // ─── MFA Authentication (login / reauthentication) ──────────────────────────
@@ -44,7 +57,11 @@ export async function authenticateMfaCode(code) {
  */
 export async function getWebAuthnRequestOptions(usage) {
   const endpoint =
-    usage === "login" ? "/auth/webauthn/login" : "/auth/webauthn/authenticate";
+    usage === "login"
+      ? "/auth/webauthn/login"
+      : usage === "reauthenticate"
+        ? "/auth/webauthn/reauthenticate"
+        : "/auth/webauthn/authenticate";
   const { data } = await allauthAppRequest("get", endpoint);
   return data?.data?.request_options || data?.data || data;
 }
@@ -56,7 +73,11 @@ export async function getWebAuthnRequestOptions(usage) {
  */
 export async function authenticateWithWebAuthnCredential(usage, credential) {
   const endpoint =
-    usage === "login" ? "/auth/webauthn/login" : "/auth/webauthn/authenticate";
+    usage === "login"
+      ? "/auth/webauthn/login"
+      : usage === "reauthenticate"
+        ? "/auth/webauthn/reauthenticate"
+        : "/auth/webauthn/authenticate";
   const { data } = await allauthAppRequest("post", endpoint, {
     data: { credential },
   });
@@ -128,13 +149,19 @@ export async function listAuthenticators() {
 
 /**
  * Get WebAuthn registration (creation) options for adding a new credential.
- * @param {{ name?: string }} options
+ * @param {{ name?: string, passwordless?: boolean }} options
  */
-export async function getWebAuthnRegistrationOptions({ name } = {}) {
+export async function getWebAuthnRegistrationOptions({
+  name,
+  passwordless = false,
+} = {}) {
+  const params = {};
+  if (name) params.name = name;
+  if (passwordless) params.passwordless = "";
   const { data } = await allauthAppRequest(
     "get",
     "/account/authenticators/webauthn",
-    { params: name ? { name } : undefined },
+    { params: Object.keys(params).length ? params : undefined },
   );
   return data?.data?.creation_options || data?.data || data;
 }
@@ -219,7 +246,7 @@ export async function reauthenticateWithPassword(password) {
  * Re-authenticate with a TOTP/recovery code (for sensitive operations).
  */
 export async function reauthenticateWithMfaCode(code) {
-  const { data } = await allauthAppRequest("post", "/auth/reauthenticate", {
+  const { data } = await allauthAppRequest("post", "/auth/2fa/reauthenticate", {
     data: { code: String(code || "").trim() },
   });
   return data;

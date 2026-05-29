@@ -41,11 +41,11 @@ describe("personalization notice state", () => {
   it("tracks post-signup suppression only in session storage", () => {
     const profile = { username: "new@example.com" };
 
-    expect(isPostSignupPersonalizationSession(profile)).toBe(false);
+    expect(isPostSignupPersonalizationSession()).toBe(false);
 
     markPostSignupPersonalizationSession();
 
-    expect(isPostSignupPersonalizationSession(profile)).toBe(true);
+    expect(isPostSignupPersonalizationSession()).toBe(true);
     expect(hasSeenPersonalizationNotice(profile)).toBe(false);
   });
 });

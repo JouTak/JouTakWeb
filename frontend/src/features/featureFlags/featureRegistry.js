@@ -56,7 +56,7 @@ export const FEATURE_MAP = {
     page: "*",
     slot: "footer",
     description: "New footer design from the website-dev branch",
-    component: null, // TODO: lazy(() => import("../../components/FooterV2"))
+    component: null, // Placeholder until FooterV2 lands in this repo.
   },
 
   site_header_v2: {
@@ -64,7 +64,7 @@ export const FEATURE_MAP = {
     page: "*",
     slot: "header",
     description: "New header/navigation design from the website-dev branch",
-    component: null, // TODO: lazy(() => import("../../components/HeaderV2"))
+    component: null, // Placeholder until HeaderV2 lands in this repo.
   },
 
   joutak_projects_section: {
@@ -72,7 +72,7 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-projects",
     description: "Project cards grid section on the homepage",
-    component: null, // Will be set when component is ready
+    component: null, // Placeholder until the section component is ready.
   },
 
   joutak_events_section: {

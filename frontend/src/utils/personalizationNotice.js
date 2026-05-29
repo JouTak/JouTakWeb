@@ -23,7 +23,7 @@ export function getPersonalizationNoticeKey(profile) {
  * Whether the current session was created by a fresh signup (the signup
  * flow marks it before redirecting to the personalization wizard).
  */
-export function isPostSignupPersonalizationSession(_profile) {
+export function isPostSignupPersonalizationSession() {
   try {
     return sessionStorage.getItem(SIGNUP_SESSION_FLAG) === "1";
   } catch {

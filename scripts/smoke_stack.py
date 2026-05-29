@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import time
+import traceback
 from dataclasses import dataclass
 from http.client import RemoteDisconnected
 from urllib.error import HTTPError, URLError
@@ -196,5 +197,6 @@ if __name__ == "__main__":
     try:
         run_smoke()
     except Exception as exc:  # noqa: BLE001
+        traceback.print_exc()
         sys.stderr.write(f"Smoke failed: {exc}\n")
         raise SystemExit(1) from exc

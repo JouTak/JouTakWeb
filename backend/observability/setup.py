@@ -22,6 +22,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 _setup_lock = Lock()
+_is_setup = False
 
 
 def _enabled() -> bool:
@@ -55,11 +56,13 @@ def _resource() -> Resource:
 
 
 def setup_observability() -> None:
+    global _is_setup
+
     if not _enabled():
         return
 
     with _setup_lock:
-        if getattr(setup_observability, "_is_setup", False):
+        if _is_setup:
             return
 
         resource = _resource()
@@ -83,7 +86,4 @@ def setup_observability() -> None:
         RequestsInstrumentor().instrument()
 
         set_meter_provider(meter_provider)
-        setup_observability._is_setup = True
-
-
-setup_observability._is_setup = False
+        _is_setup = True

@@ -35,7 +35,6 @@ apply_env_file_overrides(
 
 DEBUG = config("DJANGO_DEBUG", cast=bool, default=False)
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="")
-ALLOW_REVERSE = config("DJANGO_ALLOW_REVERSE", cast=bool, default=True)
 SITE_ID = config("DJANGO_SITE_ID", cast=int, default=1)
 SITE_DOMAIN = config("DJANGO_SITE_DOMAIN", default="")
 SITE_NAME = config("DJANGO_SITE_NAME", default="")

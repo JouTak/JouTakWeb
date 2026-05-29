@@ -24,8 +24,8 @@ def _build_bff_response(request, *, page, build_payload):
     context is ready, the payload is serialized into the response body.
     """
     response = JsonResponse({}, content_type="application/json")
-    context, _created = build_context(request, page=page, response=response)
-    payload = build_payload(request=request, context=context)
+    context, _ = build_context(request, page=page, response=response)
+    payload = build_payload(request, context)
     response.content = JsonResponse(payload).content
     return response
 
@@ -46,7 +46,7 @@ def homepage(request):
     return _build_bff_response(
         request,
         page="homepage",
-        build_payload=lambda request, context: build_home_payload(context),
+        build_payload=build_home_payload,
     )
 
 

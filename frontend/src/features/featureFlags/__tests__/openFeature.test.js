@@ -15,6 +15,18 @@ describe("toFlagConfiguration", () => {
     });
   });
 
+  it("preserves false boolean values for boolean flags", () => {
+    expect(toFlagConfiguration({ profile_personalization_ui: false })).toEqual({
+      profile_personalization_ui: {
+        disabled: false,
+        variants: {
+          false: false,
+        },
+        defaultVariant: "false",
+      },
+    });
+  });
+
   it("preserves string values for variant flags", () => {
     expect(toFlagConfiguration({ site_homepage_version: "v2" })).toEqual({
       site_homepage_version: {

@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.backends.db import SessionStore
 from django.test import TestCase, override_settings
 
-from backend.admin_site import SESSION_KEY_ADMIN_MFA_VERIFIED
+from backend.admin_site import (
+    SESSION_KEY_ADMIN_MFA_PENDING_USER,
+    SESSION_KEY_ADMIN_MFA_VERIFIED,
+)
 
 User = get_user_model()
 
@@ -193,3 +198,37 @@ class AdminHostPolicyTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/admin/login/", response["Location"])
+
+    @patch(
+        "allauth.mfa.webauthn.internal.auth.complete_authentication",
+        side_effect=ValueError("boom"),
+    )
+    def test_webauthn_complete_logs_failure_and_returns_400(
+        self, _mock_complete
+    ):
+        user = User.objects.create_user(
+            username="staff_webauthn",
+            email="staff-webauthn@example.com",
+            password="StrongPass123!",
+            is_staff=True,
+        )
+        session = SessionStore()
+        session[SESSION_KEY_ADMIN_MFA_PENDING_USER] = user.pk
+        session.save()
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = session.session_key
+
+        with patch("backend.admin_site.logger.warning") as warning_mock:
+            response = self.client.post(
+                "/admin/mfa-verify/webauthn-complete/",
+                data="{}",
+                content_type="application/json",
+                HTTP_HOST="admin.localhost",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertJSONEqual(
+            response.content,
+            {"error": "Verification failed"},
+        )
+        warning_mock.assert_called_once()
+        self.assertTrue(warning_mock.call_args.kwargs.get("exc_info"))

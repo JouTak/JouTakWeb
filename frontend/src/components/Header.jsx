@@ -165,7 +165,7 @@ const Header = () => {
     !isPersonalizationFlowPath(location.pathname) &&
     needsPersonalization(profile) &&
     isNewRegistrationPersonalization(profile) &&
-    isPostSignupPersonalizationSession(profile);
+    isPostSignupPersonalizationSession();
 
   const personalizationNoticeKey = useMemo(() => {
     return getPersonalizationNoticeKey(profile);
@@ -195,7 +195,7 @@ const Header = () => {
     if (profile?.personalization_interstitial_enabled === false) return;
     if (
       !isLegacyPersonalization(profile) &&
-      isPostSignupPersonalizationSession(profile)
+      isPostSignupPersonalizationSession()
     ) {
       return;
     }

@@ -257,6 +257,7 @@ class JouTakAdminSite(AdminSite):
             logger.warning(
                 "Admin WebAuthn verification failed for user=%s",
                 user.pk,
+                exc_info=True,
             )
             return JsonResponse({"error": "Verification failed"}, status=400)
         finally:

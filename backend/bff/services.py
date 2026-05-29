@@ -175,7 +175,10 @@ def build_bootstrap_payload(
     }
 
 
-def build_home_payload(context: RequestEvaluationContext) -> dict[str, object]:
+def build_home_payload(
+    _request: HttpRequest,
+    context: RequestEvaluationContext,
+) -> dict[str, object]:
     keys = get_flags_for_page(context.page)
     features = evaluate_many(context, keys)
     variant = str(features.get("site_homepage_version", "legacy"))

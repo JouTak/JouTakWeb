@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 
 from django.test import SimpleTestCase
 
-from observability.setup import setup_observability
+import observability.setup as observability_setup
 
 
 class ObservabilitySetupTests(SimpleTestCase):
@@ -42,12 +42,12 @@ class ObservabilitySetupTests(SimpleTestCase):
                 "observability.setup.RequestsInstrumentor"
             ) as requests_instrumentor,
         ):
-            setup_observability._is_setup = False
+            observability_setup._is_setup = False
 
-            setup_observability()
-            setup_observability()
+            observability_setup.setup_observability()
+            observability_setup.setup_observability()
 
-        self.assertTrue(setup_observability._is_setup)
+        self.assertTrue(observability_setup._is_setup)
         self.assertEqual(tracer_provider_factory.call_count, 1)
         self.assertEqual(meter_provider_factory.call_count, 1)
         self.assertEqual(trace_module.set_tracer_provider.call_count, 1)

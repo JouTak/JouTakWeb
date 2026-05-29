@@ -72,15 +72,18 @@ class BffViewTests(APITestCase):
         self.assertEqual(response.json()["variant"], "v2")
 
     def test_account_summary_returns_authenticated_viewer(self):
-        auth = self.signup_and_auth()
+        user = self.create_legacy_user(
+            email=self.unique_email("account-summary")
+        )
+        self.client.force_login(user)
         response = self.client.get(
             "/bff/account/summary",
             HTTP_HOST="api.localhost",
-            **self.auth_headers(auth["session_token"]),
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json()["viewer"]["is_authenticated"])
+        self.assertEqual(response.json()["viewer"]["username"], user.username)
 
     def test_api_host_keeps_home_bff_available(self):
         response = self.client.get(

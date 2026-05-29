@@ -73,7 +73,11 @@ export async function getWebAuthnRequestOptions(usage) {
  */
 export async function authenticateWithWebAuthnCredential(usage, credential) {
   const endpoint =
-    usage === "login" ? "/auth/webauthn/login" : "/auth/webauthn/authenticate";
+    usage === "login"
+      ? "/auth/webauthn/login"
+      : usage === "reauthenticate"
+        ? "/auth/webauthn/reauthenticate"
+        : "/auth/webauthn/authenticate";
   const { data } = await allauthAppRequest("post", endpoint, {
     data: { credential },
   });

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   authenticateMfaCode,
+  authenticateWithWebAuthnCredential,
   getMfaConfig,
   getTotpStatus,
   getWebAuthnRegistrationOptions,
@@ -136,6 +137,34 @@ describe("mfaApi", () => {
       expect.objectContaining({
         method: "get",
         url: "auth/flow/app/v1/auth/webauthn/reauthenticate",
+      }),
+    );
+  });
+
+  it("posts reauthentication WebAuthn credentials to the dedicated endpoint", async () => {
+    const requestSpy = vi.spyOn(bareClient, "request").mockResolvedValueOnce({
+      data: {
+        data: {
+          status: "ok",
+        },
+      },
+    });
+
+    const credential = { type: "public-key", id: "cred" };
+
+    await expect(
+      authenticateWithWebAuthnCredential("reauthenticate", credential),
+    ).resolves.toEqual({
+      data: {
+        status: "ok",
+      },
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: "auth/flow/app/v1/auth/webauthn/reauthenticate",
+        data: { credential },
       }),
     );
   });

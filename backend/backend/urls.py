@@ -4,6 +4,7 @@ from accounts.api.router_auth import auth_router
 from accounts.api.router_oauth import router_oauth
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
 from django.http import HttpRequest, HttpResponse
 from django.urls import include, path
 from ninja import NinjaAPI
@@ -20,10 +21,12 @@ def health(_request: HttpRequest) -> HttpResponse:
 
 
 urlpatterns = [
+    path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("api/auth/flow/", include("allauth.headless.urls")),
     path("health/", health),
     path("api/", api.urls),
+    path("bff/", include("bff.urls")),
 ]
 
 if settings.DEBUG:

@@ -1,7 +1,26 @@
 node_modules
 dist
+build
 .git
+.gitignore
 .DS_Store
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Never bake developer secrets or local overrides into the image.
+.env
+.env.*
+!.env.example
+
+# Local tooling output / caches we don't want in the final layer.
+coverage
+.nyc_output
+.cache
+.eslintcache
+.stylelintcache
+.vite
+.vitest
+
+# Project docs / metadata that don't belong in the runtime image.
+README.md

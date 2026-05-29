@@ -5,30 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { changePassword, clearAuthState } from "../../services/api";
+import { isObviouslyCommonPassword } from "../../services/password/commonPasswords";
 import { SectionCard } from "../ui/primitives";
-
-const COMMON_PASSWORDS = new Set([
-  "123456",
-  "123456789",
-  "qwerty",
-  "password",
-  "111111",
-  "12345678",
-  "abc123",
-  "1234567",
-  "123123",
-  "000000",
-  "iloveyou",
-  "1234",
-  "1q2w3e4r",
-  "qwertyuiop",
-  "admin",
-  "monkey",
-  "letmein",
-  "dragon",
-  "sunshine",
-  "princess",
-]);
 
 function computeStrength(pwd, { minLength, identityHint }) {
   if (!pwd) return { score: 0, label: "Пусто" };
@@ -38,7 +16,7 @@ function computeStrength(pwd, { minLength, identityHint }) {
   const hasDigit = /\d/.test(pwd);
   const hasSpec = /[^A-Za-zА-Яа-я0-9\s]/.test(pwd);
   const notOnlyDigits = !/^\d+$/.test(pwd);
-  const notCommon = !COMMON_PASSWORDS.has(pwd.toLowerCase());
+  const notCommon = !isObviouslyCommonPassword(pwd);
   const uname = (identityHint || "").toLowerCase();
   const unameLocal = uname.includes("@") ? uname.split("@")[0] : uname;
   const notSimilar = !(uname && pwd.toLowerCase().includes(unameLocal));
@@ -150,7 +128,7 @@ export default function PasswordCard({
         if (unameLocal && new1.toLowerCase().includes(unameLocal))
           n1Err = "Пароль слишком похож на логин/почту.";
       }
-      if (!n1Err && COMMON_PASSWORDS.has(new1.toLowerCase()))
+      if (!n1Err && isObviouslyCommonPassword(new1))
         n1Err = "Слишком распространённый пароль.";
     }
     if (touched.n2) {

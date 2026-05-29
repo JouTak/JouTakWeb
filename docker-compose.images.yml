@@ -62,8 +62,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+    # Image-based Compose без Traefik: по умолчанию backend доступен
+    # только внутри compose-сети. Если deployment публикует порт наружу,
+    # расширьте этот compose override'ом.
+    expose:
+      - "8000"
     environment: *backend-environment
     healthcheck:
       test:

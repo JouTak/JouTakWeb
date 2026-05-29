@@ -8,9 +8,12 @@ dependencies = [
     "cffi==2.0.0",
     "cryptography>=46.0.5",
     "dj-database-url>=3.0.1",
-    "django>=5.2.13,<5.3",
+    "django>=5.2.14,<5.3",
     "django-allauth[headless-spec,mfa]>=64.0",
+    "django-axes>=7.0.0",
+    "django-ratelimit>=4.1.0",
     "django-cors-headers>=4.7.0",
+    "django-simple-history>=3.7.0",
     "django-ninja>=1.4.3",
     "django-ninja-extra>=0.30.1",
     "django-ninja-jwt>=5.3.7",
@@ -26,12 +29,20 @@ dependencies = [
     "whitenoise>=6.9.0",
     "gunicorn>=21.2",
     "psycopg==3.2.3",
+    "openfeature-sdk>=0.9.0",
+    "opentelemetry-api>=1.41.1",
+    "opentelemetry-sdk>=1.41.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.41.1",
+    "opentelemetry-instrumentation-django>=0.62b1",
+    "opentelemetry-instrumentation-requests>=0.62b1",
+    "opentelemetry-instrumentation-logging>=0.62b1",
 ]
 
 [dependency-groups]
 dev = [
     "bandit>=1.9.0",
     "django-debug-toolbar>=6.0.0",
+    "pip==26.1",
     "pip-audit>=2.9.0",
     "ruff>=0.12.10",
 ]
@@ -78,6 +89,7 @@ exclude = [
     "frontend",
     "backend/.ruff_cache",
     "backend/core/migrations",
+    "backend/featureflags/migrations",
 ]
 
 [tool.ruff.lint]
@@ -86,5 +98,9 @@ ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 "backend/manage.py" = ["PLC0415"]
+"backend/backend/admin_site.py" = ["PLC0415"]
+"backend/backend/ratelimiting.py" = ["PLC0415"]
+"backend/featureflags/services.py" = ["PLC0415"]
 "backend/backend/settings/dev.py" = ["F403", "F405"]
 "backend/backend/settings/prod.py" = ["F403"]
+"backend/*/migrations/*.py" = ["E501"]

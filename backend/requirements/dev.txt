@@ -6,6 +6,7 @@ asgiref==3.9.1
     # via
     #   django
     #   django-allauth
+    #   django-axes
     #   django-cors-headers
     #   django-ninja-extra
 bandit==1.9.4
@@ -40,11 +41,12 @@ defusedxml==0.7.1
     # via py-serializable
 dj-database-url==3.0.1
     # via backend
-django==5.2.13
+django==5.2.14
     # via
     #   backend
     #   dj-database-url
     #   django-allauth
+    #   django-axes
     #   django-cors-headers
     #   django-debug-toolbar
     #   django-formtools
@@ -53,8 +55,11 @@ django==5.2.13
     #   django-ninja-jwt
     #   django-otp
     #   django-phonenumber-field
+    #   django-simple-history
     #   django-two-factor-auth
 django-allauth==65.14.1
+    # via backend
+django-axes==8.3.1
     # via backend
 django-cors-headers==4.7.0
     # via backend
@@ -79,16 +84,24 @@ django-phonenumber-field==8.1.0
     # via
     #   backend
     #   django-two-factor-auth
+django-ratelimit==4.1.0
+    # via backend
+django-simple-history==3.11.0
+    # via backend
 django-two-factor-auth==1.17.0
     # via backend
 fido2==2.0.0
     # via django-allauth
 filelock==3.29.0
     # via cachecontrol
+googleapis-common-protos==1.74.0
+    # via opentelemetry-exporter-otlp-proto-http
 gunicorn==23.0.0
     # via backend
-idna==3.15
+idna==3.16
     # via requests
+importlib-metadata==8.7.1
+    # via opentelemetry-api
 iniconfig==2.3.0
     # via pytest
 injector==0.22.0
@@ -101,11 +114,63 @@ mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.1.2
     # via cachecontrol
+openfeature-sdk==0.9.0
+    # via backend
+opentelemetry-api==1.41.1
+    # via
+    #   backend
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-instrumentation
+    #   opentelemetry-instrumentation-django
+    #   opentelemetry-instrumentation-logging
+    #   opentelemetry-instrumentation-requests
+    #   opentelemetry-instrumentation-wsgi
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via backend
+opentelemetry-instrumentation==0.62b1
+    # via
+    #   opentelemetry-instrumentation-django
+    #   opentelemetry-instrumentation-logging
+    #   opentelemetry-instrumentation-requests
+    #   opentelemetry-instrumentation-wsgi
+opentelemetry-instrumentation-django==0.62b1
+    # via backend
+opentelemetry-instrumentation-logging==0.62b1
+    # via backend
+opentelemetry-instrumentation-requests==0.62b1
+    # via backend
+opentelemetry-instrumentation-wsgi==0.62b1
+    # via opentelemetry-instrumentation-django
+opentelemetry-proto==1.41.1
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   backend
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   opentelemetry-instrumentation
+    #   opentelemetry-instrumentation-django
+    #   opentelemetry-instrumentation-requests
+    #   opentelemetry-instrumentation-wsgi
+    #   opentelemetry-sdk
+opentelemetry-util-http==0.62b1
+    # via
+    #   opentelemetry-instrumentation-django
+    #   opentelemetry-instrumentation-requests
+    #   opentelemetry-instrumentation-wsgi
 packageurl-python==0.17.6
     # via cyclonedx-python-lib
 packaging==25.0
     # via
     #   gunicorn
+    #   opentelemetry-instrumentation
     #   pip-audit
     #   pip-requirements-parser
     #   pytest
@@ -125,6 +190,10 @@ platformdirs==4.9.6
     # via pip-audit
 pluggy==1.6.0
     # via pytest
+protobuf==6.33.6
+    # via
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psycopg==3.2.3
     # via backend
 py-serializable==2.1.0
@@ -166,6 +235,7 @@ requests==2.33.0
     # via
     #   backend
     #   cachecontrol
+    #   opentelemetry-exporter-otlp-proto-http
     #   pip-audit
 rich==15.0.0
     # via
@@ -188,6 +258,10 @@ typing-extensions==4.15.0
     # via
     #   backend
     #   cyclonedx-python-lib
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   psycopg
     #   pydantic
     #   pydantic-core
@@ -203,3 +277,7 @@ urllib3==2.7.0
     # via requests
 whitenoise==6.9.0
     # via backend
+wrapt==2.1.2
+    # via opentelemetry-instrumentation
+zipp==3.23.1
+    # via importlib-metadata

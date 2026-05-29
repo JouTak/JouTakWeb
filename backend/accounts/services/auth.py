@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
+from datetime import timezone as dt_timezone
 
 from accounts.services.account_status import AccountStatusService
 from accounts.services.auth_cookies import get_refresh_cookie
@@ -12,7 +14,6 @@ from accounts.transport.schemas import (
     RevokeSessionsIn,
     TokenPairOut,
     TokenRefreshIn,
-    TokenRefreshOut,
 )
 from allauth.account.internal.flows import (
     password_change as password_change_flow,
@@ -37,6 +38,21 @@ from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from ninja_jwt.tokens import RefreshToken
 
 User = get_user_model()
+
+
+def _refresh_expires_at(refresh: RefreshToken) -> datetime | None:
+    """Extract the `exp` claim of a refresh token as a tz-aware datetime.
+
+    Returns `None` if the claim is missing or malformed — the caller
+    then falls back to a null `expires_at`, preserving legacy behaviour.
+    """
+    exp = refresh.get("exp")
+    if exp is None:
+        return None
+    try:
+        return datetime.fromtimestamp(int(exp), tz=dt_timezone.utc)
+    except (TypeError, ValueError, OSError):
+        return None
 
 
 @dataclass(slots=True)
@@ -66,9 +82,18 @@ class AuthService:
             else None
         )
         if not meta:
+            # We require at least one of: real Django session key, or a
+            # session token that maps to an existing session. Without
+            # either, creating a UserSessionMeta with empty `session_key`
+            # would violate the (user, session_key) uniqueness constraint
+            # and bind an unrevocable JWT pair to an unidentifiable
+            # session. Reject the request explicitly.
+            fallback_key = dj_key or token
+            if not fallback_key:
+                raise HttpError(401, "session binding missing")
             meta = UserSessionMeta.objects.create(
                 user=user,
-                session_key=dj_key or token,
+                session_key=fallback_key,
                 session_token_digest=token_digest or None,
             )
         updates: list[str] = []
@@ -85,7 +110,10 @@ class AuthService:
         at = rt.access_token
 
         UserSessionToken.objects.get_or_create(
-            user=user, session_key=meta.session_key, refresh_jti=str(rt["jti"])
+            user=user,
+            session_key=meta.session_key,
+            refresh_jti=str(rt["jti"]),
+            defaults={"expires_at": _refresh_expires_at(rt)},
         )
         return TokenPairOut(access=str(at), refresh=str(rt))
 
@@ -181,6 +209,10 @@ class AuthService:
             personalization_enforce_enabled=status[
                 "personalization_enforce_enabled"
             ],
+            personalization_context=status["personalization_context"],
+            personalization_prompt_variant=status[
+                "personalization_prompt_variant"
+            ],
             missing_fields=status["missing_fields"],
             **ProfileService.serialize_extended_profile(extended),
         )
@@ -238,7 +270,7 @@ class AuthService:
     def refresh_pair(
         request: HttpRequest,
         payload: TokenRefreshIn,
-    ) -> TokenRefreshOut:
+    ) -> TokenPairOut:
         refresh_token = payload.refresh or get_refresh_cookie(request)
         if not refresh_token:
             raise HttpError(401, "refresh required")
@@ -270,20 +302,28 @@ class AuthService:
             raise HttpError(401, "session token required for refresh")
         request_token_digest = session_token_digest(request_token)
 
-        request_meta = UserSessionMeta.objects.filter(
-            user=user,
-            session_token_digest=request_token_digest,
-        ).first()
+        request_meta = (
+            UserSessionMeta.objects.select_for_update()
+            .filter(
+                user=user,
+                session_token_digest=request_token_digest,
+            )
+            .first()
+        )
         if not request_meta or not request_meta.session_key:
             raise HttpError(401, "invalid session token")
 
         if mapping.session_key != request_meta.session_key:
             raise HttpError(401, "invalid refresh")
 
-        current_meta = UserSessionMeta.objects.filter(
-            user=user,
-            session_key=mapping.session_key,
-        ).first()
+        current_meta = (
+            UserSessionMeta.objects.select_for_update()
+            .filter(
+                user=user,
+                session_key=mapping.session_key,
+            )
+            .first()
+        )
         if current_meta and current_meta.revoked_at:
             raise HttpError(401, "invalid refresh")
 
@@ -295,8 +335,10 @@ class AuthService:
             BlacklistedToken.objects.get_or_create(token=old_ot)
 
         mapping.refresh_jti = new_jti
-        mapping.save(update_fields=["refresh_jti"])
+        mapping.expires_at = _refresh_expires_at(new_refresh)
+        mapping.save(update_fields=["refresh_jti", "expires_at"])
 
-        return TokenRefreshOut(
-            refresh=str(new_refresh), access=str(new_refresh.access_token)
+        return TokenPairOut(
+            access=str(new_refresh.access_token),
+            refresh=str(new_refresh),
         )

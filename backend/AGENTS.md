@@ -10,8 +10,11 @@
   2. принять typed request schemas.
   3. вызвать service methods.
   4. вернуть typed response schemas.
-- Business logic должна жить в `backend/accounts/services/`.
-- Request/response schemas должны жить в `backend/accounts/transport/schemas.py`.
+- Business logic должна жить рядом с соответствующим app:
+  - `backend/accounts/services/` для account/auth flows.
+  - `backend/bff/services.py` для BFF helpers и orchestration.
+  - `backend/featureflags/services.py` для feature-flag logic.
+- Request/response schemas и transport-слой должны жить рядом с app, который ими владеет.
 - Публичные error responses должны использовать structured error helpers, а не JSON strings внутри `HttpError`.
 
 ## Контракты и валидация
@@ -23,17 +26,22 @@
 
 ## Структура кода
 
-- `backend/accounts/api/` - Ninja routers и exception handling.
-- `backend/accounts/services/` - business logic.
-- `backend/accounts/transport/schemas.py` - request/response contracts.
-- `backend/accounts/tests/` - API и service regression tests.
+- `backend/accounts/api/` - Ninja routers и exception handling для account/auth APIs.
+- `backend/accounts/services/` - business logic для account/auth flows.
+- `backend/accounts/transport/schemas.py` - request/response contracts для account/auth APIs.
+- `backend/accounts/tests/` - API и service regression tests для account/auth flows.
+- `backend/bff/` - BFF helpers, services и tests.
+- `backend/featureflags/` - feature flag services, management commands, migrations и tests.
+- `backend/observability/` - observability helpers и tests.
 - `backend/core/` - shared models and infrastructure.
+- `backend/backend/` - project settings, top-level backend tests и Django bootstrapping.
 
 ## Практика изменения кода
 
 - Держи routers thin: authenticate, validate schemas, call services, return typed schemas.
 - Если меняешь API contracts, обновляй frontend contract check и связанные тесты.
-- Если меняешь auth, sessions, profile, password, OAuth или account deletion, добавляй или обновляй тесты.
+- Если меняешь auth, sessions, profile, password, OAuth или account deletion, добавляй или обновляй tests в `backend/accounts/tests/`.
+- Если меняешь BFF, feature flags или observability code, обновляй тесты и местные app-level проверки в соответствующем пакете.
 - Не редактируй generated requirements вручную.
 
 ## Проверки
@@ -42,7 +50,7 @@
 
 ```bash
 uv run ruff check .
-uv run bandit -r backend/accounts backend/core backend/backend -x "*/tests/*,*/migrations/*" --skip B104,B105
+uv run bandit -r backend/accounts backend/bff backend/core backend/featureflags backend/observability backend/backend -x "*/tests/*,*/migrations/*" --skip B104,B105
 PYTHONPATH=backend DJANGO_SETTINGS_MODULE=backend.settings.dev uv run python scripts/check_frontend_openapi_contracts.py
 uv run pytest backend -q
 ```

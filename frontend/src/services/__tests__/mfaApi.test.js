@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { authenticateMfaCode, getTotpStatus } from "../api/mfaApi";
+import {
+  authenticateMfaCode,
+  getMfaConfig,
+  getTotpStatus,
+  getWebAuthnRegistrationOptions,
+  getWebAuthnRequestOptions,
+} from "../api/mfaApi";
 import { tokenStore } from "../auth/tokenStore";
 import { bareClient } from "../http/client";
 
@@ -58,5 +64,107 @@ describe("mfaApi", () => {
     });
 
     expect(tokenStore.get().session_token).toBe("mfa-session-token");
+  });
+
+  it("reads MFA config from the headless config endpoint", async () => {
+    const requestSpy = vi.spyOn(bareClient, "request").mockResolvedValueOnce({
+      data: {
+        data: {
+          mfa: {
+            supported_types: ["totp", "webauthn"],
+            passkey_login_enabled: true,
+          },
+        },
+      },
+    });
+
+    await expect(getMfaConfig()).resolves.toEqual({
+      supported_types: ["totp", "webauthn"],
+      passkey_login_enabled: true,
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: "auth/flow/app/v1/config",
+      }),
+    );
+  });
+
+  it("derives passkey login support from unauthenticated config flows", async () => {
+    vi.spyOn(bareClient, "request").mockRejectedValueOnce(
+      httpError(401, {
+        data: {
+          flows: [
+            { id: "login" },
+            { id: "signup" },
+            { id: "mfa_login_webauthn" },
+          ],
+        },
+        meta: {
+          is_authenticated: null,
+        },
+      }),
+    );
+
+    await expect(getMfaConfig()).resolves.toEqual({
+      supported_types: [],
+      passkey_login_enabled: true,
+    });
+  });
+
+  it("requests reauthentication WebAuthn options from the dedicated endpoint", async () => {
+    const requestSpy = vi.spyOn(bareClient, "request").mockResolvedValueOnce({
+      data: {
+        data: {
+          request_options: {
+            challenge: "abc",
+            rpId: "joutak.ru",
+            rp: { id: "joutak.ru", name: "JouTak" },
+          },
+        },
+      },
+    });
+
+    await expect(getWebAuthnRequestOptions("reauthenticate")).resolves.toEqual({
+      challenge: "abc",
+      rpId: "joutak.ru",
+      rp: { id: "joutak.ru", name: "JouTak" },
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: "auth/flow/app/v1/auth/webauthn/reauthenticate",
+      }),
+    );
+  });
+
+  it("forwards passwordless registration mode when requested", async () => {
+    const requestSpy = vi.spyOn(bareClient, "request").mockResolvedValueOnce({
+      data: {
+        data: {
+          creation_options: {
+            challenge: "abc",
+            rp: { id: "joutak.ru", name: "JouTak" },
+          },
+        },
+      },
+    });
+
+    await expect(
+      getWebAuthnRegistrationOptions({ passwordless: true }),
+    ).resolves.toEqual({
+      challenge: "abc",
+      rp: { id: "joutak.ru", name: "JouTak" },
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: "auth/flow/app/v1/account/authenticators/webauthn",
+        params: { passwordless: "" },
+      }),
+    );
   });
 });

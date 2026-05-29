@@ -264,7 +264,7 @@ export default function AuthModal({
     setBusy(true);
     try {
       const options = await getWebAuthnRequestOptions("login");
-      const credential = await getWebAuthnCredential({ publicKey: options });
+      const credential = await getWebAuthnCredential(options);
       await authenticateWithWebAuthnCredential("login", credential);
       await completeAuthenticatedFlow("Вы вошли с помощью passkey.");
     } catch (ex) {
@@ -310,7 +310,7 @@ export default function AuthModal({
     setMfaError("");
     try {
       const options = await getWebAuthnRequestOptions("authenticate");
-      const credential = await getWebAuthnCredential({ publicKey: options });
+      const credential = await getWebAuthnCredential(options);
       await authenticateWithWebAuthnCredential("authenticate", credential);
       await completeAuthenticatedFlow("Вход подтверждён через passkey.");
     } catch (ex) {

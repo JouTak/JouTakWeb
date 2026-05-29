@@ -49,7 +49,7 @@ jobs:
 
           exit "$status"
 
-  frontend_checks:
+  frontend_checks_matrix:
     name: Frontend ${{ matrix.check_name }}
     runs-on: ubuntu-latest
     strategy:
@@ -88,6 +88,18 @@ jobs:
 
       - name: Run ${{ matrix.check_name }}
         run: ${{ matrix.command }}
+
+  frontend_checks:
+    runs-on: ubuntu-latest
+    needs: frontend_checks_matrix
+    if: always()
+    steps:
+      - name: Verify frontend matrix status
+        run: |
+          if [[ "${{ needs.frontend_checks_matrix.result }}" != "success" ]]; then
+            echo "::error::Frontend checks did not complete successfully."
+            exit 1
+          fi
 
   backend_test:
     runs-on: ubuntu-latest

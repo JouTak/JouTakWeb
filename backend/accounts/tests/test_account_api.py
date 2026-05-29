@@ -92,6 +92,8 @@ class AccountApiTests(APITestCase):
         data = response.json()
         self.assertEqual(data["ok"], True)
         self.assertEqual(data["profile_state"], "personalized")
+        self.assertEqual(data["personalization_context"], "complete")
+        self.assertEqual(data["personalization_prompt_variant"], "none")
         self.assertEqual(data["missing_fields"], [])
 
         profile = UserProfile.objects.get(user=user)
@@ -348,9 +350,7 @@ class AccountApiTests(APITestCase):
         limited_avatar = SimpleUploadedFile(
             "avatar.jpg", raw_image, content_type="image/jpeg"
         )
-        with override_settings(
-            AVATAR_MAX_UPLOAD_BYTES=normalized_size - 1
-        ):
+        with override_settings(AVATAR_MAX_UPLOAD_BYTES=normalized_size - 1):
             with self.assertRaisesMessage(
                 HttpError, "avatar file is too large"
             ):
@@ -661,6 +661,7 @@ class AccountApiTests(APITestCase):
             **self.auth_headers(token),
         )
         self.assertEqual(response.status_code, 422, response.content)
+        self.assertIn("reason", response.json().get("fields") or {})
 
     def test_revoke_single_session_success(self) -> None:
         user, token = self.create_authenticated_user()

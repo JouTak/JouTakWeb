@@ -65,6 +65,13 @@ class UserSessionToken(models.Model):
     session_key = models.CharField(max_length=64, db_index=True)
     refresh_jti = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Refresh-token expiry mirrored from the JWT `exp` claim. Having it
+    # on the row lets `cleanup_auth_data` purge aged mappings with a
+    # single indexed filter instead of joining against
+    # `OutstandingToken`, and it is cheap to maintain because we know
+    # the lifetime at row creation time. Nullable to keep the migration
+    # backfill-free on old data.
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -72,6 +79,13 @@ class UserSessionToken(models.Model):
 
 
 class UserProfile(models.Model):
+    PERSONALIZATION_ORIGIN_SIGNUP = "signup"
+    PERSONALIZATION_ORIGIN_LEGACY = "legacy"
+    PERSONALIZATION_ORIGIN_CHOICES = (
+        (PERSONALIZATION_ORIGIN_SIGNUP, "Signup"),
+        (PERSONALIZATION_ORIGIN_LEGACY, "Legacy"),
+    )
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -83,6 +97,11 @@ class UserProfile(models.Model):
     is_itmo_student = models.BooleanField(null=True, blank=True)
     itmo_isu = models.CharField(max_length=32, null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    personalization_origin = models.CharField(
+        max_length=16,
+        choices=PERSONALIZATION_ORIGIN_CHOICES,
+        default=PERSONALIZATION_ORIGIN_SIGNUP,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

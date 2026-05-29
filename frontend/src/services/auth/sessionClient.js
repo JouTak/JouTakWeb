@@ -24,6 +24,10 @@ function isRevokedSessionError(error) {
   return error?.response?.status === 410;
 }
 
+function isPendingMfaSession() {
+  return readStoredTokens()?.pending_mfa === true;
+}
+
 export function extractSessionToken(respOrErrResp) {
   const meta = respOrErrResp?.data?.meta || {};
   return (
@@ -95,9 +99,9 @@ export async function refreshAccessToken({ hardLogoutOnFailure = true } = {}) {
 export async function executeSessionRequest(
   method,
   url,
-  { data = null, params, sessionToken } = {},
+  { data = null, params, sessionToken, client = bareClient } = {},
 ) {
-  const response = await bareClient.request({
+  const response = await client.request({
     method,
     url,
     data,
@@ -122,6 +126,7 @@ export async function requestWithSession(
     rotateSessionTokenOn401 = true,
     refreshAccessOn401 = true,
     hardLogoutOn401 = true,
+    client = bareClient,
   } = {},
 ) {
   const initialSessionToken = tokenStore.getSessionToken();
@@ -133,12 +138,23 @@ export async function requestWithSession(
       data,
       params,
       sessionToken: initialSessionToken,
+      client,
     });
   } catch (error) {
     lastError = error;
   }
 
   if (!isUnauthorized(lastError)) {
+    throw lastError;
+  }
+
+  if (isPendingMfaSession()) {
+    if (rotateSessionTokenOn401) {
+      const rotatedToken = extractSessionToken(lastError.response);
+      if (rotatedToken && rotatedToken !== initialSessionToken) {
+        setSessionToken(rotatedToken, { emit: false });
+      }
+    }
     throw lastError;
   }
 
@@ -151,6 +167,7 @@ export async function requestWithSession(
           data,
           params,
           sessionToken: rotatedToken,
+          client,
         });
       } catch (error) {
         lastError = error;
@@ -174,6 +191,7 @@ export async function requestWithSession(
           data,
           params,
           sessionToken: tokenStore.getSessionToken(),
+          client,
         });
       } catch (error) {
         lastError = error;
@@ -211,19 +229,22 @@ export async function sessionDelete(url, params, options = {}) {
 export async function allauthAppRequest(
   method,
   url,
-  { data = null, headers = {} } = {},
+  { data = null, headers = {}, includeSession = true, params } = {},
 ) {
   try {
     const suffix = String(url || "").startsWith("/")
       ? String(url || "")
       : `/${String(url || "")}`;
-    const sessionHeaders = buildSessionHeaders(tokenStore.getSessionToken());
+    const requestHeaders = includeSession
+      ? buildSessionHeaders(tokenStore.getSessionToken())
+      : CLIENT_HEADERS;
     const response = await bareClient.request({
       method,
       url: `${ALLAUTH_APP_BASE}${suffix}`,
       data,
+      params,
       headers: {
-        ...sessionHeaders,
+        ...requestHeaders,
         ...headers,
       },
     });
@@ -235,6 +256,10 @@ export async function allauthAppRequest(
 
     return response;
   } catch (error) {
+    const sessionToken = extractSessionToken(error?.response);
+    if (sessionToken) {
+      setSessionToken(sessionToken, { emit: true });
+    }
     if (isRevokedSessionError(error)) {
       performHardLogout(HARD_LOGOUT_REASONS.SESSION_UNAUTHORIZED);
     }

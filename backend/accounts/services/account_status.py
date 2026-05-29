@@ -7,12 +7,18 @@ from accounts.api.errors import raise_structured_error
 from accounts.services.personalization import personalization_complete
 from allauth.account.models import EmailAddress
 from core.models import UserProfile
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from featureflags.registry import get_default_value
 
 User = get_user_model()
 PROFILE_PERSONALIZATION_REQUIRED = "PROFILE_PERSONALIZATION_REQUIRED"
 PROFILE_FIELDS_INCOMPLETE = "PROFILE_FIELDS_INCOMPLETE"
+PERSONALIZATION_CONTEXT_COMPLETE = "complete"
+PERSONALIZATION_CONTEXT_NEW_REGISTRATION = "new_registration"
+PERSONALIZATION_CONTEXT_LEGACY_REQUIRED = "legacy_required"
+PERSONALIZATION_PROMPT_NONE = "none"
+PERSONALIZATION_PROMPT_REGISTRATION_SETUP = "registration_setup"
+PERSONALIZATION_PROMPT_MIGRATION_NOTICE = "migration_notice"
 
 
 @dataclass(slots=True)
@@ -34,6 +40,22 @@ class AccountStatusService:
         email_verified = AccountStatusService.is_email_verified(user)
         complete, missing = AccountStatusService.profile_complete(p)
         profile_state = "personalized" if complete else "basic"
+        if complete:
+            personalization_context = PERSONALIZATION_CONTEXT_COMPLETE
+            personalization_prompt_variant = PERSONALIZATION_PROMPT_NONE
+        elif (
+            getattr(p, "personalization_origin", "")
+            == UserProfile.PERSONALIZATION_ORIGIN_LEGACY
+        ):
+            personalization_context = PERSONALIZATION_CONTEXT_LEGACY_REQUIRED
+            personalization_prompt_variant = (
+                PERSONALIZATION_PROMPT_MIGRATION_NOTICE
+            )
+        else:
+            personalization_context = PERSONALIZATION_CONTEXT_NEW_REGISTRATION
+            personalization_prompt_variant = (
+                PERSONALIZATION_PROMPT_REGISTRATION_SETUP
+            )
         blocking_reasons: list[str] = []
         if not complete:
             blocking_reasons.append(PROFILE_FIELDS_INCOMPLETE)
@@ -49,16 +71,16 @@ class AccountStatusService:
             ),
             "blocking_reasons": blocking_reasons,
             "personalization_ui_enabled": bool(
-                getattr(settings, "FF_PROFILE_PERSONALIZATION_UI", True)
+                get_default_value("profile_personalization_ui")
             ),
             "personalization_interstitial_enabled": bool(
-                getattr(
-                    settings, "FF_PROFILE_PERSONALIZATION_INTERSTITIAL", True
-                )
+                get_default_value("profile_personalization_interstitial")
             ),
             "personalization_enforce_enabled": bool(
-                getattr(settings, "FF_PROFILE_PERSONALIZATION_ENFORCE", False)
+                get_default_value("profile_personalization_enforce")
             ),
+            "personalization_context": personalization_context,
+            "personalization_prompt_variant": personalization_prompt_variant,
             "missing_fields": missing,
         }
 
@@ -71,9 +93,7 @@ class AccountStatusService:
             return
         raise_structured_error(
             403,
-            detail=(
-                "Profile personalization is required for this action"
-            ),
+            detail=("Profile personalization is required for this action"),
             error_code=PROFILE_PERSONALIZATION_REQUIRED,
             blocking_reasons=status.get("blocking_reasons", []),
         )

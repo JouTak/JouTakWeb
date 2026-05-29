@@ -9,6 +9,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.js"],
     restoreMocks: true,
     clearMocks: true,
+    pool: "threads",
   },
   build: {
     rollupOptions: {

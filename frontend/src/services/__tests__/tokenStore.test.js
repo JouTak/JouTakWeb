@@ -4,6 +4,8 @@ import {
   AUTH_STATE_EVENT,
   clearAuthState,
   hasStoredAuth,
+  markPendingMfaSession,
+  migrateLegacyTokenStorage,
   TOKENS_KEY,
   tokenStore,
 } from "../auth/tokenStore";
@@ -46,6 +48,8 @@ describe("tokenStore", () => {
       }),
     );
 
+    migrateLegacyTokenStorage();
+
     expect(tokenStore.get()).toEqual({
       session_token: "legacy-session",
       access: "legacy-access",
@@ -57,10 +61,47 @@ describe("tokenStore", () => {
     });
   });
 
+  it("does not overwrite existing sessionStorage tokens on migration", () => {
+    sessionStorage.setItem(
+      TOKENS_KEY,
+      JSON.stringify({ session_token: "current" }),
+    );
+    localStorage.setItem(
+      TOKENS_KEY,
+      JSON.stringify({ session_token: "legacy" }),
+    );
+
+    migrateLegacyTokenStorage();
+
+    expect(tokenStore.get()).toEqual({ session_token: "current" });
+    expect(localStorage.getItem(TOKENS_KEY)).toBeNull();
+  });
+
   it("ignores malformed token JSON", () => {
     sessionStorage.setItem(TOKENS_KEY, "{bad json");
 
     expect(tokenStore.get()).toEqual({});
     expect(hasStoredAuth()).toBe(false);
+  });
+
+  it("marks and clears pending mfa without dropping the session token", () => {
+    tokenStore.set({ session_token: "session-1", access: "access-1" });
+    const listener = vi.fn();
+    window.addEventListener(AUTH_STATE_EVENT, listener);
+
+    markPendingMfaSession(true);
+    expect(tokenStore.get()).toEqual({
+      session_token: "session-1",
+      access: "access-1",
+      pending_mfa: true,
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    markPendingMfaSession(false);
+    expect(tokenStore.get()).toEqual({
+      session_token: "session-1",
+      access: "access-1",
+    });
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });

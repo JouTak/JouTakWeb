@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from io import StringIO
 
 from allauth.account.models import EmailAddress
@@ -67,11 +68,16 @@ class EmailTemplateTests(SimpleTestCase):
 
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn('alt="Подтвердите почту"', html)
-        self.assertIn("width: 100%; max-width: 600px; height: auto", html)
+        self.assertIn("width: 100%;", html)
+        self.assertIn("max-width: 600px;", html)
+        self.assertIn("height: auto;", html)
         self.assertNotIn("background-size: 600px auto", html)
         self.assertIn("email_template_user", html)
         self.assertIn(f'href="{activate_url}"', html)
-        self.assertIn(f">{activate_url}</a>", html)
+        self.assertRegex(
+            html,
+            rf">\s*{re.escape(activate_url)}\s*</a\s*>",
+        )
         self.assertNotIn(">username<", html)
         self.assertNotIn("https://example.com", html)
 

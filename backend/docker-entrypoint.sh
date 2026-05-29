@@ -55,6 +55,8 @@ django_bootstrap() {
   if [ "${DJANGO_MIGRATE:-1}" = "1" ]; then
     log "Applying migrations ..."
     python manage.py migrate --noinput
+    log "Ensuring cache table exists ..."
+    python manage.py createcachetable --database default 2>/dev/null || true
   fi
 
   if [ "${DJANGO_SYNC_SITE:-1}" = "1" ]; then
@@ -69,6 +71,9 @@ django_bootstrap() {
 
   log "Running auth/session maintenance bootstrap ..."
   python manage.py run_auth_maintenance --once --db-wait-seconds 0
+
+  log "Syncing feature flag registry ..."
+  python manage.py sync_feature_registry
 
   if [ "${DJANGO_COLLECTSTATIC:-1}" = "1" ]; then
     log "Collecting static ..."

@@ -44,9 +44,7 @@ class OAuthService:
     def configured_provider_ids(request: HttpRequest) -> set[str]:
         apps = get_socialaccount_adapter().list_apps(request)
         return {
-            str(app.provider)
-            for app in apps
-            if getattr(app, "provider", None)
+            str(app.provider) for app in apps if getattr(app, "provider", None)
         }
 
     @staticmethod

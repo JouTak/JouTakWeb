@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 
+from accounts.api.errors import raise_field_error
 from django.http import HttpRequest
-from ninja.errors import HttpError
 
 
 def optional_str_query(
@@ -22,8 +22,8 @@ def optional_str_query(
         return None
 
     if len(value) > max_length:
-        raise HttpError(422, f"invalid '{name}' query parameter")
+        raise_field_error(name, f"invalid '{name}' query parameter")
     if pattern and re.fullmatch(pattern, value) is None:
-        raise HttpError(422, f"invalid '{name}' query parameter")
+        raise_field_error(name, f"invalid '{name}' query parameter")
 
     return value

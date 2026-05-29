@@ -12,8 +12,13 @@ import {
 import { createRoot } from "react-dom/client";
 
 import App from "./App.jsx";
+import { BootstrapProvider } from "./features/bootstrap/BootstrapProvider.jsx";
+import { setupOpenTelemetry } from "./observability/otel.js";
 import { setupAxiosInterceptors } from "./services/api";
+import { migrateLegacyTokenStorage } from "./services/auth/tokenStore";
 
+migrateLegacyTokenStorage();
+setupOpenTelemetry();
 setupAxiosInterceptors(({ reason } = {}) => {
   const currentPath = window.location.pathname || "/";
   const isProtectedAccountPage = currentPath.startsWith("/account/");
@@ -37,7 +42,9 @@ export function Root() {
   return (
     <ThemeProvider theme="dark">
       <ToasterProvider>
-        <App />
+        <BootstrapProvider>
+          <App />
+        </BootstrapProvider>
         <ToasterComponent />
       </ToasterProvider>
     </ThemeProvider>

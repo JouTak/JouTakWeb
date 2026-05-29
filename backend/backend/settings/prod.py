@@ -2,6 +2,7 @@ from urllib.parse import urlparse
 
 import dj_database_url
 from decouple import Csv, config
+from observability.logging import build_logging_config
 
 from . import base as base_settings
 
@@ -56,8 +57,14 @@ DATABASES = {
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", cast=bool, default=True)
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# Health check is consumed by the Docker/Swarm runtime over plain HTTP
+# inside the container network. Excluding it from the SSL redirect keeps
+# healthchecks green without loosening HSTS for real traffic.
+SECURE_REDIRECT_EXEMPT = [r"^health/?$"]
+SESSION_COOKIE_SECURE = config(
+    "SESSION_COOKIE_SECURE", cast=bool, default=True
+)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", cast=bool, default=True)
 
 if config("USE_X_FORWARDED_PROTO", cast=bool, default=True):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -68,6 +75,8 @@ SECURE_HSTS_PRELOAD = True
 
 SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="Lax")
 CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="Lax")
+SESSION_COOKIE_DOMAIN = config("SESSION_COOKIE_DOMAIN", default=None)
+SESSION_COOKIE_HTTPONLY = True
 
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -79,6 +88,14 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },
 }
+
+# CI/test runs use SQLite with this production settings module. Django admin
+# templates need the collected manifest there, but the test jobs do not run
+# collectstatic. Fall back to plain static files storage in that case only.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    STORAGES["staticfiles"] = {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    }
 
 HEADLESS_SERVE_SPECIFICATION = False
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = False
@@ -106,12 +123,7 @@ DEFAULT_FROM_EMAIL = config(
 SERVER_EMAIL = config("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "INFO"},
-}
+LOGGING = build_logging_config(root_level="INFO")
 
 SENTRY_DSN = config("SENTRY_DSN", default="")
 if SENTRY_DSN:

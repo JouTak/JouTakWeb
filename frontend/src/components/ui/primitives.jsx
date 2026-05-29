@@ -1,7 +1,7 @@
 import { Button, Modal } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 
-export function Page({ children, style }) {
+export function Page({ children, style = null }) {
   return (
     <main
       style={{
@@ -22,11 +22,7 @@ Page.propTypes = {
   style: PropTypes.object,
 };
 
-Page.defaultProps = {
-  style: null,
-};
-
-export function SectionCard({ children, style, ...sectionProps }) {
+export function SectionCard({ children, style = null, ...sectionProps }) {
   return (
     <section
       {...sectionProps}
@@ -49,11 +45,7 @@ SectionCard.propTypes = {
   style: PropTypes.object,
 };
 
-SectionCard.defaultProps = {
-  style: null,
-};
-
-export function DangerCard({ children, style }) {
+export function DangerCard({ children, style = null }) {
   return (
     <SectionCard
       style={{
@@ -68,9 +60,8 @@ export function DangerCard({ children, style }) {
 }
 
 DangerCard.propTypes = SectionCard.propTypes;
-DangerCard.defaultProps = SectionCard.defaultProps;
 
-export function FormActions({ children, style }) {
+export function FormActions({ children, style = null }) {
   return (
     <div
       style={{
@@ -91,11 +82,7 @@ FormActions.propTypes = {
   style: PropTypes.object,
 };
 
-FormActions.defaultProps = {
-  style: null,
-};
-
-export function InlineNotice({ children, tone, style }) {
+export function InlineNotice({ children, tone = "info", style = null }) {
   const palette =
     tone === "danger"
       ? ["rgba(255,77,79,0.16)", "rgba(255,77,79,0.42)"]
@@ -122,12 +109,7 @@ InlineNotice.propTypes = {
   style: PropTypes.object,
 };
 
-InlineNotice.defaultProps = {
-  tone: "info",
-  style: null,
-};
-
-export function SkeletonCard({ children, minHeight }) {
+export function SkeletonCard({ children, minHeight = 160 }) {
   return (
     <SectionCard
       style={{ minHeight }}
@@ -144,19 +126,15 @@ SkeletonCard.propTypes = {
   minHeight: PropTypes.number,
 };
 
-SkeletonCard.defaultProps = {
-  minHeight: 160,
-};
-
 export function ConfirmDialog({
   open,
   title,
   children,
-  confirmText,
-  cancelText,
+  confirmText = "Подтвердить",
+  cancelText = "Отмена",
   onConfirm,
   onCancel,
-  loading,
+  loading = false,
 }) {
   return (
     <Modal open={open} onClose={onCancel}>
@@ -185,10 +163,4 @@ ConfirmDialog.propTypes = {
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool,
-};
-
-ConfirmDialog.defaultProps = {
-  confirmText: "Подтвердить",
-  cancelText: "Отмена",
-  loading: false,
 };

@@ -28,8 +28,7 @@ class Command(BaseCommand):
             type=int,
             default=DEFAULT_INTERVAL_SECONDS,
             help=(
-                "Seconds between maintenance cycles when running "
-                "continuously."
+                "Seconds between maintenance cycles when running continuously."
             ),
         )
         parser.add_argument(

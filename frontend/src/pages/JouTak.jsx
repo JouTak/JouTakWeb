@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const JouTak = () => {
   return (
     <div className="text-center">
@@ -11,43 +13,37 @@ const JouTak = () => {
         <div className="carousel-inner w-100" style={{
           "aspectRatio": "16 / 9"
         }}>
-          {/* TODO: Найти снимок.
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="#"
+              src={`${PUBLIC_IMG_BASE}/joutak_1.png`}
               className="d-block w-100"
               alt="Центральный район сервера"
             />
           </div>
-           */}
-          {/* Todo: Убрать, ниже временный вариант заполнения */}
-          <div className="carousel-item active" data-bs-interval="10000">
+          <div className="carousel-item" data-bs-interval="10000">
             <img 
-            src="https://storage.yandexcloud.net/joutak-public/img/mushroom.png"
+            src={`${PUBLIC_IMG_BASE}/joutak_2.png`}
             className="d-block w-100"
             alt="Большой гриб на нулевых координатах" 
             />
           </div>
-          {/* 
-          TODO: Осталось найти эти снимки.
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="#"
+              src={`${PUBLIC_IMG_BASE}/joutak_3.png`}
               className="d-block w-100"
               alt="Летучий Голландец в Казахстане"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="#"
+              src={`${PUBLIC_IMG_BASE}/joutak_4.png`}
               className="d-block w-100"
               alt="Крупная сходка новых игроков 2025"
             />
           </div>
-           */}
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://storage.yandexcloud.net/joutak-public/img/aether-portal.png"
+              src={`${PUBLIC_IMG_BASE}/joutak_5.png`}
               className="d-block w-100"
               alt="Центральный хаб в Нижнем мире"
             />

@@ -1,3 +1,5 @@
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const Legacy = () => {
   return (
     <div className="text-center">
@@ -9,33 +11,27 @@ const Legacy = () => {
         <div className="carousel-inner w-100" style={{
           "aspectRatio": "16 / 9"
         }}>
-          {/* 
-          TODO: Найти снимок.
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="#"
+              src={`${PUBLIC_IMG_BASE}/legacy_1.png`}
               className="d-block w-100"
               alt="Сходка игроков в деревне"
             />
           </div>
-          */}
-          {/* 
-          TODO: Убрать тут active и вернуть предыдущему варианту.
-          */}
-          <div className="carousel-item active" data-bs-interval="10000">
+          <div className="carousel-item" data-bs-interval="10000">
             <img
-            src="https://storage.yandexcloud.net/joutak-public/img/aether-portal.png"
+            src={`${PUBLIC_IMG_BASE}/legacy_2.png`}
             className="d-block w-100"
             alt="Портал в рай" 
             />
           </div>
-          {/* 
-          TODO: Найти снимок.
-           
           <div className="carousel-item" data-bs-interval="10000">
-            <img src="#" className="d-block w-100" alt="Деревня" />
+            <img
+              src={`${PUBLIC_IMG_BASE}/legacy_3.png`}
+              className="d-block w-100"
+              alt="Деревня"
+            />
           </div>
-          */}
         </div>
         <button
           className="carousel-control-prev"

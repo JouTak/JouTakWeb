@@ -1,3 +1,5 @@
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const ItmoCraft = () => {
   return (
     <div className="text-center">
@@ -11,21 +13,21 @@ const ItmoCraft = () => {
         }}>
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="https://storage.yandexcloud.net/joutak-public/img/itmo-meetup.jpeg"
+              src={`${PUBLIC_IMG_BASE}/itmocraft_1.png`}
               className="d-block w-100"
               alt="Выезд клуба в Ягодное 2025"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://storage.yandexcloud.net/joutak-public/img/itmo-comunity.jpeg"
+              src={`${PUBLIC_IMG_BASE}/itmocraft_2.png`}
               className="d-block w-100"
               alt="Сходка итмокрафта — комьюнити <3"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img 
-            src="https://storage.yandexcloud.net/joutak-public/img/cronva.png" 
+            src={`${PUBLIC_IMG_BASE}/itmocraft_3.png`} 
             className="d-block w-100" 
             alt="Здание корпуса на Кронверкском, построенное на сервере" 
             />

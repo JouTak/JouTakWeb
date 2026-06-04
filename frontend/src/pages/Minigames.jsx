@@ -1,5 +1,7 @@
 import "react";
 
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const MiniGames = () => {
   return (
     <div className="text-center">
@@ -11,38 +13,27 @@ const MiniGames = () => {
         <div className="carousel-inner w-100" style={{
           "aspectRatio": "16 / 9"
         }}>
-          {/* Todo: Убрать, ниже временный вариант заполнения */}
           <div className="carousel-item active" data-bs-interval="10000">
             <img
-              src="https://storage.yandexcloud.net/joutak-public/img/final-stage.png"
-              className="d-block w-100"
-              alt="Final Stage в MiniGames"
-            />
-          </div>
-          {/* 
-          TODO: Найти снимки.
-          <div className="carousel-item active" data-bs-interval="10000">
-            <img
-              src="https://cloud.joutak.ru/s/swb4NibNCmna8gp/download"
+              src={`${PUBLIC_IMG_BASE}/minigames_1.png`}
               className="d-block w-100"
               alt="Центральная локация Survival Games"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/download"
+              src={`${PUBLIC_IMG_BASE}/minigames_2.png`}
               className="d-block w-100"
               alt="Block Party"
             />
           </div>
           <div className="carousel-item" data-bs-interval="10000">
             <img
-              src="https://cloud.joutak.ru/s/nWyfRiYDqgow62f/download"
+              src={`${PUBLIC_IMG_BASE}/minigames_3.png`}
               className="d-block w-100"
               alt="Ace Race"
             />
           </div>
-          */}
         </div>
         <button
           className="carousel-control-prev"
@@ -73,7 +64,7 @@ const MiniGames = () => {
       <div className="container py-3">
         <div className="my-4">
           <img
-            src="https://storage.yandexcloud.net/joutak-public/img/logo_minigames.png"
+            src="/img/logo_minigames.png"
             alt="MiniGames Logo"
             style={{ height: "100px" }}
           />

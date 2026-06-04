@@ -1,16 +1,18 @@
 import ImageCarousel from "../components/ImageCarousel";
 
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const LEGACY_CAROUSEL_ITEMS = [
   {
-    src: "https://cloud.joutak.ru/s/2nmyGq7ayfQpWfe/preview",
+    src: `${PUBLIC_IMG_BASE}/legacy_1.png`,
     alt: "Сходка игроков в деревне",
   },
   {
-    src: "https://cloud.joutak.ru/s/DBJpmG2DjrSnXyS/preview",
+    src: `${PUBLIC_IMG_BASE}/legacy_2.png`,
     alt: "Портал в рай",
   },
   {
-    src: "https://cloud.joutak.ru/s/6BgqZdrr9LyinAB/preview",
+    src: `${PUBLIC_IMG_BASE}/legacy_3.png`,
     alt: "Деревня",
   },
 ];

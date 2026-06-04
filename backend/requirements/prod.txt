@@ -160,7 +160,7 @@ pydantic==2.12.0
     #   django-ninja
 pydantic-core==2.41.1
     # via pydantic
-pyjwt==2.12.1
+pyjwt==2.13.0
     # via
     #   backend
     #   django-ninja-jwt

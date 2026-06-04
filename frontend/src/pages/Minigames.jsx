@@ -1,16 +1,18 @@
 import ImageCarousel from "../components/ImageCarousel";
 
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const MINIGAMES_CAROUSEL_ITEMS = [
   {
-    src: "https://cloud.joutak.ru/s/swb4NibNCmna8gp/preview",
+    src: `${PUBLIC_IMG_BASE}/minigames_1.png`,
     alt: "Центральная локация Survival Games",
   },
   {
-    src: "https://cloud.joutak.ru/s/b6R3FAjCrNDXBGR/preview",
+    src: `${PUBLIC_IMG_BASE}/minigames_2.png`,
     alt: "Block Party",
   },
   {
-    src: "https://cloud.joutak.ru/s/nWyfRiYDqgow62f/preview",
+    src: `${PUBLIC_IMG_BASE}/minigames_3.png`,
     alt: "Ace Race",
   },
 ];

@@ -1,9 +1,11 @@
+const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
 const Contact = () => {
   return (
     <div
       className="p-5 mb-4 bg-light shadow-lg position-relative"
       style={{
-        backgroundImage: "url(/img/river.png)",
+        backgroundImage: `url(${PUBLIC_IMG_BASE}/joutak_1.png)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         position: "relative",

@@ -1,8 +1,27 @@
+x-backend-environment: &backend-environment
+  DJANGO_SETTINGS_MODULE: backend.settings.prod
+  USE_X_FORWARDED_PROTO: "true"
+  SECURE_SSL_REDIRECT: "true"
+  SECURE_HSTS_SECONDS: "31536000"
+  DJANGO_MIGRATE: "1"
+  DJANGO_COLLECTSTATIC: "1"
+  DJANGO_CHECK_DEPLOY: "1"
+  DJANGO_CHECK_DEPLOY_STRICT: "1"
+  DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+  DATABASE_URL_FILE: /run/secrets/database_url
+  SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+  ACCOUNT_TRUST_PROXY_HEADERS: "true"
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-joutak-backend}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+  OTEL_METRICS_EXPORT_INTERVAL_MS: ${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
+
 services:
   traefik:
     image: traefik:v3.1
     command:
-      - --api.dashboard=true
+      - --api.dashboard=false
       - --providers.docker=true
       - --providers.docker.swarmMode=true
       - --providers.docker.exposedbydefault=false
@@ -12,16 +31,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - letsencrypt:/letsencrypt
-    deploy:
-      labels:
-        - traefik.enable=true
-        - traefik.http.routers.traefik.rule=Host(`traefik.joutak.ru`)
-        - traefik.http.routers.traefik.entrypoints=web
-        - traefik.http.routers.traefik-sec.rule=Host(`traefik.joutak.ru`)
     networks:
       - joutak_net
 
@@ -39,27 +51,13 @@ services:
       - joutak_net
     deploy:
       placement:
-        constraints: [ node.role == manager ]
+        constraints: [node.role == manager]
 
   backend:
     image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
     env_file:
       - ./.env.production
-    environment:
-      DJANGO_SETTINGS_MODULE: backend.settings.prod
-      USE_X_FORWARDED_PROTO: "true"
-      SECURE_SSL_REDIRECT: "true"
-      SECURE_HSTS_SECONDS: "31536000"
-      DJANGO_MIGRATE: "1"
-      DJANGO_COLLECTSTATIC: "1"
-      DJANGO_CHECK_DEPLOY: "1"
-      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
-      DATABASE_URL_FILE: /run/secrets/database_url
-      #      YANDEX_CLIENT_ID_FILE: /run/secrets/yandex_client_id
-      #      YANDEX_SECRET_FILE: /run/secrets/yandex_secret
-      #      GITHUB_CLIENT_ID_FILE: /run/secrets/github_client_id
-      #      GITHUB_SECRET_FILE: /run/secrets/github_secret
-      SENTRY_DSN_FILE: /run/secrets/sentry_dsn
+    environment: *backend-environment
     secrets:
       - django_secret_key
       - database_url
@@ -83,14 +81,40 @@ services:
         - traefik.http.routers.backend-sec.entrypoints=websecure
         - traefik.http.routers.backend-sec.tls=true
         - traefik.http.routers.backend-sec.tls.certresolver=le
+        - traefik.http.routers.backend-admin.rule=Host(`admin.joutak.ru`)
+        - traefik.http.routers.backend-admin.entrypoints=web
+        - traefik.http.routers.backend-admin.middlewares=redirect-to-https
+        - traefik.http.routers.backend-admin-sec.rule=Host(`admin.joutak.ru`)
+        - traefik.http.routers.backend-admin-sec.entrypoints=websecure
+        - traefik.http.routers.backend-admin-sec.tls=true
+        - traefik.http.routers.backend-admin-sec.tls.certresolver=le
         - traefik.http.services.backend.loadbalancer.server.port=8000
+
+  backend-maintenance:
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    env_file:
+      - ./.env.production
+    working_dir: /app/backend
+    entrypoint: ["/usr/bin/tini", "--"]
+    command: ["python", "manage.py", "run_auth_maintenance"]
+    environment: *backend-environment
+    secrets:
+      - django_secret_key
+      - database_url
+      - sentry_dsn
+    networks:
+      - joutak_net
+    deploy:
+      replicas: 1
 
   frontend:
     image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
     env_file:
       - ./.env.production
     environment:
-      API_URL: ${PUBLIC_API_URL}
+      REACT_APP_API_URL: ${PUBLIC_API_URL}
+      OTEL_SERVICE_NAME: ${FRONTEND_OTEL_SERVICE_NAME:-joutak-frontend}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${FRONTEND_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
     networks:
       - joutak_net
     deploy:
@@ -103,7 +127,7 @@ services:
         - traefik.http.routers.frontend-sec.entrypoints=websecure
         - traefik.http.routers.frontend-sec.tls=true
         - traefik.http.routers.frontend-sec.tls.certresolver=le
-        - traefik.http.services.frontend.loadbalancer.server.port=80
+        - traefik.http.services.frontend.loadbalancer.server.port=8080
 
 secrets:
   django_secret_key:
@@ -123,7 +147,6 @@ secrets:
   sentry_dsn:
     external: true
 
-
 networks:
   joutak_net:
     driver: overlay
@@ -132,4 +155,4 @@ volumes:
   postgres_data:
   media_data:
   static_data:
-  letsencrypt: { }
+  letsencrypt: {}

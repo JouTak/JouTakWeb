@@ -1,28 +1,23 @@
-import { useEffect, useState, useCallback } from "react";
 import {
   Button,
-  Label,
-  Loader,
-  Switch,
-  Tooltip,
   DropdownMenu,
+  Label,
   Modal,
+  Switch,
   Text,
+  Tooltip,
 } from "@gravity-ui/uikit";
-import {
-  listSessionsHeadless,
-  revokeSessionHeadless,
-  bulkRevokeSessionsHeadless,
-  logout,
-} from "../../services/api.jsx";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import {
+  bulkRevokeSessionsHeadless,
+  listSessionsHeadless,
+  logout,
+  revokeSessionHeadless,
+} from "../../services/api";
+import { SectionCard } from "../ui/primitives";
 
 const rowBetween = {
   display: "flex",
@@ -36,6 +31,142 @@ const WINDOW_HOURS = 48;
 function shortUA(ua = "") {
   if (!ua) return "Неизвестное устройство";
   return ua.length > 96 ? `${ua.slice(0, 96)}…` : ua;
+}
+
+function sessionTimestamp(value) {
+  const parsed = Date.parse(value || "");
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function compareSessions(left, right) {
+  if (left.current !== right.current) {
+    return left.current ? -1 : 1;
+  }
+  if (left.revoked !== right.revoked) {
+    return left.revoked ? 1 : -1;
+  }
+
+  const lastActivityDelta =
+    sessionTimestamp(right.last_seen || right.created) -
+    sessionTimestamp(left.last_seen || left.created);
+  if (lastActivityDelta !== 0) {
+    return lastActivityDelta;
+  }
+
+  const expiryDelta =
+    sessionTimestamp(right.expires) - sessionTimestamp(left.expires);
+  if (expiryDelta !== 0) {
+    return expiryDelta;
+  }
+
+  return String(left.id || "").localeCompare(String(right.id || ""), "ru");
+}
+
+function SessionsCardSkeleton() {
+  return (
+    <div
+      className="skeleton-block"
+      style={{
+        borderRadius: 12,
+        border: "1px solid rgba(255,255,255,0.08)",
+        padding: 16,
+        display: "grid",
+        gap: 14,
+      }}
+      aria-hidden="true"
+    >
+      <div
+        style={{ ...rowBetween, alignItems: "flex-start", flexWrap: "wrap" }}
+      >
+        <div
+          style={{ display: "grid", gap: 10, minWidth: 220, flex: "1 1 280px" }}
+        >
+          <div className="skeleton-line" style={{ width: 110, height: 18 }} />
+          <div className="skeleton-line" style={{ width: "70%" }} />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <div className="skeleton-line" style={{ width: 190, height: 28 }} />
+          <div className="skeleton-line" style={{ width: 210, height: 28 }} />
+        </div>
+      </div>
+
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          style={{
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 10,
+            padding: 12,
+            display: "grid",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              ...rowBetween,
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gap: 8,
+                minWidth: 240,
+                flex: "1 1 320px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  className="skeleton-line"
+                  style={{ width: 118, height: 16 }}
+                />
+                <div
+                  className="skeleton-line"
+                  style={{ width: 72, height: 20 }}
+                />
+              </div>
+              <div className="skeleton-line" style={{ width: "84%" }} />
+              <div className="skeleton-line" style={{ width: "62%" }} />
+              <div className="skeleton-line" style={{ width: "48%" }} />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
+              <div
+                className="skeleton-line"
+                style={{ width: 108, height: 32 }}
+              />
+              <div
+                className="skeleton-line"
+                style={{ width: 100, height: 32 }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function reasonBadge(reason) {
@@ -96,37 +227,70 @@ function normalizeSession(raw) {
   };
 }
 
-export default function SessionsCard() {
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(false);
+function normalizeSessionList(payload) {
+  const source = Array.isArray(payload)
+    ? payload
+    : payload?.results || payload?.sessions || [];
+  return source.map(normalizeSession);
+}
+
+export default function SessionsCard({ initialSessions }) {
+  const navigate = useNavigate();
+  const [allSessions, setAllSessions] = useState(() =>
+    initialSessions === undefined ? [] : normalizeSessionList(initialSessions),
+  );
+  const [loading, setLoading] = useState(initialSessions === undefined);
   const [msg, setMsg] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [targetSessionId, setTargetSessionId] = useState(null);
 
+  const redirectToSessionExpired = useCallback(() => {
+    const params = new URLSearchParams({
+      reason: "SESSION_UNAUTHORIZED",
+      next: "/account/security",
+    });
+    navigate(`/session-expired?${params.toString()}`, { replace: true });
+  }, [navigate]);
+
   const load = useCallback(async () => {
     setLoading(true);
+    setMsg("");
     try {
       const raw = await listSessionsHeadless();
-      const norm = (
-        Array.isArray(raw) ? raw : raw?.results || raw?.sessions || []
-      ).map(normalizeSession);
-      const cutoff = Date.now() - WINDOW_HOURS * 3600 * 1000;
-      const inWindow = norm.filter((s) => {
-        const ts = Date.parse(s.last_seen || s.created || "") || 0;
-        return ts >= cutoff || !ts;
-      });
-      const final = showHistory ? inWindow : inWindow.filter((s) => !s.revoked);
-      setSessions(final);
+      setAllSessions(normalizeSessionList(raw));
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        redirectToSessionExpired();
+        return;
+      }
+      setMsg("Не удалось загрузить список сессий.");
     } finally {
       setLoading(false);
     }
-  }, [showHistory]);
+  }, [redirectToSessionExpired]);
 
   useEffect(() => {
+    if (initialSessions !== undefined) {
+      setAllSessions(normalizeSessionList(initialSessions));
+      setLoading(false);
+      setMsg("");
+      return;
+    }
     load();
-  }, [load]);
+  }, [initialSessions, load]);
+
+  const sessions = useMemo(() => {
+    const cutoff = Date.now() - WINDOW_HOURS * 3600 * 1000;
+    return allSessions
+      .filter((session) => {
+        const ts = sessionTimestamp(session.last_seen || session.created);
+        return ts >= cutoff || !ts;
+      })
+      .filter((session) => showHistory || !session.revoked)
+      .sort(compareSessions);
+  }, [allSessions, showHistory]);
 
   function askRevokeOne(id) {
     setConfirmAction("revoke-one");
@@ -147,7 +311,7 @@ export default function SessionsCard() {
   async function revokeAllExceptCurrent() {
     const res = await bulkRevokeSessionsHeadless();
     const ids = new Set(res?.revoked_ids || []);
-    setSessions((arr) =>
+    setAllSessions((arr) =>
       arr.map((s) =>
         ids.has(s.id)
           ? { ...s, revoked: true, revoked_reason: "bulk_except_current" }
@@ -162,7 +326,7 @@ export default function SessionsCard() {
     try {
       if (confirmAction === "revoke-one" && targetSessionId) {
         const r = await revokeSessionHeadless(targetSessionId, "manual");
-        setSessions((arr) =>
+        setAllSessions((arr) =>
           arr.map((s) =>
             s.id === r.id
               ? {
@@ -177,6 +341,7 @@ export default function SessionsCard() {
       } else if (confirmAction === "signout-current") {
         await logout();
         setMsg("Вы вышли из аккаунта на этом устройстве.");
+        redirectToSessionExpired();
       } else if (confirmAction === "revoke-all-except-current") {
         await revokeAllExceptCurrent();
         setMsg("Все сессии завершены, кроме текущей.");
@@ -190,7 +355,7 @@ export default function SessionsCard() {
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={rowBetween}>
         <h3 style={{ margin: 0, fontSize: 18 }}>Сессии</h3>
         <div
@@ -224,7 +389,7 @@ export default function SessionsCard() {
       </div>
 
       {loading ? (
-        <Loader size="m" />
+        <SessionsCardSkeleton />
       ) : sessions.length ? (
         <div style={{ display: "grid", gap: 8 }}>
           {sessions.map((s) => {
@@ -335,7 +500,12 @@ export default function SessionsCard() {
         </div>
       )}
 
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} size="s">
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        disableBodyScrollLock
+        size="s"
+      >
         <div style={{ padding: 16, display: "grid", gap: 12 }}>
           <h4 style={{ margin: 0 }}>Подтвердите действие</h4>
           <Text>
@@ -355,6 +525,16 @@ export default function SessionsCard() {
           </div>
         </div>
       </Modal>
-    </section>
+    </SectionCard>
   );
 }
+
+SessionsCard.propTypes = {
+  initialSessions: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.object),
+    PropTypes.shape({
+      results: PropTypes.arrayOf(PropTypes.object),
+      sessions: PropTypes.arrayOf(PropTypes.object),
+    }),
+  ]),
+};

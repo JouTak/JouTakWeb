@@ -1,8 +1,44 @@
-from .base import *  # noqa: F403
-from decouple import config, Csv
+from urllib.parse import urlparse
+
 import dj_database_url
+from decouple import Csv, config
+from observability.logging import build_logging_config
+
+from . import base as base_settings
+
+globals().update(base_settings.as_public_settings())
 
 DEBUG = False
+if (
+    not base_settings.SECRET_KEY
+    or base_settings.SECRET_KEY == "VERY_LONG_PASS_>80!TODO_CHANGE_ME!"
+):
+    raise RuntimeError(
+        "A non-default DJANGO_SECRET_KEY is required in production"
+    )
+
+frontend_base_url = (base_settings.FRONTEND_BASE_URL or "").strip()
+if not frontend_base_url:
+    raise RuntimeError("FRONTEND_BASE_URL is required in production")
+
+parsed_frontend = urlparse(
+    frontend_base_url
+    if "://" in frontend_base_url
+    else f"https://{frontend_base_url}"
+)
+allow_localhost_frontend_base_url = config(
+    "DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL",
+    cast=bool,
+    default=False,
+)
+if (
+    parsed_frontend.hostname in {"localhost", "127.0.0.1"}
+    and not allow_localhost_frontend_base_url
+):
+    raise RuntimeError(
+        "FRONTEND_BASE_URL must point to a non-localhost frontend "
+        "in production"
+    )
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv(), default="")
@@ -21,8 +57,14 @@ DATABASES = {
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", cast=bool, default=True)
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# Health check is consumed by the Docker/Swarm runtime over plain HTTP
+# inside the container network. Excluding it from the SSL redirect keeps
+# healthchecks green without loosening HSTS for real traffic.
+SECURE_REDIRECT_EXEMPT = [r"^health/?$"]
+SESSION_COOKIE_SECURE = config(
+    "SESSION_COOKIE_SECURE", cast=bool, default=True
+)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", cast=bool, default=True)
 
 if config("USE_X_FORWARDED_PROTO", cast=bool, default=True):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -33,6 +75,8 @@ SECURE_HSTS_PRELOAD = True
 
 SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="Lax")
 CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="Lax")
+SESSION_COOKIE_DOMAIN = config("SESSION_COOKIE_DOMAIN", default=None)
+SESSION_COOKIE_HTTPONLY = True
 
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -45,28 +89,41 @@ STORAGES = {
     },
 }
 
+# CI/test runs use SQLite with this production settings module. Django admin
+# templates need the collected manifest there, but the test jobs do not run
+# collectstatic. Fall back to plain static files storage in that case only.
+if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
+    STORAGES["staticfiles"] = {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+    }
+
 HEADLESS_SERVE_SPECIFICATION = False
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = False
 
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
 )
-EMAIL_HOST = config("EMAIL_HOST", default="smtp")
+EMAIL_HOST = config("EMAIL_HOST", default="")
 EMAIL_PORT = config("EMAIL_PORT", cast=int, default=587)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", cast=bool, default=True)
-DEFAULT_FROM_EMAIL = config(
-    "DEFAULT_FROM_EMAIL", default="noreply@example.com"
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
+EMAIL_USE_TLS = config(
+    "EMAIL_USE_TLS",
+    cast=bool,
+    default=(not EMAIL_USE_SSL),
 )
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", cast=int, default=10)
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    raise RuntimeError("EMAIL_USE_SSL and EMAIL_USE_TLS cannot both be true")
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL",
+    default=(EMAIL_HOST_USER or "noreply@example.com"),
+)
+SERVER_EMAIL = config("SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "INFO"},
-}
+LOGGING = build_logging_config(root_level="INFO")
 
 SENTRY_DSN = config("SENTRY_DSN", default="")
 if SENTRY_DSN:

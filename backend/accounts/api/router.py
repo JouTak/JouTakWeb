@@ -1,28 +1,40 @@
-from django.db import transaction
-from ninja import Router, File, Body
-from ninja.files import UploadedFile
-from ninja.errors import HttpError
+from accounts.api.openapi_params import (
+    REVOKE_REASON_OPENAPI_PARAMETER,
+    SESSION_ID_OPENAPI_PARAMETER,
+)
+from accounts.api.query_params import optional_str_query
+from accounts.services.account_status import AccountStatusService
+from accounts.services.profile import ProfileService
+from accounts.services.sessions import SessionService
+from accounts.transport.schemas import (
+    REVOKE_REASON_MAX_LENGTH,
+    REVOKE_REASON_PATTERN,
+    AccountStatusOut,
+    DeleteAccountIn,
+    ErrorOut,
+    OkOut,
+    ProfileUpdateIn,
+    ProfileUpdateOut,
+    RevokeOut,
+    RevokeSessionsIn,
+    SessionIdStr,
+    SessionsOut,
+)
 from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.contrib.auth import get_user_model
-from accounts.transport.schemas import (
-    OkOut,
-    ChangeEmailIn,
-    ProfileUpdateIn,
-    EmailStatusOut,
-    SessionsOut,
-    RevokeSessionsIn,
-    ErrorOut,
-    RevokeOut,
-)
-from accounts.services.profile import ProfileService
-from accounts.services.emailing import EmailService
-from accounts.services.sessions import SessionService
+from django.db import transaction
+from django.http import HttpRequest
+from ninja import Body, File, Router
+from ninja.errors import HttpError
+from ninja.files import UploadedFile
 
 User = get_user_model()
 account_router = Router(tags=["Account"], auth=[x_session_token_auth])
+BODY_REQUIRED = Body(...)
+AVATAR_REQUIRED = File(...)
 
 
-def _require_authenticated_user(request) -> User:
+def _require_authenticated_user(request: HttpRequest) -> User:
     user = getattr(request, "auth", None)
     if not user or not getattr(user, "is_authenticated", False):
         raise HttpError(401, "Not authenticated")
@@ -31,26 +43,81 @@ def _require_authenticated_user(request) -> User:
 
 @account_router.patch(
     "/profile",
-    response={200: OkOut, 401: ErrorOut},
+    response={
+        200: ProfileUpdateOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Update profile fields",
     operation_id="account_update_profile",
 )
 @transaction.atomic
-def account_update_profile(request, payload: ProfileUpdateIn = Body(...)):
+def account_update_profile(
+    request: HttpRequest,
+    payload: ProfileUpdateIn = BODY_REQUIRED,
+) -> ProfileUpdateOut:
     user = _require_authenticated_user(request)
-    ProfileService.update_name(
-        user, first=payload.first_name, last=payload.last_name
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
+    profile = ProfileService.update_profile_fields(
+        user,
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        vk_username=payload.vk_username,
+        minecraft_nick=payload.minecraft_nick,
+        minecraft_has_license=payload.minecraft_has_license,
+        is_itmo_student=payload.is_itmo_student,
+        itmo_isu=payload.itmo_isu,
     )
-    return OkOut(ok=True, message="Профиль обновлён")
+    status = AccountStatusService.get_status(user, profile=profile)
+    return ProfileUpdateOut(ok=True, message="Профиль обновлён", **status)
+
+
+@account_router.get(
+    "/status",
+    response={200: AccountStatusOut, 401: ErrorOut},
+    summary="Get profile personalization status",
+    operation_id="account_get_status",
+)
+def account_status(request: HttpRequest) -> AccountStatusOut:
+    user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    SessionService.touch(request, user)
+    status = AccountStatusService.get_status(user)
+    return AccountStatusOut(**status)
+
+
+@account_router.post(
+    "/delete",
+    response={200: OkOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
+    summary="Delete current account",
+    operation_id="account_delete_current",
+)
+@transaction.atomic
+def account_delete(
+    request: HttpRequest,
+    payload: DeleteAccountIn = BODY_REQUIRED,
+) -> OkOut:
+    user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    if not user.check_password(payload.current_password):
+        raise HttpError(400, "wrong current password")
+    user.delete()
+    request.session.flush()
+    return OkOut(ok=True, message="Аккаунт удалён")
 
 
 @account_router.post(
     "/avatar",
-    response={200: OkOut, 401: ErrorOut},
+    response={200: OkOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
     summary="Upload/replace user avatar",
     operation_id="account_upload_avatar",
 )
-def upload_avatar(request, avatar: UploadedFile = File(...)):
+def upload_avatar(
+    request: HttpRequest,
+    avatar: UploadedFile = AVATAR_REQUIRED,
+) -> OkOut:
     user = _require_authenticated_user(request)
     SessionService.assert_session_allowed(request)
     SessionService.touch(request, user)
@@ -63,50 +130,12 @@ def upload_avatar(request, avatar: UploadedFile = File(...)):
 
 
 @account_router.get(
-    "/email",
-    response={200: EmailStatusOut, 401: ErrorOut},
-    summary="Get primary email & verification state",
-    operation_id="account_email_status",
-)
-def account_email_status(request):
-    user = _require_authenticated_user(request)
-    return EmailService.status(user)
-
-
-@account_router.post(
-    "/email/change",
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
-    summary="Request email change (sends confirmation)",
-    operation_id="account_change_email",
-)
-@transaction.atomic
-def account_change_email(request, payload: ChangeEmailIn = Body(...)):
-    user = _require_authenticated_user(request)
-    EmailService.request_change(request, user, new_email=payload.new_email)
-    return OkOut(
-        ok=True, message="Проверьте почту, чтобы подтвердить новый адрес"
-    )
-
-
-@account_router.post(
-    "/email/resend",
-    response={200: OkOut, 401: ErrorOut},
-    summary="Resend email confirmation",
-    operation_id="account_resend_email",
-)
-def account_resend_email_verification(request):
-    user = _require_authenticated_user(request)
-    EmailService.resend_confirmation(request, user)
-    return OkOut(ok=True, message="Письмо с подтверждением отправлено")
-
-
-@account_router.get(
     "/sessions",
     response={200: SessionsOut, 401: ErrorOut},
     summary="List current user sessions",
     operation_id="account_list_sessions",
 )
-def list_sessions(request):
+def list_sessions(request: HttpRequest) -> SessionsOut:
     user = _require_authenticated_user(request)
     SessionService.assert_session_allowed(request)
     SessionService.touch(request, user)
@@ -115,32 +144,76 @@ def list_sessions(request):
 
 @account_router.post(
     "/sessions/bulk",
-    response={200: RevokeOut, 401: ErrorOut},
+    response={
+        200: RevokeOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        409: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Revoke sessions in bulk",
     operation_id="account_revoke_sessions_bulk",
 )
-def revoke_sessions_bulk(request, payload: RevokeSessionsIn):
+def revoke_sessions_bulk(
+    request: HttpRequest,
+    payload: RevokeSessionsIn = BODY_REQUIRED,
+) -> dict[str, object]:
     _require_authenticated_user(request)
     return SessionService.revoke_bulk(request, payload)
 
 
 @account_router.post(
     "/sessions/_bulk",
-    response={200: RevokeOut, 401: ErrorOut},
+    response={
+        200: RevokeOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        409: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Revoke sessions in bulk (compat)",
     operation_id="account_revoke_sessions_bulk_compat",
+    deprecated=True,
 )
-def revoke_sessions_bulk_compat(request, payload: RevokeSessionsIn):
+def revoke_sessions_bulk_compat(
+    request: HttpRequest,
+    payload: RevokeSessionsIn = BODY_REQUIRED,
+) -> dict[str, object]:
     _require_authenticated_user(request)
     return SessionService.revoke_bulk(request, payload)
 
 
 @account_router.delete(
     "/sessions/{sid}",
-    response={200: RevokeOut, 401: ErrorOut, 404: ErrorOut},
+    response={
+        200: RevokeOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        404: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Revoke single session",
     operation_id="account_revoke_session",
+    openapi_extra={
+        "parameters": [
+            SESSION_ID_OPENAPI_PARAMETER,
+            REVOKE_REASON_OPENAPI_PARAMETER,
+        ],
+    },
 )
-def revoke_session(request, sid: str, reason: str | None = None):
+def revoke_session(
+    request: HttpRequest,
+    sid: SessionIdStr,
+) -> dict[str, object]:
     _require_authenticated_user(request)
-    return SessionService.revoke_single(request, sid=sid, reason=reason)
+    reason = optional_str_query(
+        request,
+        "reason",
+        max_length=REVOKE_REASON_MAX_LENGTH,
+        pattern=REVOKE_REASON_PATTERN,
+    )
+    return SessionService.revoke_single(
+        request,
+        sid=sid,
+        reason=reason,
+    )

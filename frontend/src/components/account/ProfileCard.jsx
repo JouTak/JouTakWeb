@@ -1,62 +1,173 @@
-import { useEffect, useMemo, useState } from "react";
-import { Button, Loader, TextInput, useToaster } from "@gravity-ui/uikit";
-import { me, updateProfile } from "../../services/api";
+import {
+  Button,
+  Loader,
+  RadioButton,
+  TextInput,
+  useToaster,
+} from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { me, updateProfile } from "../../services/api";
+import { boolToSelect, selectToBool } from "../../utils/profileForm";
+import { SectionCard } from "../ui/primitives";
 const headerStyle = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   gap: 12,
 };
+const choiceGroupStyle = {
+  border: 0,
+  display: "grid",
+  gap: 6,
+  margin: 0,
+  padding: 0,
+};
+const choiceLegendStyle = {
+  padding: 0,
+};
 
-export default function NameCard() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [loading, setLoading] = useState(true);
+function boolIcon(value) {
+  if (value === true) return "✅";
+  if (value === false) return "❌";
+  return "❔";
+}
+
+export default function ProfileCard({ profile, onUpdated }) {
+  const [firstName, setFirstName] = useState(() => profile?.first_name || "");
+  const [lastName, setLastName] = useState(() => profile?.last_name || "");
+  const [vkUsername, setVkUsername] = useState(
+    () => profile?.vk_username || "",
+  );
+  const [minecraftNick, setMinecraftNick] = useState(
+    () => profile?.minecraft_nick || "",
+  );
+  const [minecraftHasLicense, setMinecraftHasLicense] = useState(
+    () => profile?.minecraft_has_license ?? null,
+  );
+  const [isItmoStudent, setIsItmoStudent] = useState(
+    () => profile?.is_itmo_student ?? null,
+  );
+  const [itmoIsu, setItmoIsu] = useState(() => profile?.itmo_isu || "");
+  const [loading, setLoading] = useState(() => !profile);
 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fDraft, setFDraft] = useState("");
   const [lDraft, setLDraft] = useState("");
+  const [vkDraft, setVkDraft] = useState("");
+  const [mcDraft, setMcDraft] = useState("");
+  const [licenseDraft, setLicenseDraft] = useState("");
+  const [itmoDraft, setItmoDraft] = useState("");
+  const [isuDraft, setIsuDraft] = useState("");
 
   const { add } = useToaster();
 
-  async function load() {
+  const applyProfileData = useCallback((data = {}) => {
+    setFirstName(data.first_name || "");
+    setLastName(data.last_name || "");
+    setVkUsername(data.vk_username || "");
+    setMinecraftNick(data.minecraft_nick || "");
+    setMinecraftHasLicense(data.minecraft_has_license ?? null);
+    setIsItmoStudent(data.is_itmo_student ?? null);
+    setItmoIsu(data.itmo_isu || "");
+  }, []);
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await me();
-      setFirstName(data.first_name || "");
-      setLastName(data.last_name || "");
+      applyProfileData(data);
+    } catch {
+      add({
+        name: "profile-load-error",
+        title: "Ошибка",
+        content: "Не удалось загрузить данные профиля",
+        theme: "danger",
+      });
     } finally {
       setLoading(false);
     }
-  }
+  }, [add, applyProfileData]);
+
   useEffect(() => {
+    if (profile) {
+      applyProfileData(profile);
+      setLoading(false);
+      return;
+    }
     load();
-  }, []);
+  }, [applyProfileData, load, profile]);
 
   function openForm() {
     setFDraft(firstName);
     setLDraft(lastName);
+    setVkDraft(vkUsername);
+    setMcDraft(minecraftNick);
+    setLicenseDraft(boolToSelect(minecraftHasLicense));
+    setItmoDraft(boolToSelect(isItmoStudent));
+    setIsuDraft(itmoIsu);
     setOpen(true);
   }
 
+  const isuRequired = itmoDraft === "true";
   const dirty = useMemo(
-    () => fDraft !== firstName || lDraft !== lastName,
-    [fDraft, lDraft, firstName, lastName],
+    () =>
+      fDraft !== firstName ||
+      lDraft !== lastName ||
+      vkDraft !== vkUsername ||
+      mcDraft !== minecraftNick ||
+      licenseDraft !== boolToSelect(minecraftHasLicense) ||
+      itmoDraft !== boolToSelect(isItmoStudent) ||
+      isuDraft !== itmoIsu,
+    [
+      fDraft,
+      lDraft,
+      vkDraft,
+      mcDraft,
+      licenseDraft,
+      itmoDraft,
+      isuDraft,
+      firstName,
+      lastName,
+      vkUsername,
+      minecraftNick,
+      minecraftHasLicense,
+      isItmoStudent,
+      itmoIsu,
+    ],
   );
   const valid = useMemo(() => {
     const f = (fDraft || "").trim();
     const l = (lDraft || "").trim();
-    return (f.length > 0 || l.length > 0) && f.length <= 100 && l.length <= 100;
-  }, [fDraft, lDraft]);
+    const vk = (vkDraft || "").trim();
+    const mc = (mcDraft || "").trim();
+    const isu = (isuDraft || "").trim();
+    const mcOk = /^[A-Za-z0-9_]{3,16}$/.test(mc);
+    const isuOk = !isuRequired || /^\d{5,20}$/.test(isu);
+
+    return (
+      f.length <= 100 &&
+      l.length <= 100 &&
+      vk.length > 0 &&
+      mc.length > 0 &&
+      mcOk &&
+      licenseDraft !== "" &&
+      itmoDraft !== "" &&
+      (!isuRequired || isu.length > 0) &&
+      isuOk
+    );
+  }, [
+    fDraft,
+    lDraft,
+    vkDraft,
+    mcDraft,
+    licenseDraft,
+    itmoDraft,
+    isuDraft,
+    isuRequired,
+  ]);
 
   async function onSave(e) {
     e.preventDefault();
@@ -66,19 +177,46 @@ export default function NameCard() {
       const payload = {
         first_name: (fDraft || "").trim(),
         last_name: (lDraft || "").trim(),
+        vk_username: (vkDraft || "").trim(),
+        minecraft_nick: (mcDraft || "").trim(),
+        minecraft_has_license: selectToBool(licenseDraft),
+        is_itmo_student: selectToBool(itmoDraft),
+        ...(isuRequired
+          ? { itmo_isu: (isuDraft || "").trim() }
+          : { itmo_isu: "" }),
       };
-      const { message } = await updateProfile(payload);
-      setFirstName(payload.first_name);
-      setLastName(payload.last_name);
+      const result = await updateProfile(payload);
+      applyProfileData(payload);
+      onUpdated?.({
+        ...payload,
+        email_verified: result?.email_verified,
+        profile_complete: result?.profile_complete,
+        account_active: result?.account_active,
+        registration_completed: result?.registration_completed,
+        profile_state: result?.profile_state,
+        profile_tier: result?.profile_tier,
+        blocking_reasons: result?.blocking_reasons,
+        personalization_ui_enabled: result?.personalization_ui_enabled,
+        personalization_interstitial_enabled:
+          result?.personalization_interstitial_enabled,
+        personalization_enforce_enabled:
+          result?.personalization_enforce_enabled,
+        missing_fields: result?.missing_fields,
+      });
       add({
         name: "name-save",
         title: "Профиль",
-        content: message || "Сохранено",
+        content: result?.message || "Сохранено",
         theme: "success",
       });
       setOpen(false);
     } catch (e) {
-      const msg = e?.response?.data?.detail || "Не удалось сохранить";
+      const msg =
+        e?.response?.data?.fields?.vk_username ||
+        e?.response?.data?.fields?.minecraft_nick ||
+        e?.response?.data?.fields?.itmo_isu ||
+        e?.response?.data?.detail ||
+        "Не удалось сохранить";
       add({
         name: "name-save-err",
         title: "Ошибка",
@@ -94,10 +232,14 @@ export default function NameCard() {
     setOpen(false);
   }
 
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const vkProfileUrl = vkUsername ? `https://vk.com/${vkUsername}` : "";
+  const vkLabel = fullName || (vkUsername ? `@${vkUsername}` : "");
+
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={headerStyle}>
-        <h3 style={{ margin: 0, fontSize: 18 }}>Имя и фамилия</h3>
+        <h3 style={{ margin: 0, fontSize: 18 }}>Профиль</h3>
         {!open && (
           <Button
             view="outlined"
@@ -114,11 +256,80 @@ export default function NameCard() {
         <Loader size="m" />
       ) : (
         <>
-          <div>
-            <b>{firstName || "—"}</b> {lastName || ""}
+          <div style={{ display: "grid", gap: 8 }}>
+            {fullName ? (
+              <div>
+                <b>{fullName}</b>
+              </div>
+            ) : null}
+
+            {vkUsername ? (
+              <a
+                href={vkProfileUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "fit-content",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: 999,
+                  padding: "6px 12px",
+                  textDecoration: "none",
+                  color: "inherit",
+                }}
+                title="Открыть профиль VK"
+              >
+                <span style={{ opacity: 0.75 }}>VK</span>
+                <b>{vkLabel}</b>
+              </a>
+            ) : (
+              <div>
+                <span style={{ opacity: 0.75 }}>VK: </span>
+                <b>Не указан</b>
+              </div>
+            )}
+
+            <div>
+              <span style={{ opacity: 0.75 }}>Minecraft: </span>
+              <b>{minecraftNick || "—"}</b>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: 6,
+                marginTop: 2,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <span>Лицензия Minecraft</span>
+                <b>{boolIcon(minecraftHasLicense)}</b>
+              </div>
+              {isItmoStudent === true && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                  }}
+                >
+                  <span>Номер ИСУ</span>
+                  <b>{itmoIsu || "—"}</b>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Инлайн-форма с плавным раскрытием */}
           <div className={`collapse-y ${open ? "open" : ""}`}>
             <div>
               {open && (
@@ -143,6 +354,60 @@ export default function NameCard() {
                     value={lDraft}
                     onUpdate={setLDraft}
                   />
+                  <TextInput
+                    size="l"
+                    label="Username VK"
+                    value={vkDraft}
+                    onUpdate={setVkDraft}
+                    placeholder="Например, id123456 или username"
+                    required
+                  />
+                  <TextInput
+                    size="l"
+                    label="Ник в Minecraft"
+                    value={mcDraft}
+                    onUpdate={setMcDraft}
+                    placeholder="Только латиница, цифры и _"
+                    required
+                  />
+                  <fieldset style={choiceGroupStyle}>
+                    <legend style={choiceLegendStyle}>
+                      Есть лицензия Minecraft?
+                    </legend>
+                    <RadioButton
+                      size="l"
+                      width="max"
+                      value={licenseDraft || null}
+                      onUpdate={setLicenseDraft}
+                      options={[
+                        { value: "true", content: "Да" },
+                        { value: "false", content: "Нет" },
+                      ]}
+                    />
+                  </fieldset>
+                  <fieldset style={choiceGroupStyle}>
+                    <legend style={choiceLegendStyle}>Вы студент ИТМО?</legend>
+                    <RadioButton
+                      size="l"
+                      width="max"
+                      value={itmoDraft || null}
+                      onUpdate={setItmoDraft}
+                      options={[
+                        { value: "true", content: "Да" },
+                        { value: "false", content: "Нет" },
+                      ]}
+                    />
+                  </fieldset>
+                  {isuRequired && (
+                    <TextInput
+                      size="l"
+                      label="Номер ИСУ"
+                      value={isuDraft}
+                      onUpdate={setIsuDraft}
+                      placeholder="Только цифры"
+                      required
+                    />
+                  )}
                   <div
                     style={{
                       display: "flex",
@@ -174,6 +439,19 @@ export default function NameCard() {
           </div>
         </>
       )}
-    </section>
+    </SectionCard>
   );
 }
+
+ProfileCard.propTypes = {
+  profile: PropTypes.shape({
+    first_name: PropTypes.string,
+    last_name: PropTypes.string,
+    vk_username: PropTypes.string,
+    minecraft_nick: PropTypes.string,
+    minecraft_has_license: PropTypes.bool,
+    is_itmo_student: PropTypes.bool,
+    itmo_isu: PropTypes.string,
+  }),
+  onUpdated: PropTypes.func,
+};

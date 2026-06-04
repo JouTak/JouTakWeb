@@ -1,14 +1,25 @@
-from ninja.errors import HttpError
-from ninja import NinjaAPI
-from accounts.transport.schemas import ErrorOut
 import json
+from json import JSONDecodeError
+
+from accounts.transport.schemas import ErrorOut
+from django.http import HttpRequest, HttpResponse
+from ninja import NinjaAPI
+from ninja.errors import HttpError
 
 
-def _normalize_form_errors(raw: str):
-    try:
-        data = json.loads(raw)
-    except Exception:
-        return None, None
+def _normalize_form_errors(
+    raw: str | dict,
+) -> tuple[
+    dict[str, list[dict[str, str | None]]] | None,
+    dict[str, str] | None,
+]:
+    if isinstance(raw, dict):
+        data = raw
+    else:
+        try:
+            data = json.loads(raw)
+        except (JSONDecodeError, TypeError):
+            return None, None
     if not isinstance(data, dict):
         return None, None
 
@@ -32,14 +43,52 @@ def _normalize_form_errors(raw: str):
     return (errors or None), (fields or None)
 
 
+def _normalize_error_payload(
+    raw: str | dict,
+) -> dict[str, str | list[str] | None] | None:
+    if isinstance(raw, dict):
+        data = raw
+    else:
+        try:
+            data = json.loads(raw)
+        except (JSONDecodeError, TypeError):
+            return None
+    if not isinstance(data, dict):
+        return None
+    detail = data.get("detail")
+    error_code = data.get("error_code")
+    blocking_reasons = data.get("blocking_reasons")
+    if detail is None and error_code is None:
+        return None
+    if blocking_reasons is not None and not isinstance(blocking_reasons, list):
+        blocking_reasons = None
+    return {
+        "detail": str(detail or "error"),
+        "error_code": str(error_code) if error_code else None,
+        "blocking_reasons": blocking_reasons,
+    }
+
+
 def install_http_error_handler(api: NinjaAPI) -> None:
     @api.exception_handler(HttpError)
-    def on_http_error(request, exc: HttpError):  # noqa: N802
+    def on_http_error(request: HttpRequest, exc: HttpError) -> HttpResponse:
         status = getattr(exc, "status_code", 500)
         raw_detail = getattr(exc, "message", None)
         if raw_detail is None:
             raw_detail = str(exc)
-        errors, fields = _normalize_form_errors(str(raw_detail))
+        normalized_error = _normalize_error_payload(raw_detail)
+        if normalized_error:
+            return api.create_response(
+                request,
+                ErrorOut(
+                    detail=normalized_error["detail"],
+                    code=status,
+                    error_code=normalized_error["error_code"],
+                    blocking_reasons=normalized_error["blocking_reasons"],
+                ),
+                status=status,
+            )
+        errors, fields = _normalize_form_errors(raw_detail)
         if errors:
             return api.create_response(
                 request,

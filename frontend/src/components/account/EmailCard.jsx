@@ -1,24 +1,19 @@
-import { useEffect, useState, useMemo } from "react";
 import {
   Button,
   Label,
+  Loader,
   TextInput,
   useToaster,
-  Loader,
 } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
 import {
-  getEmailStatus,
   changeEmail,
+  getEmailStatus,
   resendEmailVerification,
 } from "../../services/api";
-
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { SectionCard } from "../ui/primitives";
 
 const headerStyle = {
   display: "flex",
@@ -27,35 +22,59 @@ const headerStyle = {
   gap: 12,
 };
 
-export default function EmailCard() {
-  const [email, setEmail] = useState("");
-  const [verified, setVerified] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function EmailCard({ initialStatus }) {
+  const [email, setEmail] = useState(() => initialStatus?.email || "");
+  const [verified, setVerified] = useState(() => !!initialStatus?.verified);
+  const [pendingEmail, setPendingEmail] = useState(
+    () => initialStatus?.pending_email || "",
+  );
+  const [resendTarget, setResendTarget] = useState(
+    () => initialStatus?.resend_target || "",
+  );
+  const [loading, setLoading] = useState(initialStatus === undefined);
   const [editMode, setEditMode] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
+  const [newEmail, setNewEmail] = useState(() => initialStatus?.email || "");
   const [busy, setBusy] = useState(false);
   const { add } = useToaster();
 
-  async function load() {
+  const applyStatus = useCallback((status = {}) => {
+    setEmail(status.email || "");
+    setVerified(!!status.verified);
+    setPendingEmail(status.pending_email || "");
+    setResendTarget(status.resend_target || "");
+    setNewEmail(status.email || "");
+  }, []);
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const s = await getEmailStatus();
-      setEmail(s.email || "");
-      setVerified(!!s.verified);
-      setNewEmail(s.email || "");
+      const status = await getEmailStatus();
+      applyStatus(status);
+    } catch {
+      add({
+        name: "email-load-error",
+        title: "Ошибка",
+        content: "Не удалось загрузить статус email",
+        theme: "danger",
+      });
     } finally {
       setLoading(false);
     }
-  }
+  }, [add, applyStatus]);
 
   useEffect(() => {
+    if (initialStatus !== undefined) {
+      applyStatus(initialStatus);
+      setLoading(false);
+      return;
+    }
     load();
-  }, []);
+  }, [applyStatus, initialStatus, load]);
 
   async function onResend() {
     setBusy(true);
     try {
-      const { message } = await resendEmailVerification();
+      const { message } = await resendEmailVerification(resendTarget);
       add({
         name: "email-resend",
         title: "Подтверждение",
@@ -63,12 +82,19 @@ export default function EmailCard() {
         theme: "success",
       });
     } catch (err) {
+      const errors = err?.response?.data?.errors;
+      const msg =
+        (Array.isArray(errors) &&
+          errors.find(
+            (item) =>
+              item && typeof item.message === "string" && item.message.trim(),
+          )?.message) ||
+        err?.response?.data?.detail ||
+        "Не удалось отправить письмо";
       add({
         name: "email-resend-err",
         title: "Ошибка",
-        content: String(
-          err?.response?.data?.detail || "Не удалось отправить письмо",
-        ),
+        content: String(msg),
         theme: "danger",
       });
     } finally {
@@ -84,18 +110,30 @@ export default function EmailCard() {
     }
     setBusy(true);
     try {
-      const { message } = await changeEmail(newEmail);
+      const result = await changeEmail(newEmail);
       add({
         name: "email-change",
         title: "Email",
-        content: message || "Проверьте почту для подтверждения",
+        content: result.message || "Проверьте почту для подтверждения",
         theme: "success",
       });
-      setEmail(newEmail);
-      setVerified(false);
+      setEmail(result.email || email);
+      setVerified(!!result.verified);
+      setPendingEmail(result.pending_email || String(newEmail).trim());
+      setResendTarget(
+        result.resend_target || result.pending_email || String(newEmail).trim(),
+      );
       setEditMode(false);
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Не удалось изменить email";
+      const errors = err?.response?.data?.errors;
+      const msg =
+        (Array.isArray(errors) &&
+          errors.find(
+            (item) =>
+              item && typeof item.message === "string" && item.message.trim(),
+          )?.message) ||
+        err?.response?.data?.detail ||
+        "Не удалось изменить email";
       add({
         name: "email-change-err",
         title: "Ошибка",
@@ -118,7 +156,7 @@ export default function EmailCard() {
   );
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <div style={headerStyle}>
         <h3 style={{ margin: 0, fontSize: 18 }}>Email</h3>
         {email ? (
@@ -139,16 +177,16 @@ export default function EmailCard() {
               <div>
                 <b>{email || "—"}</b>
               </div>
-              {!verified && email && (
-                <div style={{ color: "#d9534f" }}>
-                  Ваш email не подтверждён. Пожалуйста, подтвердите его.
+              {pendingEmail && (
+                <div style={{ opacity: 0.8 }}>
+                  Ожидает подтверждения: <b>{pendingEmail}</b>
                 </div>
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Button view="outlined" onClick={() => setEditMode(true)}>
                   Изменить email
                 </Button>
-                {!verified && email && (
+                {resendTarget && (
                   <Button view="normal" loading={busy} onClick={onResend}>
                     Отправить письмо повторно
                   </Button>
@@ -185,13 +223,21 @@ export default function EmailCard() {
                 </Button>
               </div>
               <div style={{ opacity: 0.75, fontSize: 12 }}>
-                После изменения мы отправим письмо с подтверждением на новый
-                адрес.
+                После подтверждения новый адрес станет основным для аккаунта.
               </div>
             </form>
           )}
         </>
       )}
-    </section>
+    </SectionCard>
   );
 }
+
+EmailCard.propTypes = {
+  initialStatus: PropTypes.shape({
+    email: PropTypes.string,
+    verified: PropTypes.bool,
+    pending_email: PropTypes.string,
+    resend_target: PropTypes.string,
+  }),
+};

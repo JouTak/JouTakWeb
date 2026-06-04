@@ -1,39 +1,83 @@
-from ninja import Router, Body
-from allauth.headless.contrib.ninja.security import x_session_token_auth
+from accounts.services.auth import AuthService
+from accounts.services.auth_cookies import (
+    delete_refresh_cookie,
+    set_refresh_cookie,
+)
+from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
+    ChangePasswordIn,
+    ChangePasswordOut,
     ErrorOut,
     OkOut,
+    ProfileOut,
     TokenPairOut,
     TokenRefreshIn,
     TokenRefreshOut,
-    ChangePasswordIn,
-    ProfileOut,
 )
-from accounts.services.auth import AuthService
+from allauth.headless.contrib.ninja.security import x_session_token_auth
+from django.contrib.auth import get_user_model
+from django.http import HttpRequest, HttpResponse
+from ninja import Body, Router
+from ninja.errors import HttpError
+
+from backend.ratelimiting import (
+    API_AUTH_RATE,
+    API_AUTH_SENSITIVE_RATE,
+    ratelimit_method,
+)
 
 auth_router = Router(tags=["Auth"])
+BODY_REQUIRED = Body(...)
+User = get_user_model()
+
+
+def _require_active_user(
+    request: HttpRequest,
+    *,
+    touch: bool = False,
+) -> User:
+    user = getattr(request, "auth", None)
+    if not user or not getattr(user, "is_authenticated", False):
+        raise HttpError(401, "Not authenticated")
+    if not getattr(user, "is_active", False):
+        raise HttpError(401, "Not authenticated")
+    SessionService.assert_session_allowed(request)
+    if touch:
+        SessionService.touch(request, user)
+    return user
 
 
 @auth_router.post(
     "/jwt/from_session",
     auth=[x_session_token_auth],
-    response={200: TokenPairOut, 401: ErrorOut},
+    response={200: TokenPairOut, 401: ErrorOut, 429: ErrorOut},
     summary="Issue JWT pair bound to current session",
     operation_id="auth_jwt_from_session",
 )
-def jwt_from_session(request):
-    return AuthService.issue_pair_for_session(request, request.auth)
+def jwt_from_session(
+    request: HttpRequest, response: HttpResponse
+) -> TokenPairOut:
+    if ratelimit_method(
+        request, group="auth.jwt_from_session", rate=API_AUTH_RATE
+    ):
+        raise HttpError(429, "Too many requests. Please try again later.")
+    user = _require_active_user(request, touch=True)
+    pair = AuthService.issue_pair_for_session(request, user)
+    set_refresh_cookie(response, pair.refresh or "")
+    return TokenPairOut(access=pair.access)
 
 
 @auth_router.post(
     "/logout",
     auth=[x_session_token_auth],
-    response={200: OkOut},
+    response={200: OkOut, 401: ErrorOut},
     summary="Logout current session",
     operation_id="auth_logout",
 )
-def logout_current(request):
+def logout_current(request: HttpRequest, response: HttpResponse) -> OkOut:
+    _require_active_user(request)
     AuthService.logout_current(request)
+    delete_refresh_cookie(response)
     return OkOut(ok=True, message="logged out")
 
 
@@ -44,29 +88,60 @@ def logout_current(request):
     summary="Get current user profile",
     operation_id="auth_me",
 )
-def me(request):
-    return AuthService.profile(request.auth)
+def me(request: HttpRequest) -> ProfileOut:
+    user = _require_active_user(request, touch=True)
+    return AuthService.profile(user)
 
 
 @auth_router.post(
     "/change_password",
     auth=[x_session_token_auth],
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut},
+    response={
+        200: ChangePasswordOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        422: ErrorOut,
+        429: ErrorOut,
+    },
     summary="Change password (requires current password)",
     operation_id="auth_change_password",
 )
-def change_password(request, payload: ChangePasswordIn = Body(...)):
-    AuthService.change_password(
-        request.auth, payload.current_password, payload.new_password
+def change_password(
+    request: HttpRequest,
+    payload: ChangePasswordIn = BODY_REQUIRED,
+) -> ChangePasswordOut:
+    if ratelimit_method(
+        request, group="auth.change_password", rate=API_AUTH_SENSITIVE_RATE
+    ):
+        raise HttpError(429, "Too many requests. Please try again later.")
+    user = _require_active_user(request, touch=True)
+    return AuthService.change_password(
+        request,
+        user,
+        payload.current_password,
+        payload.new_password,
+        logout_current_session=payload.logout_current_session,
     )
-    return OkOut(ok=True, message="password changed")
 
 
 @auth_router.post(
     "/refresh",
-    response={200: TokenRefreshOut, 401: ErrorOut},
+    response={
+        200: TokenRefreshOut,
+        401: ErrorOut,
+        422: ErrorOut,
+        429: ErrorOut,
+    },
     summary="Refresh JWT pair",
     operation_id="auth_refresh",
 )
-def refresh_pair(request, payload: TokenRefreshIn = Body(...)):
-    return AuthService.refresh_pair(payload)
+def refresh_pair(
+    request: HttpRequest,
+    response: HttpResponse,
+    payload: TokenRefreshIn = BODY_REQUIRED,
+) -> TokenRefreshOut:
+    if ratelimit_method(request, group="auth.refresh", rate=API_AUTH_RATE):
+        raise HttpError(429, "Too many requests. Please try again later.")
+    pair = AuthService.refresh_pair(request, payload)
+    set_refresh_cookie(response, pair.refresh or "")
+    return TokenRefreshOut(access=pair.access)

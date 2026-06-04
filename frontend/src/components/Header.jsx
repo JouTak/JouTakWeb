@@ -1,16 +1,47 @@
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Select,
-  DropdownMenu,
-  Button,
   Avatar,
+  Button,
+  DropdownMenu,
+  Label,
   Loader,
+  Modal,
+  Select,
 } from "@gravity-ui/uikit";
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { getProjectByPath, getPathByProject } from "../utils/projectUtils";
-import DynamicMenu from "./DynamicMenu";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Offcanvas from "react-bootstrap/Offcanvas";
+import { useLocation, useNavigate } from "react-router-dom";
+
+import {
+  AUTH_STATE_EVENT,
+  hasStoredAuth,
+  logout,
+  me,
+  readStoredTokens,
+} from "../services/api";
+import { getProfileDisplayName } from "../utils/accountIdentity";
+import {
+  getPersonalizationNoticeKey,
+  hasSeenPersonalizationNotice,
+  isPostSignupPersonalizationSession,
+  markPersonalizationNoticeSeen,
+} from "../utils/personalizationNotice";
+import {
+  isLegacyPersonalization,
+  isNewRegistrationPersonalization,
+  isPersonalizedProfile,
+  needsPersonalization,
+} from "../utils/profileState";
+import { getPathByProject, getProjectByPath } from "../utils/projectUtils";
 import AuthModal from "./AuthModal";
-import { me, tokenStore, logout } from "../services/api";
+import DynamicMenu from "./DynamicMenu";
+
+function isPersonalizationFlowPath(pathname) {
+  return (
+    pathname.startsWith("/account/complete-registration") ||
+    pathname.startsWith("/account/complete-profile") ||
+    pathname.startsWith("/account/onboarding")
+  );
+}
 
 function ProjectSelect() {
   const navigate = useNavigate();
@@ -47,25 +78,15 @@ const Header = () => {
   const location = useLocation();
 
   const [authOpen, setAuthOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [personalizationModalOpen, setPersonalizationModalOpen] =
+    useState(false);
+  const [postSignupBannerDismissed, setPostSignupBannerDismissed] =
+    useState(false);
 
-  const hasAnyToken = () => {
-    const saved = tokenStore.get();
-    return Boolean(saved?.access || saved?.refresh);
-  };
-
-  const closeOffcanvas = useCallback(() => {
-    const el = document.getElementById("offcanvasDarkNavbar");
-    const bs = window.bootstrap;
-    if (el && bs?.Offcanvas) {
-      let inst = bs.Offcanvas.getInstance(el);
-      if (!inst) inst = new bs.Offcanvas(el);
-      inst.hide();
-    } else {
-      document.querySelector("#offcanvasDarkNavbar .btn-close")?.click();
-    }
-  }, []);
+  const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
 
   const openAuth = useCallback(() => {
     closeOffcanvas();
@@ -73,12 +94,21 @@ const Header = () => {
   }, [closeOffcanvas]);
 
   useEffect(() => {
-    const el = document.getElementById("offcanvasDarkNavbar");
-    if (el && el.classList.contains("show")) closeOffcanvas();
-  }, [location.pathname, closeOffcanvas]);
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    setPostSignupBannerDismissed(false);
+  }, [profile?.email, profile?.username]);
 
   const loadProfileIfTokens = useCallback(async () => {
-    if (!hasAnyToken()) {
+    const tokens = readStoredTokens();
+    if (tokens?.pending_mfa) {
+      setProfile(null);
+      setLoadingProfile(false);
+      return;
+    }
+    if (!hasStoredAuth()) {
       setProfile(null);
       return;
     }
@@ -99,12 +129,85 @@ const Header = () => {
   useEffect(() => {
     if (!authOpen) loadProfileIfTokens();
   }, [authOpen, loadProfileIfTokens]);
+  useEffect(() => {
+    const onAuthStateChanged = () => {
+      loadProfileIfTokens();
+    };
+    window.addEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+    };
+  }, [loadProfileIfTokens]);
 
   const goSecurity = () => navigate("/account/security");
-  const onLogout = () => {
-    logout();
-    setProfile(null);
-  };
+  const goOnboarding = () => navigate("/account/complete-profile");
+  const onLogout = useCallback(async () => {
+    closeOffcanvas();
+    setAuthOpen(false);
+    setPersonalizationModalOpen(false);
+    try {
+      await logout();
+    } finally {
+      setProfile(null);
+      navigate("/joutak", { replace: true });
+    }
+  }, [closeOffcanvas, navigate]);
+
+  const registrationCompleted = useMemo(
+    () => isPersonalizedProfile(profile),
+    [profile],
+  );
+  const legacyPersonalization = isLegacyPersonalization(profile);
+  const showPostSignupBanner =
+    profile &&
+    !authOpen &&
+    !postSignupBannerDismissed &&
+    !isPersonalizationFlowPath(location.pathname) &&
+    needsPersonalization(profile) &&
+    isNewRegistrationPersonalization(profile) &&
+    isPostSignupPersonalizationSession();
+
+  const personalizationNoticeKey = useMemo(() => {
+    return getPersonalizationNoticeKey(profile);
+  }, [profile]);
+
+  const closePersonalizationModal = useCallback(
+    ({ markSeen = true } = {}) => {
+      if (markSeen) markPersonalizationNoticeSeen(profile);
+      setPersonalizationModalOpen(false);
+    },
+    [profile],
+  );
+
+  const openPersonalizationFlow = useCallback(() => {
+    closePersonalizationModal({ markSeen: true });
+    navigate("/account/complete-profile");
+  }, [closePersonalizationModal, navigate]);
+
+  const openRegistrationSetup = useCallback(() => {
+    navigate("/account/complete-registration");
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!profile || authOpen) return;
+    if (isPersonalizationFlowPath(location.pathname)) return;
+    if (!needsPersonalization(profile)) return;
+    if (profile?.personalization_interstitial_enabled === false) return;
+    if (
+      !isLegacyPersonalization(profile) &&
+      isPostSignupPersonalizationSession()
+    ) {
+      return;
+    }
+    if (hasSeenPersonalizationNotice(profile)) return;
+    setPersonalizationModalOpen(true);
+  }, [authOpen, location.pathname, personalizationNoticeKey, profile]);
+
+  useEffect(() => {
+    if (isPersonalizationFlowPath(location.pathname)) {
+      setPersonalizationModalOpen(false);
+    }
+  }, [location.pathname]);
 
   const renderAccountSwitcher = (switcherProps) => (
     <Button
@@ -118,10 +221,10 @@ const Header = () => {
     >
       <Avatar
         size="m"
-        text={profile?.username || "?"}
+        text={getProfileDisplayName(profile)}
         imgUrl={profile?.avatar_url}
         view="outlined"
-        title={profile?.username || "Гость"}
+        title={getProfileDisplayName(profile)}
       />
     </Button>
   );
@@ -130,7 +233,7 @@ const Header = () => {
     <>
       <header>
         <nav className="navbar navbar-dark bg-dark">
-          <div className="container container-fluid d-flex justify-content-between align-items-center">
+          <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
             <a className="navbar-brand" href="https://joutak.ru">
               <img
                 src="/img/icons/logo.png"
@@ -153,6 +256,16 @@ const Header = () => {
                   size="m"
                   renderSwitcher={renderAccountSwitcher}
                   items={[
+                    ...(!registrationCompleted
+                      ? [
+                          [
+                            {
+                              text: "Завершить профиль",
+                              action: goOnboarding,
+                            },
+                          ],
+                        ]
+                      : []),
                     [{ text: "Аккаунт и безопасность", action: goSecurity }],
                     { text: "Выйти", action: onLogout, theme: "danger" },
                   ]}
@@ -174,8 +287,7 @@ const Header = () => {
               <button
                 className="navbar-toggler ms-2"
                 type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#offcanvasDarkNavbar"
+                onClick={() => setMenuOpen(true)}
                 aria-controls="offcanvasDarkNavbar"
                 aria-label="Toggle navigation"
               >
@@ -184,33 +296,116 @@ const Header = () => {
             </div>
           </div>
         </nav>
+        {showPostSignupBanner && (
+          <div
+            style={{
+              borderBottom: "1px solid rgba(255, 190, 92, 0.35)",
+              background: "rgba(255, 163, 0, 0.12)",
+              padding: "10px 16px",
+            }}
+          >
+            <div
+              className="container-fluid"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ display: "grid", gap: 2 }}>
+                <b>Аккаунт создан. Осталось завершить регистрацию.</b>
+                <span style={{ opacity: 0.85 }}>
+                  Публичные разделы доступны, а профиль и персональные функции
+                  откроются после 2 коротких шагов.
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button view="action" onClick={openRegistrationSetup}>
+                  Завершить
+                </Button>
+                <Button
+                  view="flat"
+                  onClick={() => setPostSignupBannerDismissed(true)}
+                >
+                  Позже
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
-      <div
-        className="offcanvas offcanvas-start text-bg-dark"
-        tabIndex="-1"
+      <Offcanvas
+        show={menuOpen}
+        onHide={closeOffcanvas}
+        placement="start"
+        scroll
         id="offcanvasDarkNavbar"
-        aria-labelledby="offcanvasDarkNavbarLabel"
+        className="text-bg-dark"
       >
-        <div className="offcanvas-header">
-          <h5 className="offcanvas-title" id="offcanvasDarkNavbarLabel">
-            Меню
-          </h5>
-          <button
-            type="button"
-            className="btn-close btn-close-white"
-            data-bs-dismiss="offcanvas"
-            aria-label="Close"
-          ></button>
-        </div>
-        <div className="offcanvas-body">
+        <Offcanvas.Header closeButton closeVariant="white">
+          <Offcanvas.Title id="offcanvasDarkNavbarLabel">Меню</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             <DynamicMenu />
           </ul>
-        </div>
-      </div>
+        </Offcanvas.Body>
+      </Offcanvas>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+
+      <Modal
+        open={personalizationModalOpen}
+        onClose={() => closePersonalizationModal({ markSeen: true })}
+        disableBodyScrollLock
+        aria-labelledby="personalization-modal-title"
+        style={{ "--g-modal-width": "620px" }}
+      >
+        <div style={{ padding: 24, display: "grid", gap: 12 }}>
+          <h3 id="personalization-modal-title" style={{ margin: 0 }}>
+            {legacyPersonalization
+              ? "Нужно обновить данные профиля"
+              : "Завершите регистрацию"}
+          </h3>
+          <p style={{ margin: 0, opacity: 0.9 }}>
+            {legacyPersonalization
+              ? "Мы обновили требования профиля. Чтобы использовать часть функций, нужно заполнить обязательные данные аккаунта."
+              : "Чтобы открыть профиль и персональные функции, заполните 2 коротких шага персонализации."}
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Label theme="warning" size="s">
+              Пока профиль базовый, часть действий будет ограничена
+            </Label>
+            {Array.isArray(profile?.missing_fields) &&
+              profile.missing_fields.length > 0 && (
+                <Label theme="danger" size="s">
+                  Осталось заполнить: {profile.missing_fields.length}
+                </Label>
+              )}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              marginTop: 4,
+            }}
+          >
+            <Button
+              view="flat"
+              onClick={() => closePersonalizationModal({ markSeen: true })}
+            >
+              Позже
+            </Button>
+            <Button view="action" onClick={openPersonalizationFlow}>
+              {legacyPersonalization ? "Заполнить сейчас" : "Завершить"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

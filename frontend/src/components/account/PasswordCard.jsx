@@ -1,41 +1,14 @@
-import { useMemo, useState, useCallback } from "react";
-import PropTypes from "prop-types";
-import { Button, TextInput } from "@gravity-ui/uikit";
+import { Button, Switch, TextInput } from "@gravity-ui/uikit";
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
-import { changePassword } from "../../services/api";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const cardStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 16,
-  display: "grid",
-  gap: 12,
-};
+import { changePassword, clearAuthState } from "../../services/api";
+import { isObviouslyCommonPassword } from "../../services/password/commonPasswords";
+import { SectionCard } from "../ui/primitives";
 
-const COMMON_PASSWORDS = new Set([
-  "123456",
-  "123456789",
-  "qwerty",
-  "password",
-  "111111",
-  "12345678",
-  "abc123",
-  "1234567",
-  "123123",
-  "000000",
-  "iloveyou",
-  "1234",
-  "1q2w3e4r",
-  "qwertyuiop",
-  "admin",
-  "monkey",
-  "letmein",
-  "dragon",
-  "sunshine",
-  "princess",
-]);
-
-function computeStrength(pwd, { minLength, username }) {
+function computeStrength(pwd, { minLength, identityHint }) {
   if (!pwd) return { score: 0, label: "Пусто" };
   const lenOK = pwd.length >= minLength;
   const hasLower = /[a-zа-я]/.test(pwd);
@@ -43,8 +16,8 @@ function computeStrength(pwd, { minLength, username }) {
   const hasDigit = /\d/.test(pwd);
   const hasSpec = /[^A-Za-zА-Яа-я0-9\s]/.test(pwd);
   const notOnlyDigits = !/^\d+$/.test(pwd);
-  const notCommon = !COMMON_PASSWORDS.has(pwd.toLowerCase());
-  const uname = (username || "").toLowerCase();
+  const notCommon = !isObviouslyCommonPassword(pwd);
+  const uname = (identityHint || "").toLowerCase();
   const unameLocal = uname.includes("@") ? uname.split("@")[0] : uname;
   const notSimilar = !(uname && pwd.toLowerCase().includes(unameLocal));
   let score = 0;
@@ -111,17 +84,19 @@ StrengthBar.propTypes = {
 };
 
 export default function PasswordCard({
-  username,
+  identityHint,
   minLength = 8,
   defaultOpen = false,
   autoCloseOnSuccess = true,
 }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(!!defaultOpen);
   const [busy, setBusy] = useState(false);
 
   const [curPwd, setCurPwd] = useState("");
   const [new1, setNew1] = useState("");
   const [new2, setNew2] = useState("");
+  const [logoutCurrentSession, setLogoutCurrentSession] = useState(false);
 
   const [touched, setTouched] = useState({ cur: false, n1: false, n2: false });
   const [capsCur, setCapsCur] = useState(false);
@@ -131,9 +106,9 @@ export default function PasswordCard({
   const strength = useMemo(
     () =>
       editing
-        ? computeStrength(new1, { minLength, username })
+        ? computeStrength(new1, { minLength, identityHint })
         : { score: 0, label: "Пусто" },
-    [editing, new1, minLength, username],
+    [editing, new1, minLength, identityHint],
   );
 
   const { curErr, n1Err, n2Err, hasErrors } = useMemo(() => {
@@ -147,13 +122,13 @@ export default function PasswordCard({
         n1Err = `Минимум ${minLength} символов.`;
       else if (/^\d+$/.test(new1))
         n1Err = "Пароль не должен состоять только из цифр.";
-      else if (username) {
-        const uname = username.toLowerCase();
+      else if (identityHint) {
+        const uname = identityHint.toLowerCase();
         const unameLocal = uname.includes("@") ? uname.split("@")[0] : uname;
         if (unameLocal && new1.toLowerCase().includes(unameLocal))
           n1Err = "Пароль слишком похож на логин/почту.";
       }
-      if (!n1Err && COMMON_PASSWORDS.has(new1.toLowerCase()))
+      if (!n1Err && isObviouslyCommonPassword(new1))
         n1Err = "Слишком распространённый пароль.";
     }
     if (touched.n2) {
@@ -163,7 +138,7 @@ export default function PasswordCard({
     if (!curErr && backendErr.cur) curErr = backendErr.cur;
     if (!n1Err && backendErr.n1) n1Err = backendErr.n1;
     return { curErr, n1Err, n2Err, hasErrors: !!(curErr || n1Err || n2Err) };
-  }, [curPwd, new1, new2, touched, backendErr, minLength, username]);
+  }, [curPwd, new1, new2, touched, backendErr, minLength, identityHint]);
 
   const touchAll = () => setTouched({ cur: true, n1: true, n2: true });
 
@@ -175,6 +150,7 @@ export default function PasswordCard({
     setBackendErr({ cur: "", n1: "" });
     setCapsCur(false);
     setCapsNew(false);
+    setLogoutCurrentSession(false);
   }, []);
 
   const onCancel = useCallback(() => {
@@ -182,15 +158,39 @@ export default function PasswordCard({
     setEditing(false);
   }, [resetForm]);
 
+  useEffect(() => {
+    if (!editing || busy) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onCancel();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busy, editing, onCancel]);
+
   function mapBackendErrors(data) {
     let cur = "";
     let n1 = "";
+    const flatFields =
+      data?.fields && typeof data.fields === "object" ? data.fields : {};
+    const nestedErrors =
+      data?.errors && typeof data.errors === "object" ? data.errors : {};
     const fieldMsgs = (k) =>
-      Array.isArray(data?.[k])
-        ? data[k].join("\n")
-        : typeof data?.[k] === "string"
-          ? data[k]
-          : "";
+      typeof flatFields?.[k] === "string"
+        ? flatFields[k]
+        : Array.isArray(nestedErrors?.[k])
+          ? nestedErrors[k]
+              .map((entry) =>
+                typeof entry?.message === "string" ? entry.message : "",
+              )
+              .filter(Boolean)
+              .join("\n")
+          : Array.isArray(data?.[k])
+            ? data[k].join("\n")
+            : typeof data?.[k] === "string"
+              ? data[k]
+              : "";
     n1 = fieldMsgs("new_password") || fieldMsgs("password") || "";
     cur = fieldMsgs("current_password") || "";
     if (/too short/i.test(n1))
@@ -203,6 +203,44 @@ export default function PasswordCard({
     if (cur || n1) touchAll();
   }
 
+  function firstBackendMessage(data) {
+    if (data?.fields && typeof data.fields === "object") {
+      const firstFieldMessage = Object.values(data.fields).find(
+        (value) => typeof value === "string" && value.trim(),
+      );
+      if (firstFieldMessage) return firstFieldMessage;
+    }
+    if (
+      data?.errors &&
+      typeof data.errors === "object" &&
+      !Array.isArray(data.errors)
+    ) {
+      for (const entries of Object.values(data.errors)) {
+        if (!Array.isArray(entries)) continue;
+        const firstEntry = entries.find(
+          (entry) =>
+            entry && typeof entry.message === "string" && entry.message.trim(),
+        );
+        if (firstEntry?.message) return firstEntry.message;
+      }
+    }
+    if (Array.isArray(data?.errors)) {
+      const firstError = data.errors.find(
+        (entry) =>
+          entry && typeof entry.message === "string" && entry.message.trim(),
+      );
+      if (firstError?.message) return firstError.message;
+    }
+    return (
+      (typeof data?.detail === "string" &&
+        data.detail !== "validation_error" &&
+        data.detail) ||
+      (Array.isArray(data?.non_field_errors) &&
+        data.non_field_errors.join("\n")) ||
+      null
+    );
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     touchAll();
@@ -211,29 +249,45 @@ export default function PasswordCard({
 
     setBusy(true);
     try {
-      await changePassword({ current_password: curPwd, new_password: new1 });
+      const result = await changePassword({
+        current_password: curPwd,
+        new_password: new1,
+        logout_current_session: logoutCurrentSession,
+      });
 
       toaster.add({
         name: "pwd-ok",
         title: "Пароль обновлён",
-        content: "Новый пароль уже доступен для авторизации.",
-        type: "success",
+        content: result?.logged_out_current_session
+          ? "Пароль обновлён. Для продолжения нужно войти снова."
+          : "Пароль обновлён. Другие сессии завершены по правилам безопасности Django.",
+        theme: "success",
       });
 
       try {
         if (
-          username &&
+          identityHint &&
           "credentials" in navigator &&
           "PasswordCredential" in window
         ) {
           const cred = new window.PasswordCredential({
-            id: String(username),
+            id: String(identityHint),
             password: new1,
           });
           navigator.credentials.store(cred).catch(() => {});
         }
       } catch (err) {
         void err;
+      }
+
+      if (result?.logged_out_current_session) {
+        clearAuthState();
+        const params = new URLSearchParams({
+          reason: "PASSWORD_CHANGED",
+          next: "/account/security",
+        });
+        navigate(`/session-expired?${params.toString()}`, { replace: true });
+        return;
       }
 
       if (autoCloseOnSuccess) {
@@ -243,16 +297,11 @@ export default function PasswordCard({
       }
     } catch (ex) {
       const data = ex?.response?.data;
-      const detail =
-        (typeof data?.detail === "string" && data.detail) ||
-        (Array.isArray(data?.non_field_errors) &&
-          data.non_field_errors.join("\n")) ||
-        null;
       toaster.add({
         name: "pwd-err",
         title: "Ошибка",
-        content: detail || "Не удалось изменить пароль.",
-        type: "error",
+        content: firstBackendMessage(data) || "Не удалось изменить пароль.",
+        theme: "danger",
       });
       if (data && typeof data === "object") mapBackendErrors(data);
     } finally {
@@ -261,7 +310,7 @@ export default function PasswordCard({
   }
 
   return (
-    <section style={cardStyle}>
+    <SectionCard>
       <h3 style={{ margin: 0, fontSize: 18 }}>Пароль</h3>
 
       {!editing ? (
@@ -287,16 +336,13 @@ export default function PasswordCard({
           onSubmit={onSubmit}
           style={{ display: "grid", gap: 12 }}
           autoComplete="off"
-          onKeyDown={(e) => {
-            if (e.key === "Escape" && !busy) onCancel();
-          }}
         >
-          {username ? (
+          {identityHint ? (
             <input
               type="text"
               name="username"
               autoComplete="username"
-              value={username}
+              value={identityHint}
               readOnly
               hidden
             />
@@ -369,6 +415,19 @@ export default function PasswordCard({
 
           <StrengthBar score={strength.score} label={strength.label} />
 
+          <div style={{ display: "grid", gap: 6 }}>
+            <Switch
+              size="m"
+              checked={logoutCurrentSession}
+              onUpdate={setLogoutCurrentSession}
+              content="Выйти и на этом устройстве после смены пароля"
+            />
+            <div style={{ opacity: 0.75, fontSize: 12 }}>
+              Другие сессии завершаются автоматически при смене пароля. Этот
+              переключатель управляет только текущим устройством.
+            </div>
+          </div>
+
           <div style={{ opacity: 0.8, fontSize: 12, display: "grid", gap: 4 }}>
             <div>
               Требования: минимум {minLength} символов, пароль не должен быть
@@ -398,12 +457,12 @@ export default function PasswordCard({
           </div>
         </form>
       )}
-    </section>
+    </SectionCard>
   );
 }
 
 PasswordCard.propTypes = {
-  username: PropTypes.string,
+  identityHint: PropTypes.string,
   minLength: PropTypes.number,
   defaultOpen: PropTypes.bool,
   autoCloseOnSuccess: PropTypes.bool,

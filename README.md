@@ -46,6 +46,10 @@ npm run dev
 
 Dev server выведет локальный URL, обычно `http://localhost:5173`.
 
+Backend не является обязательной зависимостью для `npm run dev`: интерфейс
+должен открываться и без поднятого API. При этом auth/BFF-запросы будут
+ошибаться, что ожидаемо для standalone frontend development.
+
 Проверки frontend:
 
 ```bash

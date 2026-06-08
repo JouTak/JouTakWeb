@@ -13,6 +13,38 @@ import {
 } from "../featureFlags/openFeature.js";
 import { BootstrapContext } from "./bootstrapContext.js";
 
+const DEFAULT_BOOTSTRAP = {
+  viewer: { is_authenticated: false },
+  features: {},
+  experiments: { anonymous_id_present: false },
+  layout: { homepage_variant: "legacy" },
+};
+
+function getLocalFeatureOverrides(search) {
+  const params = pickFeatureOverrideParams(search);
+  const overrides = {};
+
+  for (const [key, value] of params.entries()) {
+    if (!key.startsWith("ff_")) {
+      continue;
+    }
+    overrides[key.slice(3)] = value;
+  }
+
+  return overrides;
+}
+
+function buildFallbackBootstrap(search) {
+  const features = getLocalFeatureOverrides(search);
+  const homepageVariant = features.site_homepage_version || "legacy";
+
+  return {
+    ...DEFAULT_BOOTSTRAP,
+    features,
+    layout: { homepage_variant: homepageVariant },
+  };
+}
+
 function RouteFallback() {
   return <div className="py-5 text-center text-secondary">Загрузка...</div>;
 }
@@ -47,11 +79,13 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         error: null,
       });
     } catch (error) {
+      const fallbackBootstrap = buildFallbackBootstrap(window.location.search);
+      await updateFeatureConfiguration(fallbackBootstrap.features);
       if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
         return;
       }
       setState({
-        bootstrap: null,
+        bootstrap: fallbackBootstrap,
         loading: false,
         error,
       });
@@ -103,14 +137,6 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
 
   if (state.loading && !state.bootstrap) {
     return fallback;
-  }
-
-  if (state.error && !state.bootstrap) {
-    return (
-      <div className="py-5 text-center text-danger">
-        Не удалось загрузить конфигурацию интерфейса.
-      </div>
-    );
   }
 
   return (

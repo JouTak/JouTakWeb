@@ -10,16 +10,19 @@ function Hero({ hero }) {
           <div className="text-uppercase small text-warning mb-2">
             {hero?.eyebrow || "JouTak Community"}
           </div>
-          <h1 className="display-4 fw-bold mb-3">{hero?.title}</h1>
-          <p className="fs-5 text-secondary mb-4">{hero?.description}</p>
+          <h1 className="display-4 fw-bold mb-3">{hero?.title || "JouTak"}</h1>
+          <p className="fs-5 text-secondary mb-4">
+            {hero?.description ||
+              "Интерфейс доступен без backend. API-зависимые действия будут недоступны, пока бэкенд не поднят."}
+          </p>
           <div className="d-flex flex-wrap gap-3 align-items-center">
             <a
               className="btn btn-warning btn-lg"
-              href={hero?.primary_cta?.href}
+              href={hero?.primary_cta?.href || "https://joutak.ru"}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {hero?.primary_cta?.label}
+              {hero?.primary_cta?.label || "Открыть JouTak"}
             </a>
             <Link
               className="btn btn-outline-light btn-lg"

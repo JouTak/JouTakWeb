@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -44,14 +44,15 @@ function BootstrapProbe() {
     return <div>loading</div>;
   }
   if (error) {
-    return <div>error</div>;
+    return <div>{bootstrap?.layout?.homepage_variant || "error"}</div>;
   }
   return <div>{bootstrap?.layout?.homepage_variant || "none"}</div>;
 }
 
 describe("BootstrapProvider", () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    cleanup();
+    vi.resetAllMocks();
   });
 
   it("blocks variant-sensitive render until bootstrap resolves", async () => {
@@ -172,6 +173,20 @@ describe("BootstrapProvider", () => {
     });
   });
 
+  it("keeps rendering with local fallback when bootstrap is unavailable", async () => {
+    getBootstrap.mockRejectedValue(new Error("Network error"));
+
+    render(
+      <MemoryRouter>
+        <BootstrapProvider>
+          <BootstrapProbe />
+        </BootstrapProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("legacy")).toBeInTheDocument();
+  });
+
   it("ignores stale bootstrap responses after a newer refresh starts", async () => {
     const first = createDeferred();
     const second = createDeferred();
@@ -196,6 +211,10 @@ describe("BootstrapProvider", () => {
         </BootstrapProvider>
       </MemoryRouter>,
     );
+
+    await waitFor(() => {
+      expect(getBootstrap).toHaveBeenCalledTimes(1);
+    });
 
     expect(screen.getByText("Загрузка...")).toBeInTheDocument();
 

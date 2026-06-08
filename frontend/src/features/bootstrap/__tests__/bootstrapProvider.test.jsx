@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -24,8 +24,16 @@ vi.mock("../../../services/api/bffApi", () => ({
   pickFeatureOverrideParams: vi.fn(() => new URLSearchParams()),
 }));
 
+vi.mock("../../featureFlags/openFeature.js", () => ({
+  initializeOpenFeature: vi.fn(),
+  updateFeatureConfiguration: vi.fn(() => Promise.resolve()),
+}));
+
 const { getBootstrap, getHomepagePayload } = await import(
   "../../../services/api/bffApi"
+);
+const { updateFeatureConfiguration } = await import(
+  "../../featureFlags/openFeature.js"
 );
 
 function createDeferred() {
@@ -44,14 +52,15 @@ function BootstrapProbe() {
     return <div>loading</div>;
   }
   if (error) {
-    return <div>error</div>;
+    return <div>{bootstrap?.layout?.homepage_variant || "error"}</div>;
   }
   return <div>{bootstrap?.layout?.homepage_variant || "none"}</div>;
 }
 
 describe("BootstrapProvider", () => {
   afterEach(() => {
-    vi.clearAllMocks();
+    cleanup();
+    vi.resetAllMocks();
   });
 
   it("blocks variant-sensitive render until bootstrap resolves", async () => {
@@ -172,6 +181,20 @@ describe("BootstrapProvider", () => {
     });
   });
 
+  it("keeps rendering with local fallback when bootstrap is unavailable", async () => {
+    getBootstrap.mockRejectedValue(new Error("Network error"));
+
+    render(
+      <MemoryRouter>
+        <BootstrapProvider>
+          <BootstrapProbe />
+        </BootstrapProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("legacy")).toBeInTheDocument();
+  });
+
   it("ignores stale bootstrap responses after a newer refresh starts", async () => {
     const first = createDeferred();
     const second = createDeferred();
@@ -196,6 +219,10 @@ describe("BootstrapProvider", () => {
         </BootstrapProvider>
       </MemoryRouter>,
     );
+
+    await waitFor(() => {
+      expect(getBootstrap).toHaveBeenCalledTimes(1);
+    });
 
     expect(screen.getByText("Загрузка...")).toBeInTheDocument();
 
@@ -227,5 +254,55 @@ describe("BootstrapProvider", () => {
 
     expect(screen.getByText("v2")).toBeInTheDocument();
     expect(screen.queryByText("legacy")).toBeNull();
+  });
+
+  it("does not let stale failures override newer feature flags", async () => {
+    const first = createDeferred();
+    const second = createDeferred();
+    getBootstrap
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+
+    render(
+      <MemoryRouter>
+        <BootstrapProvider>
+          <BootstrapProbe />
+        </BootstrapProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(getBootstrap).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+    });
+
+    await act(async () => {
+      second.resolve({
+        viewer: { is_authenticated: false },
+        features: { site_homepage_version: "v2" },
+        experiments: { anonymous_id_present: true },
+        layout: { homepage_variant: "v2" },
+      });
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText("v2")).toBeInTheDocument();
+    expect(updateFeatureConfiguration).toHaveBeenLastCalledWith({
+      site_homepage_version: "v2",
+    });
+
+    await act(async () => {
+      first.reject(new Error("Network error"));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText("v2")).toBeInTheDocument();
+    expect(updateFeatureConfiguration).toHaveBeenCalledTimes(1);
+    expect(updateFeatureConfiguration).toHaveBeenLastCalledWith({
+      site_homepage_version: "v2",
+    });
   });
 });

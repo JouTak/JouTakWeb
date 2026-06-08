@@ -20,11 +20,11 @@ export default function LegacyHomepage({ content }) {
           </p>
           <a
             className="btn btn-primary btn-lg mt-4"
-            href={hero.primary_cta?.href}
+            href={hero.primary_cta?.href || "https://joutak.ru"}
             target="_blank"
             rel="noopener noreferrer"
           >
-            {hero.primary_cta?.label}
+            {hero.primary_cta?.label || "Открыть JouTak"}
           </a>
           <br />
           <Link

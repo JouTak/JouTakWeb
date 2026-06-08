@@ -5,6 +5,28 @@ import { getHomepagePayload, pickFeatureOverrideParams } from "../services/api";
 import HomepageV2 from "./joutak/HomepageV2.jsx";
 import LegacyHomepage from "./joutak/LegacyHomepage.jsx";
 
+const FALLBACK_HOMEPAGE_CONTENT = {
+  hero: {
+    title: "JouTak",
+    description:
+      "Интерфейс доступен без backend. API-зависимые действия будут падать, пока бэкенд не поднят.",
+    server_ip: "mc.joutak.ru",
+    primary_cta: {
+      href: "https://joutak.ru",
+      label: "Открыть JouTak",
+    },
+    secondary_cta: {
+      to: "/joutak/pay",
+      label: "Оплатить проходку",
+    },
+  },
+  carousel: [],
+  projects: [],
+  events: [],
+  gallery: [],
+  faq: [],
+};
+
 export default function JouTak() {
   const bootstrapVariant = useStringFlagValue(
     "site_homepage_version",
@@ -53,15 +75,14 @@ export default function JouTak() {
   }
 
   if (state.error && !state.payload) {
-    return (
-      <div className="py-5 text-center text-danger">
-        Не удалось загрузить главную страницу.
-      </div>
-    );
+    if (bootstrapVariant === "v2") {
+      return <HomepageV2 content={FALLBACK_HOMEPAGE_CONTENT} />;
+    }
+    return <LegacyHomepage content={FALLBACK_HOMEPAGE_CONTENT} />;
   }
 
   const variant = state.payload?.variant || bootstrapVariant || "legacy";
-  const content = state.payload?.content || {};
+  const content = state.payload?.content || FALLBACK_HOMEPAGE_CONTENT;
 
   if (variant === "v2") {
     return <HomepageV2 content={content} />;

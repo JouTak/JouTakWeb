@@ -58,6 +58,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
   const requestSeqRef = useRef(0);
   const mountedRef = useRef(false);
 
+  const isCurrentRequest = useCallback(
+    (requestSeq) => mountedRef.current && requestSeq === requestSeqRef.current,
+    [],
+  );
+
   const loadBootstrap = useCallback(async () => {
     const requestSeq = ++requestSeqRef.current;
     setState((current) => ({
@@ -69,8 +74,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
     try {
       const params = pickFeatureOverrideParams(window.location.search);
       const bootstrap = await getBootstrap(params);
+      if (!isCurrentRequest(requestSeq)) {
+        return;
+      }
       await updateFeatureConfiguration(bootstrap?.features || {});
-      if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+      if (!isCurrentRequest(requestSeq)) {
         return;
       }
       setState({
@@ -80,8 +88,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
       });
     } catch (error) {
       const fallbackBootstrap = buildFallbackBootstrap(window.location.search);
+      if (!isCurrentRequest(requestSeq)) {
+        return;
+      }
       await updateFeatureConfiguration(fallbackBootstrap.features);
-      if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+      if (!isCurrentRequest(requestSeq)) {
         return;
       }
       setState({
@@ -90,7 +101,7 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         error,
       });
     }
-  }, []);
+  }, [isCurrentRequest]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -120,8 +131,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         }));
         const params = pickFeatureOverrideParams(window.location.search);
         const bootstrap = await getBootstrap(params);
+        if (!isCurrentRequest(requestSeq)) {
+          return bootstrap;
+        }
         await updateFeatureConfiguration(bootstrap?.features || {});
-        if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+        if (!isCurrentRequest(requestSeq)) {
           return bootstrap;
         }
         setState({
@@ -132,7 +146,7 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         return bootstrap;
       },
     }),
-    [state],
+    [isCurrentRequest, state],
   );
 
   if (state.loading && !state.bootstrap) {

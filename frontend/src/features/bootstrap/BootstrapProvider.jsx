@@ -13,6 +13,38 @@ import {
 } from "../featureFlags/openFeature.js";
 import { BootstrapContext } from "./bootstrapContext.js";
 
+const DEFAULT_BOOTSTRAP = {
+  viewer: { is_authenticated: false },
+  features: {},
+  experiments: { anonymous_id_present: false },
+  layout: { homepage_variant: "legacy" },
+};
+
+function getLocalFeatureOverrides(search) {
+  const params = pickFeatureOverrideParams(search);
+  const overrides = {};
+
+  for (const [key, value] of params.entries()) {
+    if (!key.startsWith("ff_")) {
+      continue;
+    }
+    overrides[key.slice(3)] = value;
+  }
+
+  return overrides;
+}
+
+function buildFallbackBootstrap(search) {
+  const features = getLocalFeatureOverrides(search);
+  const homepageVariant = features.site_homepage_version || "legacy";
+
+  return {
+    ...DEFAULT_BOOTSTRAP,
+    features,
+    layout: { homepage_variant: homepageVariant },
+  };
+}
+
 function RouteFallback() {
   return <div className="py-5 text-center text-secondary">Загрузка...</div>;
 }
@@ -26,6 +58,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
   const requestSeqRef = useRef(0);
   const mountedRef = useRef(false);
 
+  const isCurrentRequest = useCallback(
+    (requestSeq) => mountedRef.current && requestSeq === requestSeqRef.current,
+    [],
+  );
+
   const loadBootstrap = useCallback(async () => {
     const requestSeq = ++requestSeqRef.current;
     setState((current) => ({
@@ -37,8 +74,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
     try {
       const params = pickFeatureOverrideParams(window.location.search);
       const bootstrap = await getBootstrap(params);
+      if (!isCurrentRequest(requestSeq)) {
+        return;
+      }
       await updateFeatureConfiguration(bootstrap?.features || {});
-      if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+      if (!isCurrentRequest(requestSeq)) {
         return;
       }
       setState({
@@ -47,16 +87,21 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         error: null,
       });
     } catch (error) {
-      if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+      const fallbackBootstrap = buildFallbackBootstrap(window.location.search);
+      if (!isCurrentRequest(requestSeq)) {
+        return;
+      }
+      await updateFeatureConfiguration(fallbackBootstrap.features);
+      if (!isCurrentRequest(requestSeq)) {
         return;
       }
       setState({
-        bootstrap: null,
+        bootstrap: fallbackBootstrap,
         loading: false,
         error,
       });
     }
-  }, []);
+  }, [isCurrentRequest]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -86,8 +131,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         }));
         const params = pickFeatureOverrideParams(window.location.search);
         const bootstrap = await getBootstrap(params);
+        if (!isCurrentRequest(requestSeq)) {
+          return bootstrap;
+        }
         await updateFeatureConfiguration(bootstrap?.features || {});
-        if (!mountedRef.current || requestSeq !== requestSeqRef.current) {
+        if (!isCurrentRequest(requestSeq)) {
           return bootstrap;
         }
         setState({
@@ -98,19 +146,11 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
         return bootstrap;
       },
     }),
-    [state],
+    [isCurrentRequest, state],
   );
 
   if (state.loading && !state.bootstrap) {
     return fallback;
-  }
-
-  if (state.error && !state.bootstrap) {
-    return (
-      <div className="py-5 text-center text-danger">
-        Не удалось загрузить конфигурацию интерфейса.
-      </div>
-    );
   }
 
   return (

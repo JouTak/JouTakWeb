@@ -21,7 +21,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via qrcode
 contextlib2==21.6.0
     # via django-ninja-extra
-cryptography==46.0.7
+cryptography==48.0.1
     # via
     #   backend
     #   fido2

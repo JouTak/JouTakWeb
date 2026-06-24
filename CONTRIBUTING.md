@@ -65,8 +65,9 @@ uv run pytest backend -q
 Docker:
 
 ```bash
+docker compose config >/dev/null
 docker compose -f docker-compose.yml config >/dev/null
-docker compose -f docker-compose.local.yml config >/dev/null
+docker compose -f docker-compose.images.yml config >/dev/null
 ```
 
 ## Lockfiles

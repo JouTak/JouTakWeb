@@ -88,7 +88,7 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-faq",
     description: "FAQ accordion section on the homepage",
-    component: null,
+    component: () => import("../../components/FAQSection/FAQSection.jsx"),
   },
 
   joutak_gallery_section: {

@@ -1,0 +1,120 @@
+.section {
+  margin: 0 calc(50% - 50vw);
+  padding: 56px max(24px, calc((100vw - 1140px) / 2));
+  color: #ecf7ff;
+  background: #00080f;
+}
+
+.inner {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0 0 40px;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 700;
+}
+
+.items {
+  display: grid;
+  gap: 20px;
+}
+
+.item {
+  margin: 0;
+}
+
+.question {
+  margin: 0;
+}
+
+.toggle {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  color: #3c9bf9;
+  font: inherit;
+  font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+  font-weight: 500;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.toggle:focus-visible {
+  outline: 3px solid #ecf7ff;
+  outline-offset: 6px;
+}
+
+.icon {
+  position: relative;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  background: #3c9bf9;
+  border-radius: 8px;
+}
+
+.icon::before,
+.icon::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 3px;
+  content: "";
+  background: #00080f;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+  transition: transform 180ms ease;
+}
+
+.icon::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.toggle[aria-expanded="true"] .icon::after {
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.answerWrapper {
+  padding-left: 64px;
+}
+
+.answer {
+  max-width: 800px;
+  margin: 10px 0 0;
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .section {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+
+  .title {
+    margin-bottom: 32px;
+  }
+
+  .toggle {
+    gap: 12px;
+  }
+
+  .icon {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .answerWrapper {
+    padding-left: 52px;
+  }
+}

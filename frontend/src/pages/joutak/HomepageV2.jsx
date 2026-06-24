@@ -2,6 +2,9 @@ import PropTypes from "prop-types";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import FAQSection from "../../components/FAQSection/FAQSection.jsx";
+import FeatureGate from "../../features/featureFlags/FeatureGate.jsx";
+
 function Hero({ hero }) {
   return (
     <section className="rounded-4 p-4 p-lg-5 text-light mb-4 bg-dark">
@@ -173,7 +176,16 @@ export default function HomepageV2({ content }) {
       />
       <Events items={Array.isArray(content?.events) ? content.events : []} />
       <Gallery items={Array.isArray(content?.gallery) ? content.gallery : []} />
-      <FAQ items={Array.isArray(content?.faq) ? content.faq : []} />
+      <FeatureGate
+        flag="joutak_faq_section"
+        fallback={
+          <FAQ items={Array.isArray(content?.faq) ? content.faq : []} />
+        }
+      >
+        <FAQSection
+          items={Array.isArray(content?.faq) ? content.faq : []}
+        />
+      </FeatureGate>
     </div>
   );
 }

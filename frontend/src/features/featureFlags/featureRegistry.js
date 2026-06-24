@@ -56,7 +56,7 @@ export const FEATURE_MAP = {
     page: "*",
     slot: "footer",
     description: "New footer design from the website-dev branch",
-    component: null, // Placeholder until FooterV2 lands in this repo.
+    component: () => import("../../components/FooterV2/FooterV2.jsx"),
   },
 
   site_header_v2: {

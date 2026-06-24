@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import EventsSection from "../../components/EventsSection/EventsSection.jsx";
 import FAQSection from "../../components/FAQSection/FAQSection.jsx";
 import GallerySection from "../../components/GallerySection/GallerySection.jsx";
+import HeroSection from "../../components/HeroSection/HeroSection.jsx";
 import ProjectsSection from "../../components/ProjectsSection/ProjectsSection.jsx";
 import FeatureGate from "../../features/featureFlags/FeatureGate.jsx";
 
@@ -173,7 +174,12 @@ FAQ.propTypes = {
 export default function HomepageV2({ content }) {
   return (
     <div className="py-2">
-      <Hero hero={content?.hero} />
+      <FeatureGate
+        flag="joutak_hero_section"
+        fallback={<Hero hero={content?.hero} />}
+      >
+        <HeroSection hero={content?.hero} />
+      </FeatureGate>
       <FeatureGate
         flag="joutak_projects_section"
         fallback={

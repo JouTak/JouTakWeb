@@ -76,6 +76,14 @@ export const FEATURE_MAP = {
       import("../../components/ProjectsSection/ProjectsSection.jsx"),
   },
 
+  joutak_hero_section: {
+    type: "boolean",
+    page: "/joutak",
+    slot: "section-hero",
+    description: "New full-viewport hero section on the homepage",
+    component: () => import("../../components/HeroSection/HeroSection.jsx"),
+  },
+
   joutak_events_section: {
     type: "boolean",
     page: "/joutak",

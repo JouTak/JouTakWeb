@@ -24,7 +24,7 @@ DJANGO_API_HOSTS=api.localhost,api.joutak.ru \
 DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru \
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,https://joutak.ru \
 PUBLIC_API_URL=http://api.localhost \
-docker compose config >/dev/null
+docker compose -f compose.yaml config >/dev/null
 
 POSTGRES_DB=gate_db \
 POSTGRES_USER=gate_user \

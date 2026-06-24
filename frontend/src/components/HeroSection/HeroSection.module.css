@@ -1,0 +1,99 @@
+.hero {
+  position: relative;
+  display: grid;
+  min-height: min(820px, calc(100vh - 64px));
+  margin: -0.5rem calc(50% - 50vw) 0;
+  overflow: hidden;
+  color: #ecf7ff;
+  background: #00080f url("/img/main-image.png") center / cover no-repeat;
+  place-items: center;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgb(0 8 15 / 88%) 0%, rgb(0 8 15 / 38%) 68%),
+    linear-gradient(0deg, #070e14 0%, transparent 28%);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  width: min(1140px, calc(100% - 48px));
+  padding: 80px 0;
+}
+
+.eyebrow {
+  margin: 0 0 16px;
+  color: #75baff;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  max-width: 900px;
+  margin: 0;
+  font-size: clamp(3.5rem, 10vw, 8rem);
+  font-weight: 800;
+  line-height: 0.9;
+  text-shadow: 6px 6px rgb(0 107 212 / 55%);
+}
+
+.description {
+  max-width: 720px;
+  margin: 32px 0 0;
+  color: rgb(236 247 255 / 82%);
+  font-size: clamp(1.05rem, 2.5vw, 1.4rem);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.primaryAction,
+.secondaryAction {
+  padding: 14px 22px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 2px solid #3c9bf9;
+  border-radius: 8px;
+}
+
+.primaryAction {
+  color: #00080f;
+  background: #3c9bf9;
+}
+
+.secondaryAction {
+  color: #ecf7ff;
+  background: rgb(0 8 15 / 65%);
+}
+
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible {
+  outline: 3px solid #ecf7ff;
+  outline-offset: 4px;
+}
+
+.server {
+  margin: 24px 0 0;
+  color: #75baff;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .hero {
+    min-height: 680px;
+  }
+
+  .content {
+    padding: 56px 0;
+  }
+}

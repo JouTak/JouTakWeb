@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import FAQSection from "../../components/FAQSection/FAQSection.jsx";
+import ProjectsSection from "../../components/ProjectsSection/ProjectsSection.jsx";
 import FeatureGate from "../../features/featureFlags/FeatureGate.jsx";
 
 function Hero({ hero }) {
@@ -171,9 +172,18 @@ export default function HomepageV2({ content }) {
   return (
     <div className="py-2">
       <Hero hero={content?.hero} />
-      <Projects
-        items={Array.isArray(content?.projects) ? content.projects : []}
-      />
+      <FeatureGate
+        flag="joutak_projects_section"
+        fallback={
+          <Projects
+            items={Array.isArray(content?.projects) ? content.projects : []}
+          />
+        }
+      >
+        <ProjectsSection
+          items={Array.isArray(content?.projects) ? content.projects : []}
+        />
+      </FeatureGate>
       <Events items={Array.isArray(content?.events) ? content.events : []} />
       <Gallery items={Array.isArray(content?.gallery) ? content.gallery : []} />
       <FeatureGate

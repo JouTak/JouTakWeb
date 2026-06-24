@@ -81,7 +81,8 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-events",
     description: "Events section on the homepage",
-    component: null,
+    component: () =>
+      import("../../components/EventsSection/EventsSection.jsx"),
   },
 
   joutak_faq_section: {

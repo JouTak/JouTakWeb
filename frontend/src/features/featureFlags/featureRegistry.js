@@ -72,7 +72,8 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-projects",
     description: "Project cards grid section on the homepage",
-    component: null, // Placeholder until the section component is ready.
+    component: () =>
+      import("../../components/ProjectsSection/ProjectsSection.jsx"),
   },
 
   joutak_events_section: {

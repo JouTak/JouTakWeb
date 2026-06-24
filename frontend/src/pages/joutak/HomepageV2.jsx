@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import EventsSection from "../../components/EventsSection/EventsSection.jsx";
 import FAQSection from "../../components/FAQSection/FAQSection.jsx";
+import GallerySection from "../../components/GallerySection/GallerySection.jsx";
 import ProjectsSection from "../../components/ProjectsSection/ProjectsSection.jsx";
 import FeatureGate from "../../features/featureFlags/FeatureGate.jsx";
 
@@ -195,7 +196,18 @@ export default function HomepageV2({ content }) {
           items={Array.isArray(content?.events) ? content.events : []}
         />
       </FeatureGate>
-      <Gallery items={Array.isArray(content?.gallery) ? content.gallery : []} />
+      <FeatureGate
+        flag="joutak_gallery_section"
+        fallback={
+          <Gallery
+            items={Array.isArray(content?.gallery) ? content.gallery : []}
+          />
+        }
+      >
+        <GallerySection
+          items={Array.isArray(content?.gallery) ? content.gallery : []}
+        />
+      </FeatureGate>
       <FeatureGate
         flag="joutak_faq_section"
         fallback={

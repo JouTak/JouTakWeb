@@ -201,7 +201,7 @@ jobs:
           PUBLIC_API_URL: http://api.localhost
         run: |
           docker compose -f docker-compose.yml config >/dev/null
-          docker compose -f docker-compose.local.yml config >/dev/null
+          docker compose -f compose.yaml config >/dev/null
           cp .env.example .env.production
           docker compose -f stack.yml config >/dev/null
           rm -f .env.production
@@ -244,7 +244,7 @@ jobs:
           CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,http://joutak.localhost
           PUBLIC_API_URL: http://api.localhost
         run: |
-          docker compose -f docker-compose.local.yml up -d --build
+          docker compose -f compose.yaml up -d --build
           uv run python scripts/smoke_stack.py
 
       - name: Restart stack with OTEL endpoints enabled
@@ -263,8 +263,8 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: http://127.0.0.1:4318
           FRONTEND_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://127.0.0.1:4318/v1/traces
         run: |
-          docker compose -f docker-compose.local.yml down -v
-          docker compose -f docker-compose.local.yml up -d --build
+          docker compose -f compose.yaml down -v
+          docker compose -f compose.yaml up -d --build
           uv run python scripts/smoke_stack.py
 
       - name: Shutdown smoke stack
@@ -281,7 +281,7 @@ jobs:
           DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,http://joutak.localhost
           CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,http://joutak.localhost
           PUBLIC_API_URL: http://api.localhost
-        run: docker compose -f docker-compose.local.yml down -v
+        run: docker compose -f compose.yaml down -v
 
   secret_scan:
     name: Secret scan

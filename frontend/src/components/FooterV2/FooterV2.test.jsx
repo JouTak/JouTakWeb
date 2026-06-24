@@ -12,10 +12,7 @@ describe("FooterV2", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "JouTak" })).toHaveAttribute(
-      "href",
-      "/joutak",
-    );
+    expect(screen.getByLabelText("JouTak")).toHaveAttribute("href", "/joutak");
     expect(screen.getByRole("link", { name: "Discord" })).toHaveAttribute(
       "target",
       "_blank",

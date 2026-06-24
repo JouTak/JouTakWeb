@@ -20,7 +20,7 @@ export default function EventsSection({
   return (
     <section className={styles.section} aria-labelledby="events-title-v2">
       <div className={styles.inner}>
-        <h2 id="events-title-v2" className={styles.sectionTitle}>
+        <h2 id="events-title-v2" className={styles["section-title"]}>
           {title}
         </h2>
         <div className={styles.list}>

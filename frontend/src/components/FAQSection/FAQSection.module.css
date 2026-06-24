@@ -82,7 +82,7 @@
   transform: translate(-50%, -50%) rotate(0deg);
 }
 
-.answerWrapper {
+.answer-wrapper {
   padding-left: 64px;
 }
 
@@ -114,7 +114,7 @@
     height: 40px;
   }
 
-  .answerWrapper {
+  .answer-wrapper {
     padding-left: 52px;
   }
 }

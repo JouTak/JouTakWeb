@@ -2,6 +2,13 @@ import PropTypes from "prop-types";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import EventsSection from "../../components/EventsSection/EventsSection.jsx";
+import FAQSection from "../../components/FAQSection/FAQSection.jsx";
+import GallerySection from "../../components/GallerySection/GallerySection.jsx";
+import HeroSection from "../../components/HeroSection/HeroSection.jsx";
+import ProjectsSection from "../../components/ProjectsSection/ProjectsSection.jsx";
+import FeatureGate from "../../features/featureFlags/FeatureGate.jsx";
+
 function Hero({ hero }) {
   return (
     <section className="rounded-4 p-4 p-lg-5 text-light mb-4 bg-dark">
@@ -167,13 +174,56 @@ FAQ.propTypes = {
 export default function HomepageV2({ content }) {
   return (
     <div className="py-2">
-      <Hero hero={content?.hero} />
-      <Projects
-        items={Array.isArray(content?.projects) ? content.projects : []}
-      />
-      <Events items={Array.isArray(content?.events) ? content.events : []} />
-      <Gallery items={Array.isArray(content?.gallery) ? content.gallery : []} />
-      <FAQ items={Array.isArray(content?.faq) ? content.faq : []} />
+      <FeatureGate
+        flag="joutak_hero_section"
+        fallback={<Hero hero={content?.hero} />}
+      >
+        <HeroSection hero={content?.hero} />
+      </FeatureGate>
+      <FeatureGate
+        flag="joutak_projects_section"
+        fallback={
+          <Projects
+            items={Array.isArray(content?.projects) ? content.projects : []}
+          />
+        }
+      >
+        <ProjectsSection
+          items={Array.isArray(content?.projects) ? content.projects : []}
+        />
+      </FeatureGate>
+      <FeatureGate
+        flag="joutak_events_section"
+        fallback={
+          <Events
+            items={Array.isArray(content?.events) ? content.events : []}
+          />
+        }
+      >
+        <EventsSection
+          items={Array.isArray(content?.events) ? content.events : []}
+        />
+      </FeatureGate>
+      <FeatureGate
+        flag="joutak_gallery_section"
+        fallback={
+          <Gallery
+            items={Array.isArray(content?.gallery) ? content.gallery : []}
+          />
+        }
+      >
+        <GallerySection
+          items={Array.isArray(content?.gallery) ? content.gallery : []}
+        />
+      </FeatureGate>
+      <FeatureGate
+        flag="joutak_faq_section"
+        fallback={
+          <FAQ items={Array.isArray(content?.faq) ? content.faq : []} />
+        }
+      >
+        <FAQSection items={Array.isArray(content?.faq) ? content.faq : []} />
+      </FeatureGate>
     </div>
   );
 }

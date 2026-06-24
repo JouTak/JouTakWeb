@@ -23,7 +23,8 @@ frontend/                 Vite React application
 frontend/src/services/    Frontend HTTP, auth/session and API clients
 docs/                     Contributor, architecture and security docs
 .github/workflows/        CI and release workflows
-docker-compose*.yml       Local and image-based Compose entry points
+compose.yaml              Default local Compose entry point
+docker-compose*.yml       Image-based Compose entry points and overrides
 stack.yml                 Docker Swarm production stack template
 ```
 
@@ -84,16 +85,26 @@ uv run pytest backend -q
 
 Создайте локальный env-файл из очищенного примера и замените placeholder values:
 
+`compose.yaml` теперь является дефолтным локальным Compose-файлом, поэтому
+достаточно короткой команды:
+
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.local.yml up --build
+docker compose up --build
 ```
+
+По умолчанию локальный стек остаётся HTTP-only, чтобы `docker compose up
+--build` не упирался в TLS-redirect loop. Для `Passkeys` локально включён
+`MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN`, а если нужен именно HTTPS-сценарий
+для ручной проверки, поднимайте production-style stack или свой TLS
+override.
 
 Полезные команды для сверки конфигов:
 
 ```bash
+docker compose config >/dev/null
 docker compose -f docker-compose.yml config >/dev/null
-docker compose -f docker-compose.local.yml config >/dev/null
+docker compose -f docker-compose.images.yml config >/dev/null
 ```
 
 ## Environment Files

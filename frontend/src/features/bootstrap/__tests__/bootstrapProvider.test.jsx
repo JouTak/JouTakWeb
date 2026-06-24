@@ -15,6 +15,7 @@ vi.mock("@openfeature/react-sdk", () => ({
   OpenFeature: {
     setProvider: vi.fn(),
   },
+  useBooleanFlagValue: vi.fn((_, fallback) => fallback),
   useStringFlagValue: vi.fn((_, fallback) => fallback),
 }));
 

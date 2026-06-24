@@ -98,7 +98,11 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":
     }
 
 HEADLESS_SERVE_SPECIFICATION = False
-MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = False
+MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = config(
+    "MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN",
+    cast=bool,
+    default=False,
+)
 
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"

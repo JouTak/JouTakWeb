@@ -30,7 +30,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
 contextlib2==21.6.0
     # via django-ninja-extra
 coverage==7.13.5
-cryptography==46.0.7
+cryptography==48.0.1
     # via
     #   backend
     #   fido2
@@ -90,7 +90,7 @@ django-simple-history==3.11.0
     # via backend
 django-two-factor-auth==1.17.0
     # via backend
-fido2==2.0.0
+fido2==2.2.0
     # via django-allauth
 filelock==3.29.0
     # via cachecontrol

@@ -1,6 +1,8 @@
 import PropTypes from "prop-types";
 
+import FeatureGate from "../features/featureFlags/FeatureGate.jsx";
 import Footer from "./Footer";
+import FooterV2 from "./FooterV2/FooterV2.jsx";
 import Header from "./Header";
 
 const Layout = ({ children }) => {
@@ -8,7 +10,9 @@ const Layout = ({ children }) => {
     <>
       <Header />
       <main className="container my-4">{children}</main>
-      <Footer />
+      <FeatureGate flag="site_footer_v2" fallback={<Footer />}>
+        <FooterV2 />
+      </FeatureGate>
     </>
   );
 };

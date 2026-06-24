@@ -47,8 +47,9 @@ reset остаются на allauth headless endpoints.
 - `frontend`: nginx-served Vite build.
 - `traefik`: production Swarm ingress в `stack.yml`.
 
-Локальная разработка использует `docker-compose.local.yml`. Image-based
-deployment использует `docker-compose.images.yml` или `stack.yml`.
+Локальная разработка использует `compose.yaml` и запускается командой
+`docker compose up --build`. Image-based deployment использует
+`docker-compose.images.yml` или `stack.yml`.
 
 ## CI Jobs
 

@@ -126,6 +126,16 @@ FEATURE_REGISTRY: dict[str, dict] = {
         ),
         "visual_impact": "Project cards grid below the hero on /joutak",
     },
+    "joutak_hero_section": {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["homepage"],
+        "sticky": False,
+        "description": "Shows the new full-viewport homepage hero.",
+        "visual_impact": "Replaces the hero section on /joutak",
+    },
     "joutak_events_section": {
         "kind": "boolean",
         "default_env": None,

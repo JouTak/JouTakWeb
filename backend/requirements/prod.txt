@@ -21,7 +21,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via qrcode
 contextlib2==21.6.0
     # via django-ninja-extra
-cryptography==46.0.7
+cryptography==48.0.1
     # via
     #   backend
     #   fido2
@@ -75,7 +75,7 @@ django-simple-history==3.11.0
     # via backend
 django-two-factor-auth==1.17.0
     # via backend
-fido2==2.0.0
+fido2==2.2.0
     # via django-allauth
 googleapis-common-protos==1.74.0
     # via opentelemetry-exporter-otlp-proto-http

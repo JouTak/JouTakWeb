@@ -50,13 +50,12 @@ export const FEATURE_MAP = {
   },
 
   // ─── New design elements (from website-dev / PR #85) ────────────────
-
   site_footer_v2: {
     type: "boolean",
     page: "*",
     slot: "footer",
     description: "New footer design from the website-dev branch",
-    component: null, // Placeholder until FooterV2 lands in this repo.
+    component: () => import("../../components/FooterV2/FooterV2.jsx"),
   },
 
   site_header_v2: {
@@ -72,7 +71,16 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-projects",
     description: "Project cards grid section on the homepage",
-    component: null, // Placeholder until the section component is ready.
+    component: () =>
+      import("../../components/ProjectsSection/ProjectsSection.jsx"),
+  },
+
+  joutak_hero_section: {
+    type: "boolean",
+    page: "/joutak",
+    slot: "section-hero",
+    description: "New full-viewport hero section on the homepage",
+    component: () => import("../../components/HeroSection/HeroSection.jsx"),
   },
 
   joutak_events_section: {
@@ -80,7 +88,7 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-events",
     description: "Events section on the homepage",
-    component: null,
+    component: () => import("../../components/EventsSection/EventsSection.jsx"),
   },
 
   joutak_faq_section: {
@@ -88,7 +96,7 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-faq",
     description: "FAQ accordion section on the homepage",
-    component: null,
+    component: () => import("../../components/FAQSection/FAQSection.jsx"),
   },
 
   joutak_gallery_section: {
@@ -96,7 +104,8 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-gallery",
     description: "Photo gallery with tab switching on the homepage",
-    component: null,
+    component: () =>
+      import("../../components/GallerySection/GallerySection.jsx"),
   },
 
   itmocraft_new_header: {

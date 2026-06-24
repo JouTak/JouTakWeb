@@ -57,8 +57,8 @@
   margin-top: 36px;
 }
 
-.primaryAction,
-.secondaryAction {
+.primary-action,
+.secondary-action {
   padding: 14px 22px;
   font-weight: 700;
   text-decoration: none;
@@ -66,18 +66,18 @@
   border-radius: 8px;
 }
 
-.primaryAction {
+.primary-action {
   color: #00080f;
   background: #3c9bf9;
 }
 
-.secondaryAction {
+.secondary-action {
   color: #ecf7ff;
   background: rgb(0 8 15 / 65%);
 }
 
-.primaryAction:focus-visible,
-.secondaryAction:focus-visible {
+.primary-action:focus-visible,
+.secondary-action:focus-visible {
   outline: 3px solid #ecf7ff;
   outline-offset: 4px;
 }

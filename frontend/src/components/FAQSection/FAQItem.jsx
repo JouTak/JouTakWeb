@@ -23,7 +23,7 @@ export default function FAQItem({ item }) {
       </h3>
       <div
         id={answerId}
-        className={styles.answerWrapper}
+        className={styles["answer-wrapper"]}
         data-open={isOpen || undefined}
         hidden={!isOpen}
       >

@@ -93,6 +93,12 @@ cp .env.example .env
 docker compose up --build
 ```
 
+По умолчанию локальный стек остаётся HTTP-only, чтобы `docker compose up
+--build` не упирался в TLS-redirect loop. Для `Passkeys` локально включён
+`MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN`, а если нужен именно HTTPS-сценарий
+для ручной проверки, поднимайте production-style stack или свой TLS
+override.
+
 Полезные команды для сверки конфигов:
 
 ```bash

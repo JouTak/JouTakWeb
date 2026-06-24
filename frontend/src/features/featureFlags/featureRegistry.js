@@ -50,7 +50,6 @@ export const FEATURE_MAP = {
   },
 
   // ─── New design elements (from website-dev / PR #85) ────────────────
-
   site_footer_v2: {
     type: "boolean",
     page: "*",
@@ -89,8 +88,7 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-events",
     description: "Events section on the homepage",
-    component: () =>
-      import("../../components/EventsSection/EventsSection.jsx"),
+    component: () => import("../../components/EventsSection/EventsSection.jsx"),
   },
 
   joutak_faq_section: {

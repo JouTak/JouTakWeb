@@ -17,7 +17,9 @@ export default function GallerySection({ title = "Галерея", items = [] })
       : activeItem.alt || `JouTak gallery ${normalizedIndex + 1}`;
 
   function changePhoto(direction) {
-    setActiveIndex((index) => (index + direction + items.length) % items.length);
+    setActiveIndex(
+      (index) => (index + direction + items.length) % items.length,
+    );
   }
 
   return (

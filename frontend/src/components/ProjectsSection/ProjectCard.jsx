@@ -16,11 +16,11 @@ export default function ProjectCard({
       className={`${styles.card} ${extended ? styles.extended : ""}`}
     >
       {image && (
-        <div className={styles.imageWrapper}>
+        <div className={styles["image-wrapper"]}>
           <img src={image} alt={title} loading="lazy" />
         </div>
       )}
-      <div className={styles.projectInfo}>
+      <div className={styles["project-info"]}>
         <h3>{title}</h3>
         <p>{description}</p>
       </div>

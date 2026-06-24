@@ -195,7 +195,9 @@ export default function HomepageV2({ content }) {
       <FeatureGate
         flag="joutak_events_section"
         fallback={
-          <Events items={Array.isArray(content?.events) ? content.events : []} />
+          <Events
+            items={Array.isArray(content?.events) ? content.events : []}
+          />
         }
       >
         <EventsSection
@@ -220,9 +222,7 @@ export default function HomepageV2({ content }) {
           <FAQ items={Array.isArray(content?.faq) ? content.faq : []} />
         }
       >
-        <FAQSection
-          items={Array.isArray(content?.faq) ? content.faq : []}
-        />
+        <FAQSection items={Array.isArray(content?.faq) ? content.faq : []} />
       </FeatureGate>
     </div>
   );

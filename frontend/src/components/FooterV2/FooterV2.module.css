@@ -38,17 +38,13 @@
   text-decoration: none;
 }
 
-.links a:hover {
-  color: #fff;
-}
-
-.socialColumn {
+.social-column {
   display: grid;
   gap: 20px;
   color: rgb(236 247 255 / 72%);
 }
 
-.socialColumn p {
+.social-column p {
   margin: 0;
 }
 
@@ -69,6 +65,10 @@
 .socials img {
   width: 26px;
   height: 26px;
+}
+
+.links a:hover {
+  color: #fff;
 }
 
 .brand:focus-visible,

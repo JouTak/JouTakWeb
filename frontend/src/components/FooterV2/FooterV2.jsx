@@ -19,7 +19,11 @@ const contacts = [
 const socials = [
   ["VK", "https://vk.com/itmocraft", "/img/icons/vk.svg"],
   ["Telegram", "https://t.me/itmocraft", "/img/icons/tg.svg"],
-  ["Discord", "https://discord.com/invite/2tPbdRVgcz", "/img/icons/discord.svg"],
+  [
+    "Discord",
+    "https://discord.com/invite/2tPbdRVgcz",
+    "/img/icons/discord.svg",
+  ],
 ];
 
 function LinkColumn({ title, items }) {
@@ -51,7 +55,7 @@ export default function FooterV2() {
         </Link>
         <LinkColumn title="Навигация" items={navigation} />
         <LinkColumn title="Связь с нами" items={contacts} />
-        <div className={styles.socialColumn}>
+        <div className={styles["social-column"]}>
           <div className={styles.socials}>
             {socials.map(([label, href, icon]) => (
               <a

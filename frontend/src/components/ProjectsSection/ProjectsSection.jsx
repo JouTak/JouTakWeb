@@ -10,7 +10,10 @@ const PROJECT_IMAGE_BY_PATH = {
   "/minigames": "/img/minigames.png",
 };
 
-export default function ProjectsSection({ title = "Наши проекты", items = [] }) {
+export default function ProjectsSection({
+  title = "Наши проекты",
+  items = [],
+}) {
   return (
     <section className={styles.section} aria-labelledby="projects-title-v2">
       <div className={styles.inner}>

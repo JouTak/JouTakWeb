@@ -98,7 +98,8 @@ export const FEATURE_MAP = {
     page: "/joutak",
     slot: "section-gallery",
     description: "Photo gallery with tab switching on the homepage",
-    component: null,
+    component: () =>
+      import("../../components/GallerySection/GallerySection.jsx"),
   },
 
   itmocraft_new_header: {

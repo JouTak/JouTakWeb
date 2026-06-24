@@ -30,7 +30,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
 contextlib2==21.6.0
     # via django-ninja-extra
 coverage==7.13.5
-cryptography==48.0.1
+cryptography==49.0.0
     # via
     #   backend
     #   fido2
@@ -112,7 +112,7 @@ markdown-it-py==4.0.0
     # via rich
 mdurl==0.1.2
     # via markdown-it-py
-msgpack==1.1.2
+msgpack==1.2.1
     # via cachecontrol
 openfeature-sdk==0.9.0
     # via backend

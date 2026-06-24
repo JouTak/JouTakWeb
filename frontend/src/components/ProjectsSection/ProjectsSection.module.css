@@ -34,13 +34,13 @@
   grid-column: 1 / -1;
 }
 
-.imageWrapper {
+.image-wrapper {
   overflow: hidden;
   background: #111c25;
   border-radius: 18px;
 }
 
-.imageWrapper img {
+.image-wrapper img {
   display: block;
   width: 100%;
   aspect-ratio: 1;
@@ -48,11 +48,11 @@
   transition: transform 220ms ease;
 }
 
-.extended .imageWrapper img {
+.extended .image-wrapper img {
   aspect-ratio: 3 / 1;
 }
 
-.card:hover .imageWrapper img {
+.card:hover .image-wrapper img {
   transform: scale(1.02);
 }
 
@@ -61,18 +61,18 @@
   outline-offset: 8px;
 }
 
-.projectInfo {
+.project-info {
   margin-top: 24px;
 }
 
-.projectInfo h3 {
+.project-info h3 {
   margin: 0 0 12px;
   color: #3c9bf9;
   font-size: clamp(1.75rem, 3vw, 2.5rem);
   font-weight: 500;
 }
 
-.projectInfo p {
+.project-info p {
   max-width: 720px;
   margin: 0;
   color: #ecf7ff;
@@ -90,7 +90,7 @@
     grid-column: auto;
   }
 
-  .extended .imageWrapper img {
+  .extended .image-wrapper img {
     aspect-ratio: 1;
   }
 }

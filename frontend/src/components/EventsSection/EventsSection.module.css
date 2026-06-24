@@ -10,7 +10,7 @@
   margin: 0 auto;
 }
 
-.sectionTitle {
+.section-title {
   margin: 0 0 40px;
   color: #ecf7ff;
   font-size: clamp(2rem, 5vw, 4rem);

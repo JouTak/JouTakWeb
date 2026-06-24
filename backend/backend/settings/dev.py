@@ -1,3 +1,4 @@
+from decouple import config
 from observability.logging import build_logging_config
 
 from . import base as base_settings
@@ -50,6 +51,10 @@ STORAGES = {
 }
 
 HEADLESS_SERVE_SPECIFICATION = True
-MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = True
+MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = config(
+    "MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN",
+    cast=bool,
+    default=True,
+)
 
 LOGGING = build_logging_config(root_level="DEBUG")

@@ -25,23 +25,23 @@ LEGACY_HOMEPAGE = {
     },
     "carousel": [
         {
-            "src": "https://cloud.joutak.ru/s/2oQALeqNkndEQMw/preview",
+            "src": "https://cloud.joutak.ru/s/ZZg89sgcx6X9cxp/preview",
             "alt": "Центральный район сервера",
         },
         {
-            "src": "https://cloud.joutak.ru/s/fAn6tq8jn3wcbzy/preview",
+            "src": "https://cloud.joutak.ru/s/mFfm4HqBzYm5Wxc/preview",
             "alt": "Большой гриб на нулевых координатах",
         },
         {
-            "src": "https://cloud.joutak.ru/s/oD9SmGSnqGCYqLP/preview",
+            "src": "https://cloud.joutak.ru/s/z3zBa6cBZ8jbnsS/preview",
             "alt": "Летучий Голландец в Казахстане",
         },
         {
-            "src": "https://cloud.joutak.ru/s/D8MH8Bmia4f6Ab5/preview",
+            "src": "https://cloud.joutak.ru/s/2kZ8WNN49aqn8yd/preview",
             "alt": "Крупная сходка новых игроков 2025",
         },
         {
-            "src": "https://cloud.joutak.ru/s/3ebFJexTFSntZmL/preview",
+            "src": "https://cloud.joutak.ru/s/RcA26gKCY495Y8j/preview",
             "alt": "Центральный хаб в Нижнем мире",
         },
     ],

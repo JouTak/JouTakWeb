@@ -1,5 +1,5 @@
 @font-face {
-    font-family: 'MinecraftSevenFont';
+    font-family: MinecraftSevenFont;
     src: url('img/fonts/Minecraft Seven_2.ttf') format('truetype');
 }
 
@@ -55,7 +55,7 @@
 
 .paginationCounter {
     text-align: center;
-    font-family: 'MinecraftSevenFont', sans-serif;
+    font-family: MinecraftSevenFont, sans-serif;
     font-size: 24px;
     color: #fff;
     margin-bottom: 5px;
@@ -65,7 +65,7 @@
     position: absolute;
     display: inline-flex;
     align-items: center;
-    font-family: 'MinecraftSevenFont', sans-serif;
+    font-family: MinecraftSevenFont, sans-serif;
     color: #000;
     font-weight: 400;
     font-size: 32px;

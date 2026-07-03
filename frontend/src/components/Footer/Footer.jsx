@@ -1,4 +1,5 @@
 import { FaDiscord, FaTelegramPlane, FaVk } from "react-icons/fa";
+
 import styles from "./Footer.module.css";
 
 const SOCIAL_ICON_BY_TYPE = {
@@ -90,7 +91,7 @@ const CustomFooter = ({
             })}
           </div>
 
-          <a href="#" className={styles.copyright}>
+          <a href="/joutak" className={styles.copyright}>
             {copyrightText}
           </a>
         </div>

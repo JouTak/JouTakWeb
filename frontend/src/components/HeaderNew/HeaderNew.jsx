@@ -1,15 +1,16 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import { DropdownMenu, Button, Loader, Modal, Label } from "@gravity-ui/uikit";
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { getPathByProject } from "../../utils/projectUtils";
-import AuthModal from "../AuthModal";
-import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
+import { Button, DropdownMenu, Label,Loader, Modal } from "@gravity-ui/uikit";
+import { useCallback, useEffect, useMemo, useRef,useState } from "react";
+import { useLocation,useNavigate } from "react-router-dom";
+
 import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../../services/api";
-import { isPersonalizedProfile, needsPersonalization } from "../../utils/profileState";
 import {
   getProfileDisplayName,
   getProfileIdentityKey,
 } from "../../utils/accountIdentity";
+import { isPersonalizedProfile, needsPersonalization } from "../../utils/profileState";
+import { getPathByProject } from "../../utils/projectUtils";
+import AuthModal from "../AuthModal";
+import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
 import styles from "./HeaderNew.module.css";
 
 const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";

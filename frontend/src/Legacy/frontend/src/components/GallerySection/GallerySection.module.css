@@ -1,0 +1,80 @@
+.section {
+  margin: 0 calc(50% - 50vw);
+  padding: 64px max(24px, calc((100vw - 1140px) / 2));
+  color: #ecf7ff;
+  background: #070e14;
+}
+
+.inner {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0 0 40px;
+  color: #3c9bf9;
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.viewer {
+  position: relative;
+  padding: clamp(14px, 2vw, 24px);
+  background: linear-gradient(145deg, #17222c, #0a1117);
+  border: 2px solid #3c9bf9;
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 40%);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #00080f;
+  border-radius: 14px;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: #00080f;
+  font-size: 1.5rem;
+  background: #3c9bf9;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.button:hover {
+  background: #75baff;
+}
+
+.button:focus-visible {
+  outline: 3px solid #ecf7ff;
+  outline-offset: 3px;
+}
+
+.counter {
+  min-width: 64px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .section {
+    padding-top: 48px;
+    padding-bottom: 48px;
+  }
+}

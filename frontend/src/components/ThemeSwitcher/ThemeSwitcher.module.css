@@ -13,7 +13,7 @@
 
 svg {
   display: block;
-  shape-rendering: crispEdges;
+  shape-rendering: crispedges;
 }
 
 .contour {
@@ -69,6 +69,7 @@ svg {
 }
 
 /* Облака */
+
 .clouds {
   position: absolute;
 

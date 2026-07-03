@@ -1,6 +1,6 @@
 .section {
     background-color: #070E14;
-    padding: 56px 40px 32px 40px;
+    padding: 56px 40px 32px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -11,7 +11,7 @@
 }
 
 .title {
-    font-family: 'MinecraftFont', sans-serif;
+    font-family: MinecraftFont, sans-serif;
     color: var(--big-title-color);
     text-shadow: 5px 5px 0 var(--big-title-shadow);
     font-size: 64px;

@@ -1,6 +1,6 @@
+import sectionStyles from '../shared/sectionLayout.module.css'
 import ProjectCard from './ProjectCard'
 import styles from './projectCard.module.css'
-import sectionStyles from '../shared/sectionLayout.module.css'
 
 export default function ProjectsSection({
     title = 'Наши проекты',

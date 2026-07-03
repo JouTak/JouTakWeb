@@ -8,12 +8,12 @@
 }
 
 @font-face {
-    font-family: 'MinecraftFont';
+    font-family: MinecraftFont;
     src: url('img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
 }
 
 @font-face {
-    font-family: 'GeologicaFont';
+    font-family: GeologicaFont;
     src: url('img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
 }
 
@@ -43,7 +43,7 @@
 
 .projectInfo {
   margin-top: 30px;
-  font-family: 'GeologicaFont', sans-serif;
+  font-family: GeologicaFont, sans-serif;
   text-align: left;
 }
 

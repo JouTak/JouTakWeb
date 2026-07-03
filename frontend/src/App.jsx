@@ -12,7 +12,20 @@ import AuthModal from "./components/AuthModal.jsx";
 import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
-
+const JouTak = lazy(() => import("./pages/JouTak.jsx"));
+const Legacy = lazy(() => import("./pages/Legacy.jsx"));
+const MiniGames = lazy(() => import("./pages/Minigames.jsx"));
+const ItmoCraft = lazy(() => import("./pages/ItmoCraft.jsx"));
+const Contact = lazy(() => import("./pages/Contact.jsx"));
+const NotFound = lazy(() => import("./pages/NotFound.jsx"));
+const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
+const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
+const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
+const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
+const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
+// демо версии секций
+import ProjectsSection from "./components/ProjectsSection/ProjectsSection.jsx";
 function safeInternalPath(path) {
   if (typeof path !== "string") return "/joutak";
   if (!path.startsWith("/")) return "/joutak";

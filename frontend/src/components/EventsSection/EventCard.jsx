@@ -1,7 +1,8 @@
-import MinecraftButton from "../MineCraftButton/MinecraftButton";
-import styles from "./eventCard.module.css";
 import { FiCalendar } from "react-icons/fi";
 import { GrLocation } from "react-icons/gr";
+
+import MinecraftButton from "../MineсraftButton/MinecraftButton";
+import styles from "./eventCard.module.css";
 
 export default function EventCard({
     title,
@@ -11,6 +12,7 @@ export default function EventCard({
     date,
     to,
     imageWidth,
+    alt="Описание картинки"
 }) {
 
     const formattedDate = new Date(date).toLocaleString("ru-RU", {
@@ -37,7 +39,7 @@ export default function EventCard({
                     регистрация
                 </MinecraftButton>
             </div>
-            <img className={styles.eventImg} src={image} width="739" style={eventImageStyle} />
+            <img className={styles.eventImg} src={image} width="739" style={eventImageStyle} alt={alt} />
         </div>
     )
 }

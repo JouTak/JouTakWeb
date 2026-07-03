@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom'
-import styles from './projectCard.module.css'
 import clsx from 'clsx'
+import { Link } from 'react-router-dom'
+
+import styles from './projectCard.module.css'
 
 export default function ProjectCard({
     title,

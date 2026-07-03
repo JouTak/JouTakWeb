@@ -1,6 +1,6 @@
+import sectionStyles from '../shared/sectionLayout.module.css'
 import EventCard from './EventCard'
 import styles from './eventCard.module.css'
-import sectionStyles from '../shared/sectionLayout.module.css'
 
 export default function EventsSection({
     events = [],

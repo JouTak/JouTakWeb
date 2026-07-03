@@ -24,8 +24,7 @@ const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
-// демо версии секций
-import ProjectsSection from "./components/ProjectsSection/ProjectsSection.jsx";
+
 function safeInternalPath(path) {
   if (typeof path !== "string") return "/joutak";
   if (!path.startsWith("/")) return "/joutak";

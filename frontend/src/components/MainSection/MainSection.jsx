@@ -1,5 +1,5 @@
-import styles from './MainSection.module.css';
 import Notification from '../Notification/Notification';
+import styles from './MainSection.module.css';
 
 export default function MainSection({
   backgroundImage = '/img/main-image.png',

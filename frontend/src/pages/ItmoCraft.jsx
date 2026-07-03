@@ -1,6 +1,6 @@
 import LandingPageBuilder from "../components/LandingPageBuilder/LandingPageBuilder";
 import { itmoCraftPageContent } from "./landingContent";
-import MinecraftButton from "../components/MineCraftButton/MinecraftButton";
+import MinecraftButton from "../components/MinecraftButton/MinecraftButton";
 import sectionStyles from "../components/shared/sectionLayout.module.css";
 import styles from "./ItmoCraft.module.css";
 import FeatureGate from "../features/featureFlags/FeatureGate";

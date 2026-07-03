@@ -2,7 +2,6 @@ import PropTypes from "prop-types";
 import Carousel from "react-bootstrap/Carousel";
 
 export default function ImageCarousel({ items, interval = 10000 }) {
-  console.log(items);
   return (
     <div className="w-100" style={{ aspectRatio: "16 / 9" }}>
       <Carousel

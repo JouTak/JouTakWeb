@@ -1,7 +1,7 @@
 import { FiCalendar } from "react-icons/fi";
 import { GrLocation } from "react-icons/gr";
 
-import MinecraftButton from "../MineсraftButton/MinecraftButton";
+import MinecraftButton from "../MinecraftButton/MinecraftButton";
 import styles from "./eventCard.module.css";
 
 export default function EventCard({

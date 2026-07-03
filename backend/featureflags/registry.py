@@ -35,8 +35,22 @@ from django.conf import settings
 
 FEATURE_REGISTRY: dict[str, dict] = {
     # ─── Homepage variant rollout ──────────────────────────────────────
-    "site_new_homepage": {
+    "site_homepage_version": {
         "kind": "variant",
+        "default_env": "FF_SITE_HOMEPAGE_VERSION",
+        "default_fallback": "legacy",
+        "variants": ["legacy", "v2"],
+        "pages": ["homepage"],
+        "sticky": False,
+        "description": (
+            "Switches the /joutak homepage between the legacy carousel "
+            "layout and the new V2 layout (projects, events, gallery, "
+            "FAQ sections)."
+        ),
+        "visual_impact": "Full page replacement on /joutak",
+    },
+    "site_new_homepage": {
+        "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
@@ -48,11 +62,11 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "Full page replacement on /joutak",
     },
     "site_new_minigames_page": {
-        "kind": "variant",
+        "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["minigames"],
         "sticky": False,
         "description": (
             "Switches the /minigames new/legacy homepage."
@@ -60,11 +74,11 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "Full page replacement on /minigames",
     },
     "site_new_itmocraft_page": {
-        "kind": "variant",
+        "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["itmocraft"],
         "sticky": False,
         "description": (
             "Switches the /itmocraft new/legacy homepage."

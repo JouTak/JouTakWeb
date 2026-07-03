@@ -4,7 +4,7 @@ import MinecraftButton from "../components/MinecraftButton/MinecraftButton";
 import sectionStyles from "../components/shared/sectionLayout.module.css";
 import styles from "./ItmoCraft.module.css";
 import FeatureGate from "../features/featureFlags/FeatureGate";
-import LegacyHomepage from "../Legacy/frontend/src/pages/Joutak"
+import LegacyHomepage from "../Legacy/frontend/src/pages/JouTak"
 
 const ItmoCraft = () => {
   return (

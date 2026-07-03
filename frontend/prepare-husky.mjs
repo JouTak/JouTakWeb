@@ -20,6 +20,7 @@ const result = spawnSync(
   {
     cwd: repoRoot,
     stdio: "inherit",
+    shell: true
   },
 );
 

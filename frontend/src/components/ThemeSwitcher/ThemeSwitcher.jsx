@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import styles from "./ThemeSwitcher.module.css";
 
 export default function ThemeSwitcher() {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+
 import sectionStyles from '../shared/sectionLayout.module.css'
 import styles from './gallery.module.css'
 

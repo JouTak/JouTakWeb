@@ -1,5 +1,5 @@
 @font-face {
-    font-family: "MinecraftSeven";
+    font-family: MinecraftSeven;
     src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
   }
 
@@ -18,7 +18,7 @@
     background-size: 100% auto;
     background-position: center;
   
-    font-family: "MinecraftSeven", sans-serif;
+    font-family: MinecraftSeven, sans-serif;
     font-size: 14px;
   }
 
@@ -51,6 +51,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
   /* gap: 12px; */
   flex-wrap: wrap;
 }
@@ -59,6 +60,7 @@
   display: flex;
   align-items: center;
   gap: 15px;
+
   /* border: 1px solid red; */
   padding-right: 40px;
 }
@@ -68,6 +70,7 @@
   align-items: center;
   gap: 15px;
   padding-left: 40px;
+
   /* border: 1px solid red; */
 }
 
@@ -160,7 +163,7 @@
   border: none;
   color: #fff;
   text-align: left;
-  font-family: "MinecraftSeven", sans-serif;
+  font-family: MinecraftSeven, sans-serif;
   padding-bottom: 8px;
   padding-top: 5px;
   padding-left: 15px;

@@ -1,5 +1,5 @@
 @font-face {
-  font-family: "MinecraftSeven";
+  font-family: MinecraftSeven;
   src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
 }
 
@@ -10,14 +10,14 @@
   justify-content: center;
   width: 325px;
   height: 59px;
-  padding: 0px 0px 10px 0px ;
+  padding: 0px 0px 10px;
   border: none;
   background-color: transparent;
   background-image: url("/img/кнопка-bg.png");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
-  font-family: "MinecraftSeven", sans-serif;
+  font-family: MinecraftSeven, sans-serif;
   font-size: 24px;
   color: #EAEAEA;
   text-shadow: 3px 3px 0 #3F3F3F;

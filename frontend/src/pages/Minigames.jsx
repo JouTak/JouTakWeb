@@ -1,6 +1,6 @@
 import LandingPageBuilder from "../components/LandingPageBuilder/LandingPageBuilder";
-import LegacyMinigames from "../Legacy/frontend/src/pages/Minigames.jsx"
 import FeatureGate from "../features/featureFlags/FeatureGate";
+import LegacyMinigames from "../Legacy/frontend/src/pages/Minigames.jsx"
 import { miniGamesPageContent } from "./landingContent";
 
 const MiniGames = () => {

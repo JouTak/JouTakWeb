@@ -2,7 +2,7 @@
   background-color: #00080f;
   padding: 36px 40px 30px;
   margin-top: 0;
-  font-family: 'GeologicaFont', sans-serif;
+  font-family: GeologicaFont, sans-serif;
 }
 
 .inner {
@@ -38,15 +38,15 @@
 }
 
 .heading {
-  color: #ffffff;
+  color: #fff;
   font-size: 20px;
   font-weight: 500;
-  margin: 0 0 14px 0;
+  margin: 0 0 14px;
 }
 
 .subitem {
-  color: rgba(255, 255, 255, 0.75);
-  margin: 0 0 6px 0;
+  color: rgb(255 255 255 / 75%);
+  margin: 0 0 6px;
   font-size: 16px;
   font-weight: 300;
   text-decoration: none;
@@ -68,7 +68,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #ffffff;
+  background: #fff;
   color: #00080f;
   display: flex;
   align-items: center;
@@ -99,7 +99,7 @@
 }
 
 .copyright {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgb(255 255 255 / 75%);
   margin: 0;
   font-size: 16px;
   font-weight: 300;
@@ -108,7 +108,7 @@
 
 .subitem:hover,
 .copyright:hover {
-  color: #ffffff;
+  color: #fff;
 }
 
 @media (max-width: 1200px) {

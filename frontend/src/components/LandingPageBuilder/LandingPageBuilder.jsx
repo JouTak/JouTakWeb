@@ -1,6 +1,6 @@
 import FeatureGate from "../../features/featureFlags/FeatureGate";
 import EventsSection from "../EventsSection/EventsSection";
-import FAQsection from "../FAQSection/FAQsection";
+import FAQsection from "../FAQSection/SectionFAQ";
 import GallerySection from "../GallerySection/GallerySection";
 import MainSection from "../MainSection/MainSection";
 import ProjectsSection from "../ProjectsSection/ProjectsSection";

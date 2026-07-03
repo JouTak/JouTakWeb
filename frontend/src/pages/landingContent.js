@@ -58,6 +58,7 @@ export const joutakPageContent = {
   sections: [
     {
       type: "main",
+      flag: "section_main",
       props: {
         backgroundImage: "/img/main-image.png",
         logoSrc: "/img/logo-maxi.svg",
@@ -68,12 +69,14 @@ export const joutakPageContent = {
     },
     {
       type: "projects",
+      flag: "section_projects",
       props: {
         projects: sharedProjects,
       },
     },
     {
       type: "events",
+      flag: "section_events",
       props: {
         events: [
           {
@@ -92,6 +95,7 @@ export const joutakPageContent = {
     },
     {
       type: "gallery",
+      flag: "section_gallery",
       props: {
         galleryItems: [
           {
@@ -135,6 +139,7 @@ export const joutakPageContent = {
     },
     {
       type: "faq",
+      flag: "section_faq",
       props: {
         faqItems: sharedFaqItems,
       },
@@ -146,6 +151,7 @@ export const itmoCraftPageContent = {
   sections: [
     {
       type: "main",
+      flag: "section_main",
       props: {
         backgroundImage: "/img/bg-itmocraft-joutak.png",
         logoSrc: "/img/itmocraft-joutak-logo.svg",
@@ -156,6 +162,7 @@ export const itmoCraftPageContent = {
     },
     {
       type: "gallery",
+      flag: "section_gallery",
       props: {
         galleryItems: [
           {
@@ -204,6 +211,7 @@ export const miniGamesPageContent = {
   sections: [
     {
       type: "main",
+      flag: "section_main",
       props: {
         backgroundImage: "/img/bg-minigames.png",
         logoSrc: "/img/minigames-logo.svg",
@@ -213,6 +221,7 @@ export const miniGamesPageContent = {
     },
     {
       type: "projects",
+      flag: "section_projects",
       props: {
         title: "Режимы",
         projects: [
@@ -266,6 +275,7 @@ export const miniGamesPageContent = {
     },
     {
       type: "events",
+      flag: "section_events",
       props: {
         events: [
           {
@@ -284,6 +294,7 @@ export const miniGamesPageContent = {
     },
     {
       type: "gallery",
+      flag: "section_gallery",
       props: {
         galleryItems: [
           {

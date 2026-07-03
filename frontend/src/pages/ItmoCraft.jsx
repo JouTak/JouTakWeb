@@ -3,10 +3,16 @@ import { itmoCraftPageContent } from "./landingContent";
 import MinecraftButton from "../components/MineCraftButton/MinecraftButton";
 import sectionStyles from "../components/shared/sectionLayout.module.css";
 import styles from "./ItmoCraft.module.css";
+import FeatureGate from "../features/featureFlags/FeatureGate";
+import LegacyHomepage from "../Legacy/frontend/src/pages/Joutak"
 
 const ItmoCraft = () => {
   return (
     <>
+      <FeatureGate
+      flag="site_new_homepage"
+      fallback={<LegacyHomepage />}
+      >
       <LandingPageBuilder sections={itmoCraftPageContent.sections} />
       <section className={sectionStyles.section}>
         <div className={`${sectionStyles.inner} ${styles.ctaInner}`}>
@@ -17,6 +23,7 @@ const ItmoCraft = () => {
           <MinecraftButton className={styles.ctaButton}>зарегистрироваться</MinecraftButton>
         </div>
       </section>
+      </FeatureGate>
     </>
   );
 };

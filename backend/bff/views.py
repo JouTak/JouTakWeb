@@ -12,6 +12,7 @@ from bff.services import (
     build_account_summary_payload,
     build_bootstrap_payload,
     build_home_payload,
+    build_page_flags_payload,
 )
 
 
@@ -47,6 +48,25 @@ def homepage(request):
         request,
         page="homepage",
         build_payload=build_home_payload,
+    )
+
+@require_GET
+@bff_ratelimit
+def minigames(request):
+    return _build_bff_response(
+        request,
+        page="minigames",
+        build_payload=build_page_flags_payload,
+    )
+
+
+@require_GET
+@bff_ratelimit
+def itmocraft(request):
+    return _build_bff_response(
+        request,
+        page="itmocraft",
+        build_payload=build_page_flags_payload,
     )
 
 

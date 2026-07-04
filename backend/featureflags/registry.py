@@ -40,7 +40,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": "FF_SITE_HOMEPAGE_VERSION",
         "default_fallback": "legacy",
         "variants": ["legacy", "v2"],
-        "pages": ["homepage"],
+        "pages": ["joutak"],
         "sticky": False,
         "description": (
             "Switches the /joutak homepage between the legacy carousel "
@@ -54,7 +54,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["joutak"],
         "sticky": False,
         "description": (
             "Switches the /joutak new/legacy homepage."
@@ -155,7 +155,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["*"],
         "sticky": False,
         "description": (
             "Shows the 'Our Projects' card section on the homepage."
@@ -167,7 +167,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["*"],
         "sticky": False,
         "description": "Shows the new full-viewport homepage hero.",
         "visual_impact": "Replaces the hero section on /joutak",
@@ -177,7 +177,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["*"],
         "sticky": False,
         "description": "Shows the events section on the homepage.",
         "visual_impact": "Events timeline/carousel on /joutak",
@@ -187,7 +187,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["*"],
         "sticky": False,
         "description": "Shows the FAQ accordion section on the homepage.",
         "visual_impact": "FAQ section on /joutak",
@@ -197,7 +197,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["*"],
         "sticky": False,
         "description": "Shows the gallery section on the homepage.",
         "visual_impact": "Photo gallery with tab switching on /joutak",

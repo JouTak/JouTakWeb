@@ -4,7 +4,7 @@
   }
 
 .notification {
-    background-image: url('img/notification-bg.svg');
+    background-image: url('/img/notification-bg.svg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

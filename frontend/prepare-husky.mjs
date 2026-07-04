@@ -20,7 +20,7 @@ const result = spawnSync(
   {
     cwd: repoRoot,
     stdio: "inherit",
-    shell: true
+    shell: process.platform === "win32",
   },
 );
 

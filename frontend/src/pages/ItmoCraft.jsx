@@ -2,7 +2,7 @@ import LandingPageBuilder from "../components/LandingPageBuilder/LandingPageBuil
 import MinecraftButton from "../components/MinecraftButton/MinecraftButton";
 import sectionStyles from "../components/shared/sectionLayout.module.css";
 import FeatureGate from "../features/featureFlags/FeatureGate";
-import LegacyHomepage from "../Legacy/frontend/src/pages/JouTak"
+import LegacyItmocraft from "../Legacy/frontend/src/pages/JouTak"
 import styles from "./ItmoCraft.module.css";
 import { itmoCraftPageContent } from "./landingContent";
 
@@ -10,8 +10,8 @@ const ItmoCraft = () => {
   return (
     <>
       <FeatureGate
-      flag="site_new_homepage"
-      fallback={<LegacyHomepage />}
+      flag="site_new_itmocraft_page"
+      fallback={<LegacyItmocraft />}
       >
       <LandingPageBuilder sections={itmoCraftPageContent.sections} />
       <section className={sectionStyles.section}>

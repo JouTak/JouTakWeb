@@ -48,9 +48,15 @@ export const FEATURE_MAP = {
       v2: () => import("../../pages/joutak/HomepageV2.jsx"),
     },
   },
-
+  site_new_minigames_page: {
+    type: "boolean",
+    page: "/minigames",
+    slot: "page-content",
+    description: "Switches the /minigames new/legacy layout",
+    component: () => import("../../pages/Minigames.jsx"), // Ссылка на ваш новый компонент страницы
+  },
   // ─── New design elements (from website-dev / PR #85) ────────────────
-  site_footer_v2: {
+  site_new_footer: {
     type: "boolean",
     page: "*",
     slot: "footer",
@@ -58,7 +64,7 @@ export const FEATURE_MAP = {
     component: () => import("../../components/FooterV2/FooterV2.jsx"),
   },
 
-  site_header_v2: {
+  site_new_header: {
     type: "boolean",
     page: "*",
     slot: "header",
@@ -66,54 +72,46 @@ export const FEATURE_MAP = {
     component: null, // Placeholder until HeaderV2 lands in this repo.
   },
 
-  joutak_projects_section: {
+  section_projects: {
     type: "boolean",
-    page: "/joutak",
+    page: "*",
     slot: "section-projects",
     description: "Project cards grid section on the homepage",
     component: () =>
       import("../../components/ProjectsSection/ProjectsSection.jsx"),
   },
 
-  joutak_hero_section: {
+  section_hero: {
     type: "boolean",
-    page: "/joutak",
+    page: "*",
     slot: "section-hero",
     description: "New full-viewport hero section on the homepage",
     component: () => import("../../components/HeroSection/HeroSection.jsx"),
   },
 
-  joutak_events_section: {
+  section_events: {
     type: "boolean",
-    page: "/joutak",
+    page: "*",
     slot: "section-events",
     description: "Events section on the homepage",
     component: () => import("../../components/EventsSection/EventsSection.jsx"),
   },
 
-  joutak_faq_section: {
+  section_faq: {
     type: "boolean",
-    page: "/joutak",
+    page: "*",
     slot: "section-faq",
     description: "FAQ accordion section on the homepage",
     component: () => import("../../components/FAQSection/FAQSection.jsx"),
   },
 
-  joutak_gallery_section: {
+  section_gallery: {
     type: "boolean",
-    page: "/joutak",
+    page: "*",
     slot: "section-gallery",
     description: "Photo gallery with tab switching on the homepage",
     component: () =>
       import("../../components/GallerySection/GallerySection.jsx"),
-  },
-
-  itmocraft_new_header: {
-    type: "boolean",
-    page: "/itmocraft",
-    slot: "page-header",
-    description: "New header design for the /itmocraft page",
-    component: null,
   },
 
   // ─── Profile personalization flags ──────────────────────────────────

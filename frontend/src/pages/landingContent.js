@@ -54,7 +54,7 @@ export const sharedFaqItems = [
   },
 ];
 
-export const joutakPageContent = {
+export const itmoCraftPageContent = {
   sections: [
     {
       type: "main",
@@ -147,7 +147,7 @@ export const joutakPageContent = {
   ],
 };
 
-export const itmoCraftPageContent = {
+export const joutakPageContent = {
   sections: [
     {
       type: "main",

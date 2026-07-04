@@ -36,7 +36,7 @@ const CustomFooter = ({
   contactItems = defaultContactItems,
   socialItems = defaultSocialItems,
   copyrightText = `Copyright © ${new Date().getFullYear()} iTMOcraft`,
-  bottomImageSrc = "img/footer.svg",
+  bottomImageSrc = "/img/footer.svg",
 }) => {
   return (
     <>

@@ -1,11 +1,11 @@
 @font-face {
     font-family: MinecraftFont;
-    src: url('img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
+    src: url('/img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
 }
 
 @font-face {
     font-family: GeologicaFont;
-    src: url('img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
+    src: url('/img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
 }
 
 .qaHead {

@@ -30,11 +30,13 @@ export default function EventCard({
         <div className={styles.card}>
             <div className={styles.text}>
                 <h3 className={styles.title}>{title}</h3>
-                <p className={styles.info}><FiCalendar /> {formattedDate}</p>    
+                <p className={styles.info}><FiCalendar /> {formattedDate || "Скоро"}</p>    
                 <p className={styles.info}><GrLocation /> {location}</p>
                 <p className={styles.description}>{description}</p>
                 <MinecraftButton
-                // onClick={() => navigate(to)}
+                    onClick={() => {
+                     if (to) window.location.assign(to);
+                   }}
                 >
                     регистрация
                 </MinecraftButton>

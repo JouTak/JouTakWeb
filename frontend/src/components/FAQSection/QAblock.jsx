@@ -8,7 +8,7 @@ export default function QAblock({
                                 }) 
 {
         const [isOpen, setIsOpen] = React.useState(false)
-
+        const answerID = React.useId()
         function handleOpen() {
             setIsOpen(prev => !prev)
         }
@@ -20,12 +20,19 @@ export default function QAblock({
                         onClick={handleOpen}
                         className={`${styles.toggleBtn} ${isOpen ? styles.toggleBtnOpen : ''}`}
                         aria-expanded={isOpen}
+                        aria-controls={answerID}
+                        aria-label={question}
+                        type="button"
                     >
                         <img src="img/close-qa-btn.png" alt="" />
                     </button>
                     <h3 className={styles.question}>{question}</h3>
                 </div>
-                <div className={`${styles.answerWrapper} ${isOpen ? styles.answerWrapperOpen : ''}`}>
+                <div 
+                    id={answerID}
+                    className={`${styles.answerWrapper} ${isOpen ? styles.answerWrapperOpen : ''}`}
+                    hidden={!isOpen}
+                >
                     <p className={styles.answer}>{answer}</p>
                 </div>
             </div>

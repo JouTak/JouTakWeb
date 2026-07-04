@@ -158,6 +158,7 @@ def build_bootstrap_payload(
     request: HttpRequest,
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
+    context.page = request.GET.get("page", "homepage")
     keys = get_flags_for_page(context.page)
     features = evaluate_many(context, keys)
     return {
@@ -198,4 +199,22 @@ def build_account_summary_payload(
     return {
         "viewer": viewer_summary(request, context.user),
         "features": evaluate_many(context, keys),
+    }
+
+def build_page_flags_payload(
+    _request: HttpRequest,
+    context: RequestEvaluationContext,
+) -> dict[str, object]:
+    """
+    Новая универсальная функция. 
+    Отдает фронтенду строго булевы значения флагов для текущей страницы.
+    """
+    keys = get_flags_for_page(context.page)
+    features = evaluate_many(context, keys)
+    
+    return {
+        "features": {
+            flag: bool(value) 
+            for flag, value in features.items()
+        }
     }

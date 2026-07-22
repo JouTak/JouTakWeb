@@ -19,7 +19,7 @@ const MINIGAMES_CAROUSEL_ITEMS = [
 
 const MiniGames = () => {
   return (
-    <div className="text-center">
+    <div className="text-center container my-4">
       <ImageCarousel items={MINIGAMES_CAROUSEL_ITEMS} />
 
       <div className="container py-3">

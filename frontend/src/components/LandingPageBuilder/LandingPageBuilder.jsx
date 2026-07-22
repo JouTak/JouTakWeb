@@ -31,9 +31,11 @@ export default function LandingPageBuilder({ sections = [] }) {
           <FeatureGate
             key={section.key ?? `${section.type}-${index}`}
             flag={section.flag ?? "site_new_homepage"}
-          >
-            <SectionComponent {...(section.props ?? {})} />
-          </FeatureGate>
+            flag_type="boolean"
+            variants={{
+              true: <SectionComponent {...(section.props ?? {})} />,
+            }}
+          />
         );
       })}
     </>

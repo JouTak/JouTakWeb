@@ -1,17 +1,25 @@
-import { Button, DropdownMenu, Label,Loader, Modal } from "@gravity-ui/uikit";
-import { useCallback, useEffect, useMemo, useRef,useState } from "react";
-import { useLocation,useNavigate } from "react-router-dom";
+import { Button, DropdownMenu, Label, Loader, Modal } from "@gravity-ui/uikit";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import { AUTH_STATE_EVENT, hasStoredAuth, logout, me } from "../../services/api";
+import {
+  AUTH_STATE_EVENT,
+  hasStoredAuth,
+  logout,
+  me,
+} from "../../services/api";
 import {
   getProfileDisplayName,
   getProfileIdentityKey,
 } from "../../utils/accountIdentity";
-import { isPersonalizedProfile, needsPersonalization } from "../../utils/profileState";
+import {
+  isPersonalizedProfile,
+  needsPersonalization,
+} from "../../utils/profileState";
 import { getPathByProject } from "../../utils/projectUtils";
 import AuthModal from "../AuthModal";
 import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
-import styles from "./HeaderNew.module.css";
+import styles from "./HeaderNew.module.scss";
 
 const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 
@@ -66,7 +74,9 @@ function ProjectSelect() {
         </button>
       </div>
 
-      <div className={`${styles.serversMenu} ${isOpen ? styles.serversMenuOpen : ""}`}>
+      <div
+        className={`${styles.serversMenu} ${isOpen ? styles.serversMenuOpen : ""}`}
+      >
         {options.map((option) => (
           <button
             key={option.value}
@@ -196,7 +206,7 @@ export default function HeaderNew() {
       <header className={styles.header}>
         <div className={styles.container}>
           <div className={styles.row}>
-            <div className={styles.leftSide}>
+            <div className={styles.Side}>
               <ThemeSwitcher />
             </div>
 
@@ -230,10 +240,9 @@ export default function HeaderNew() {
                   Новости
                 </button>
               </div>
-
             </div>
 
-            <div className={styles.rightSide}>
+            <div className={styles.sideRight}>
               <div className={styles.accountArea}>
                 {loadingProfile ? (
                   <Loader size="m" />
@@ -243,7 +252,14 @@ export default function HeaderNew() {
                     renderSwitcher={renderAccountSwitcher}
                     items={[
                       ...(!registrationCompleted
-                        ? [[{ text: "Завершить профиль", action: goOnboarding }]]
+                        ? [
+                            [
+                              {
+                                text: "Завершить профиль",
+                                action: goOnboarding,
+                              },
+                            ],
+                          ]
                         : []),
                       [{ text: "Аккаунт и безопасность", action: goSecurity }],
                       { text: "Выйти", action: onLogout, theme: "danger" },
@@ -319,4 +335,3 @@ export default function HeaderNew() {
     </>
   );
 }
-

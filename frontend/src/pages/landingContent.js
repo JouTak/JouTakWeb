@@ -13,7 +13,8 @@ export const sharedProjects = [
   },
   {
     title: "Legacy 1.5.2",
-    description: "Ностальгический сервер для тех, кому раньше блоки были зеленее",
+    description:
+      "Ностальгический сервер для тех, кому раньше блоки были зеленее",
     image: "/img/legacy.png",
     to: "/legacy",
   },
@@ -54,11 +55,11 @@ export const sharedFaqItems = [
   },
 ];
 
-export const itmoCraftPageContent = {
+export const itmocraftPageContent = {
   sections: [
     {
       type: "main",
-      flag: "section_main",
+      flag: "itmocraft_new_hero_section",
       props: {
         backgroundImage: "/img/main-image.png",
         logoSrc: "/img/logo-maxi.svg",
@@ -69,14 +70,14 @@ export const itmoCraftPageContent = {
     },
     {
       type: "projects",
-      flag: "section_projects",
+      flag: "itmocraft_new_projects_section",
       props: {
         projects: sharedProjects,
       },
     },
     {
       type: "events",
-      flag: "section_events",
+      flag: "itmocraft_new_events_section",
       props: {
         events: [
           {
@@ -95,7 +96,7 @@ export const itmoCraftPageContent = {
     },
     {
       type: "gallery",
-      flag: "section_gallery",
+      flag: "itmocraft_new_gallery_section",
       props: {
         galleryItems: [
           {
@@ -139,7 +140,7 @@ export const itmoCraftPageContent = {
     },
     {
       type: "faq",
-      flag: "section_faq",
+      flag: "itmocraft_new_faq_section",
       props: {
         faqItems: sharedFaqItems,
       },
@@ -151,7 +152,7 @@ export const joutakPageContent = {
   sections: [
     {
       type: "main",
-      flag: "section_main",
+      flag: "joutak_new_hero_section",
       props: {
         backgroundImage: "/img/bg-itmocraft-joutak.png",
         logoSrc: "/img/itmocraft-joutak-logo.svg",
@@ -162,44 +163,28 @@ export const joutakPageContent = {
     },
     {
       type: "gallery",
-      flag: "section_gallery",
+      flag: "joutak_new_gallery_section",
       props: {
         galleryItems: [
           {
             label: "Джойтак",
             image: "/img/gallery-bg.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Казахстан",
             image: "/img/gallery-bg-2.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Богемия",
             image: "/img/gallery-bg-3.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Tokyo :3",
             image: "/img/gallery-bg-4.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
         ],
       },
@@ -211,7 +196,7 @@ export const miniGamesPageContent = {
   sections: [
     {
       type: "main",
-      flag: "section_main",
+      flag: "minigames_new_hero_section",
       props: {
         backgroundImage: "/img/bg-minigames.png",
         logoSrc: "/img/minigames-logo.svg",
@@ -221,7 +206,7 @@ export const miniGamesPageContent = {
     },
     {
       type: "projects",
-      flag: "section_projects",
+      flag: "minigames_new_projects_section",
       props: {
         title: "Режимы",
         projects: [
@@ -251,7 +236,8 @@ export const miniGamesPageContent = {
           },
           {
             title: "Splatoon",
-            description: "Используй сплат-пушку, чтобы закрасить белую карту своим цветом и превратить всё вокруг в яркую композицию (?)",
+            description:
+              "Используй сплат-пушку, чтобы закрасить белую карту своим цветом и превратить всё вокруг в яркую композицию (?)",
             image: "/img/splatoon.png",
             imageHeight: "248px",
             to: "/minigames",
@@ -275,7 +261,7 @@ export const miniGamesPageContent = {
     },
     {
       type: "events",
-      flag: "section_events",
+      flag: "minigames_new_events_section",
       props: {
         events: [
           {
@@ -294,57 +280,36 @@ export const miniGamesPageContent = {
     },
     {
       type: "gallery",
-      flag: "section_gallery",
+      flag: "minigames_new_gallery_section",
       props: {
         galleryItems: [
           {
             label: "Лобби",
             image: "/img/gallery-bg.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Block Party",
             image: "/img/gallery-bg-2.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Ace Race",
             image: "/img/gallery-bg-3.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Survival Games",
             image: "/img/gallery-bg-4.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
           {
             label: "Splatoon",
             image: "/img/gallery-bg-3.png",
-            photos: [
-              "#",
-              "#",
-              "#",
-            ],
+            photos: ["#", "#", "#"],
           },
         ],
       },
     },
-    
   ],
 };

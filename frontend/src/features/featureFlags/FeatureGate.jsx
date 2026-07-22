@@ -32,37 +32,29 @@ import {
   useBooleanFlagValue,
   useStringFlagValue,
 } from "@openfeature/react-sdk";
+import PropTypes from "prop-types";
 
-export default function FeatureGate({
-  flag,
-  variant,
-  expect = true,
-  fallback = null,
-  children,
-}) {
+const FeatureGate = ({ flag, flag_type, variants = {}, fallback = null }) => {
+  const stringValue = useStringFlagValue(flag, "");
+  const booleanValue = useBooleanFlagValue(flag, false);
+
   // For variant-based flags
-  if (variant !== undefined) {
-    return (
-      <VariantGate flag={flag} variant={variant} fallback={fallback}>
-        {children}
-      </VariantGate>
-    );
+  if (flag_type === "variant") {
+    return variants[stringValue] || fallback;
+  }
+  // For boolean-based flags
+  if (flag_type === "boolean") {
+    return variants[String(booleanValue)] || fallback;
   }
 
-  // For boolean flags
-  return (
-    <BooleanGate flag={flag} expect={expect} fallback={fallback}>
-      {children}
-    </BooleanGate>
-  );
-}
+  return fallback;
+};
 
-function BooleanGate({ flag, expect, fallback, children }) {
-  const value = useBooleanFlagValue(flag, false);
-  return value === expect ? children : fallback;
-}
+FeatureGate.propTypes = {
+  flag: PropTypes.string.isRequired,
+  flag_type: PropTypes.oneOf(["boolean", "variant"]).isRequired,
+  variants: PropTypes.objectOf(PropTypes.element),
+  fallback: PropTypes.oneOfType([PropTypes.element, PropTypes.oneOf([null])]),
+};
 
-function VariantGate({ flag, variant, fallback, children }) {
-  const value = useStringFlagValue(flag, "");
-  return value === variant ? children : fallback;
-}
+export default FeatureGate;

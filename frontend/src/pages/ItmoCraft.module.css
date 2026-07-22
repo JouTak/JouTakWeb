@@ -9,7 +9,7 @@
   src: url("/img/fonts/minecraft-ten-font-cyrillic.ttf") format("truetype");
 }
 
-.ctaInner {
+.cta-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -39,7 +39,7 @@
   color: rgb(236 247 255 / 100%);
 }
 
-.ctaButton {
+.cta-button {
   margin-top: 6px;
   font-size: 18px;
 }

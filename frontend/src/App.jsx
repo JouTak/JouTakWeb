@@ -14,7 +14,7 @@ import ScrollToTop from "./components/ScrollToTop.jsx";
 const JouTak = lazy(() => import("./pages/JouTak.jsx"));
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
 const MiniGames = lazy(() => import("./pages/Minigames.jsx"));
-const ITMOcraft = lazy(() => import("./pages/ITMOcraft.jsx"));
+const ITMOcraft = lazy(() => import("./pages/ItmoCraft.jsx"));
 const Contact = lazy(() => import("./pages/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));

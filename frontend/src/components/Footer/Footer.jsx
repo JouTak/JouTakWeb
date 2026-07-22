@@ -40,64 +40,64 @@ const CustomFooter = ({
 }) => {
   return (
     <>
-    <footer className={styles.footer}>
-      <div className={styles.inner}>
-        <div className={styles.logoWrap}>
-          <img src={logoSrc} alt={logoAlt} className={styles.logo} />
-        </div>
-
-        <div className={styles.navCol}>
-          <h3 className={styles.heading}>{navigationTitle}</h3>
-          {navigationItems.map((item, index) => (
-            <a
-              key={`${item.label}-${index}`}
-              href={item.href}
-              className={`${styles.subitem} ${index === navigationItems.length - 1 ? styles.subitemLast : ""}`}
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
-
-        <div className={styles.contactsCol}>
-          <h3 className={styles.heading}>{contactsTitle}</h3>
-          {contactItems.map((item, index) => (
-            <a
-              key={`${item.label}-${index}`}
-              href={item.href}
-              className={`${styles.subitem} ${index === contactItems.length - 1 ? styles.subitemLast : ""}`}
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
-
-        <div className={styles.socialCol}>
-          <div className={styles.socialRow}>
-            {socialItems.map(({ type, href }, index) => {
-              const Icon = SOCIAL_ICON_BY_TYPE[type];
-
-              if (!Icon) {
-                return null;
-              }
-
-              return (
-                <div key={`${type}-${index}`} className={styles.socialIcon}>
-                  <a href={href} target="_blank" rel="noopener noreferrer">
-                    <Icon />
-                  </a>
-                </div>
-              );
-            })}
+      <footer className={styles.footer}>
+        <div className={styles.inner}>
+          <div className={styles.logoWrap}>
+            <img src={logoSrc} alt={logoAlt} className={styles.logo} />
           </div>
 
-          <a href="/joutak" className={styles.copyright}>
-            {copyrightText}
-          </a>
+          <div className={styles.navCol}>
+            <h3 className={styles.heading}>{navigationTitle}</h3>
+            {navigationItems.map((item, index) => (
+              <a
+                key={`${item.label}-${index}`}
+                href={item.href}
+                className={`${styles.subitem} ${index === navigationItems.length - 1 ? styles.subitemLast : ""}`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+
+          <div className={styles.contactsCol}>
+            <h3 className={styles.heading}>{contactsTitle}</h3>
+            {contactItems.map((item, index) => (
+              <a
+                key={`${item.label}-${index}`}
+                href={item.href}
+                className={`${styles.subitem} ${index === contactItems.length - 1 ? styles.subitemLast : ""}`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+
+          <div className={styles.socialCol}>
+            <div className={styles.socialRow}>
+              {socialItems.map(({ type, href }, index) => {
+                const Icon = SOCIAL_ICON_BY_TYPE[type];
+
+                if (!Icon) {
+                  return null;
+                }
+
+                return (
+                  <div key={`${type}-${index}`} className={styles.socialIcon}>
+                    <a href={href} target="_blank" rel="noopener noreferrer">
+                      <Icon />
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+
+            <a href="/joutak" className={styles.copyright}>
+              {copyrightText}
+            </a>
+          </div>
         </div>
-      </div>
-    </footer>
-    <img src={bottomImageSrc} alt="" />
+      </footer>
+      <img src={bottomImageSrc} alt="" />
     </>
   );
 };

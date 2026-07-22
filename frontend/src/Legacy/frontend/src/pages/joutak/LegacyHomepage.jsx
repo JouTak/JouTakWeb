@@ -8,7 +8,7 @@ export default function LegacyHomepage({ content }) {
   const carousel = Array.isArray(content?.carousel) ? content.carousel : [];
 
   return (
-    <div className="text-center">
+    <div className="text-center container my-4">
       <ImageCarousel items={carousel} />
 
       <div className="p-5 mb-4 rounded-3">

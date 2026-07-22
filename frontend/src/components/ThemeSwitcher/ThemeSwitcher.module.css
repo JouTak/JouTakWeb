@@ -40,7 +40,7 @@ svg {
   transition: transform 0.45s ease;
 }
 
-.thumbBg {
+.thumb-background {
   width: 100%;
   height: 100%;
 
@@ -49,7 +49,7 @@ svg {
   transition: color 0.45s ease;
 }
 
-.night .thumbBg {
+.night .thumb-background {
   color: #070e14;
 }
 
@@ -101,10 +101,7 @@ svg {
 
   opacity: 1;
 
-  transform:
-    translateX(0)
-    rotate(0deg)
-    scale(1);
+  transform: translateX(0) rotate(0deg) scale(1);
 }
 
 /* Луна */
@@ -114,10 +111,7 @@ svg {
 
   opacity: 0;
 
-  transform:
-    translateX(-40px)
-    rotate(-180deg)
-    scale(0.5);
+  transform: translateX(-40px) rotate(-180deg) scale(0.5);
 }
 
 /* Звезды */
@@ -147,19 +141,13 @@ svg {
 .night .sun {
   opacity: 0;
 
-  transform:
-    translateX(40px)
-    rotate(180deg)
-    scale(0.5);
+  transform: translateX(40px) rotate(180deg) scale(0.5);
 }
 
 .night .moon {
   opacity: 1;
 
-  transform:
-    translateX(40px)
-    rotate(0deg)
-    scale(1);
+  transform: translateX(40px) rotate(0deg) scale(1);
 }
 
 .night .stars {

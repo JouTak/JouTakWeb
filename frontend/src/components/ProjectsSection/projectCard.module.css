@@ -1,20 +1,20 @@
 :root {
-    --big-title-color: #3C9BF9;
-    --big-title-shadow: #003E7CB0;
-    --small-title-color: #3C9BF9;
-    --description-color: #ECF7FF;
-    --background-color: #070E14;
-
+  --big-title-color: #3c9bf9;
+  --big-title-shadow: #003e7cb0;
+  --small-title-color: #3c9bf9;
+  --description-color: #ecf7ff;
+  --background-color: #070e14;
 }
 
 @font-face {
-    font-family: MinecraftFont;
-    src: url('/img/fonts/minecraft-ten-font-cyrillic.ttf') format('truetype');
+  font-family: MinecraftFont;
+  src: url("/img/fonts/minecraft-ten-font-cyrillic.ttf") format("truetype");
 }
 
 @font-face {
-    font-family: GeologicaFont;
-    src: url('/img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf') format('truetype');
+  font-family: GeologicaFont;
+  src: url("/img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf")
+    format("truetype");
 }
 
 .title {
@@ -27,37 +27,37 @@
   flex: 0 0 calc((100% - 40px) / 3);
 }
 
-.card:not(.extended) .imageWrapper img {
+.card:not(.extended) .image-wrapper img {
   width: 100%;
   aspect-ratio: 1 / 1;
   height: auto;
   object-fit: cover;
 }
 
-.card.extended .imageWrapper img {
+.card.extended .image-wrapper img {
   width: 100%;
   aspect-ratio: 1360 / 440;
   height: auto;
   object-fit: cover;
 }
 
-.projectInfo {
+.project-info {
   margin-top: 30px;
   font-family: GeologicaFont, sans-serif;
   text-align: left;
 }
 
-.projectInfo h3 {
-    color: var(--small-title-color);
-    font-size: 40px;
-    font-weight: 500;
+.project-info h3 {
+  color: var(--small-title-color);
+  font-size: 40px;
+  font-weight: 500;
 }
 
-.projectInfo p {
-    color: var(--description-color);
-    font-size: 20px;
-    font-weight: 300;
-    line-height: 1.2;
+.project-info p {
+  color: var(--description-color);
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1.2;
 }
 
 .grid {
@@ -86,15 +86,15 @@
     flex: 0 0 calc((100% - 20px) / 2);
   }
 
-  .projectInfo h3 {
+  .project-info h3 {
     font-size: 28px;
   }
 
-  .projectInfo p {
+  .project-info p {
     font-size: 16px;
   }
 
-  .card.extended .imageWrapper img {
+  .card.extended .image-wrapper img {
     aspect-ratio: 1 / 1;
   }
 }

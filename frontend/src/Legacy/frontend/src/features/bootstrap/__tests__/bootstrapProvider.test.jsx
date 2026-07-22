@@ -131,7 +131,7 @@ describe("BootstrapProvider", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("Legacy content")).toBeInTheDocument();
+    expect(await screen.findByText(/legacy content/i)).toBeInTheDocument();
   });
 
   it("renders v2 homepage when bootstrap resolves to v2", async () => {

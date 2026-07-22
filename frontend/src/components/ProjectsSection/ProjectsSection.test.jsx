@@ -21,7 +21,6 @@ describe("ProjectsSection", () => {
         />
       </MemoryRouter>,
     );
-    screen.logTestingPlaygroundURL();
     expect(
       screen.getByRole("link", { name: /тестовый проект/i }),
     ).toHaveAttribute("href", "/nevada");

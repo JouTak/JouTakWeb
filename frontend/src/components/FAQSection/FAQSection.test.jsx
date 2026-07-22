@@ -15,6 +15,7 @@ describe("FAQSection", () => {
   it("reveals an answer when its question is toggled", async () => {
     const user = userEvent.setup();
     render(<FAQSection faqItems={items} />);
+    screen.logTestingPlaygroundURL();
     const toggle = screen.getByRole("button", { name: "Как подключиться?" });
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");

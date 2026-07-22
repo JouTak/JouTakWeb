@@ -182,3 +182,7 @@ cython_debug/
 
 .env.development
 .env.production.secrets
+<<<<<<< HEAD
+=======
+.husky/_
+>>>>>>> 8c1ed38 (fix(frontend): strengthen linting workflow)

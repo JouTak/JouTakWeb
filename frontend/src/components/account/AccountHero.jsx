@@ -1,7 +1,8 @@
-import PropTypes from "prop-types";
 import { Avatar, Label } from "@gravity-ui/uikit";
-import { isPersonalizedProfile } from "../../utils/profileState";
+import PropTypes from "prop-types";
+
 import { getProfileDisplayName } from "../../utils/accountIdentity";
+import { isPersonalizedProfile } from "../../utils/profileState";
 
 function AccountHero({ profile }) {
   const displayName = getProfileDisplayName(profile);

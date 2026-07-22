@@ -1,4 +1,4 @@
-import { Container, Button } from "react-bootstrap";
+import { Button, Container } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 const NotFound = () => {

@@ -1,21 +1,19 @@
+import { Button } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PropTypes from "prop-types";
-import { Button } from "@gravity-ui/uikit";
-
-import { getEmailStatus, listSessionsHeadless, me } from "../services/api";
-
-import { needsPersonalization } from "../utils/profileState";
 
 import AccountHero from "../components/account/AccountHero";
-import ProfileCard from "../components/account/ProfileCard";
+import DeleteAccountCard from "../components/account/DeleteAccountCard";
 import EmailCard from "../components/account/EmailCard";
 import PasswordCard from "../components/account/PasswordCard";
-import DeleteAccountCard from "../components/account/DeleteAccountCard";
+import ProfileCard from "../components/account/ProfileCard";
 // import MfaCard from '../components/account/MfaCard';
 // import PasskeysCard from '../components/account/PasskeysCard';
 // import OauthCard from '../components/account/OauthCard';
 import SessionsCard from "../components/account/SessionsCard";
+import { getEmailStatus, listSessionsHeadless, me } from "../services/api";
+import { needsPersonalization } from "../utils/profileState";
 
 const pageStyle = {
   maxWidth: 960,

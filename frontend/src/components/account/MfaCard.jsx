@@ -1,5 +1,5 @@
-import PropTypes from "prop-types";
 import { Button, Label } from "@gravity-ui/uikit";
+import PropTypes from "prop-types";
 
 const cardStyle = {
   border: "1px solid rgba(255,255,255,0.12)",

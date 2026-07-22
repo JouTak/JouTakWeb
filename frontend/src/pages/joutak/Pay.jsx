@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
 import "./pay.css";
+
+import { Link } from "react-router-dom";
 
 export default function Pay() {
   return (
@@ -33,6 +34,7 @@ export default function Pay() {
         className="pay"
         src="https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b?iframe=1&theme=dark"
         name="ya-form-6515e3dcd04688fca3cc271b"
+        title="Форма оплаты JouTak"
       />
     </section>
   );

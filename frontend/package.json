@@ -74,5 +74,11 @@
     "stylelint-config-standard": "^37.0.0",
     "vite": "^6.4.2",
     "vitest": "^4.1.5"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "msw@2.13.6": true,
+    "esbuild@0.25.9": true,
+    "@swc/core@1.10.15": true
   }
 }

@@ -24,7 +24,7 @@ const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
 const ITMOcraftLegacy = lazy(
-  () => import("./Legacy/frontend/src/pages/ITMOcraft.jsx"),
+  () => import("./Legacy/frontend/src/pages/ItmoCraft.jsx"),
 );
 
 function safeInternalPath(path) {

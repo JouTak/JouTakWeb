@@ -5,7 +5,7 @@ import sectionStyles from "../components/shared/sectionLayout.module.css";
 import FeatureGate from "../features/featureFlags/FeatureGate";
 import { itmocraftPageContent } from "./landingContent";
 const ITMOcraftLegacy = lazy(
-  () => import("../Legacy/frontend/src/pages/ITMOcraft"),
+  () => import("../Legacy/frontend/src/pages/ItmoCraft"),
 );
 const styles = lazy(() => import("./ItmoCraft.module.css"));
 const LandingPageBuilder = lazy(

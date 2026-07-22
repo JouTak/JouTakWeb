@@ -1,7 +1,6 @@
 import { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
-  Navigate,
   Route,
   Routes,
   useLocation,
@@ -15,7 +14,7 @@ import ScrollToTop from "./components/ScrollToTop.jsx";
 const JouTak = lazy(() => import("./pages/JouTak.jsx"));
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
 const MiniGames = lazy(() => import("./pages/Minigames.jsx"));
-const ItmoCraft = lazy(() => import("./pages/ItmoCraft.jsx"));
+const ITMOcraft = lazy(() => import("./pages/ITMOcraft.jsx"));
 const Contact = lazy(() => import("./pages/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
@@ -24,6 +23,9 @@ const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
+const ITMOcraftLegacy = lazy(
+  () => import("./Legacy/frontend/src/pages/ITMOcraft.jsx"),
+);
 
 function safeInternalPath(path) {
   if (typeof path !== "string") return "/joutak";
@@ -62,11 +64,11 @@ function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes location={background || location}>
-        <Route path="/" element={<Navigate to="/itmocraft" replace />} />
+        <Route path="/" element={<ITMOcraft />} />
         <Route path="/joutak" element={<JouTak />} />
         <Route path="/legacy" element={<Legacy />} />
-        <Route path="/itmocraft" element={<ItmoCraft />} />
         <Route path="/minigames" element={<MiniGames />} />
+        <Route path="/itmocraft" element={<ITMOcraftLegacy />} />
         <Route path="/contact" element={<Contact />} />
         <Route
           path="/account/security"

@@ -69,6 +69,7 @@
     "lint-staged": "^16.4.0",
     "msw": "^2.13.6",
     "prettier": "^3.5.0",
+    "sass-embedded": "^1.100.0",
     "stylelint": "^16.14.1",
     "stylelint-config-standard": "^37.0.0",
     "vite": "^6.4.2",

@@ -1,0 +1,43 @@
+.notification-container {
+  position: absolute;
+  align-self: flex-start;
+  width: 100%;
+  height: 133px;
+  margin-top: 2%;
+  margin-right: 2%;
+  display: flex;
+  justify-content: flex-end;
+
+  .notification-inner {
+    background-image: url("/img/notification-bg.svg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    font-family: $font-minecraft-seven;
+    font-size: 23px;
+    transform-origin: right top;
+    width: 446px;
+    height: 100%;
+    @media (max-width: 768px) {
+      transform: scale(0.8);
+    }
+
+    @media (max-width: 480px) {
+      transform: scale(0.5);
+    }
+
+    .up {
+      text-shadow: 3px 3px rgb(62 62 62 / 100%);
+      position: relative;
+      top: 23px;
+      left: 100px;
+    }
+
+    .down {
+      color: rgb(84 252 84 / 100%);
+      position: relative;
+      top: 50px;
+      left: 20px;
+    }
+  }
+}

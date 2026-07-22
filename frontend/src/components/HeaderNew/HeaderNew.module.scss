@@ -1,26 +1,19 @@
-@font-face {
-    font-family: MinecraftSeven;
-    src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
-  }
+.header {
+  position: absolute;
+  margin: 0;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1530 / 124;
+  z-index: 1000;
 
-  .header {
-    position: absolute;
-    top: 0;
-    left: 0;
-  
-    width: 100%;
-    height: 137px;
-    z-index: 1000;
-  
-    background-image: url("/img/header-bg.svg");
-    background-repeat: no-repeat;
-  
-    background-size: 100% auto;
-    background-position: center;
-  
-    font-family: MinecraftSeven, sans-serif;
-    font-size: 14px;
-  }
+  background-image: url("/img/header-bg.svg");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+
+  font-family: $font-minecraft-seven;
+  font-size: 14px;
+}
 
 .container {
   height: 100%;
@@ -36,46 +29,39 @@
   justify-content: space-between;
 }
 
-.leftSide,
-.rightSide {
+.side {
   display: flex;
   align-items: center;
   flex: 1;
+
+  &-right {
+    justify-content: flex-end;
+  }
 }
 
-.rightSide {
-  justify-content: flex-end;
-}
-
-.centerGroup {
+.center-group {
   display: flex;
   align-items: center;
   justify-content: center;
-
-  /* gap: 12px; */
   flex-wrap: wrap;
 }
 
-.leftNavGroup {
+.left-nav-group {
   display: flex;
   align-items: center;
   gap: 15px;
-
-  /* border: 1px solid red; */
   padding-right: 40px;
 }
 
-.rightNavGroup {
+.right-nav-group {
   display: flex;
   align-items: center;
   gap: 15px;
   padding-left: 40px;
-
-  /* border: 1px solid red; */
 }
 
-.navButton,
-.logoButton {
+.nav-button,
+.logo-button {
   border: none;
   background: transparent;
   color: #fff;
@@ -83,15 +69,15 @@
   padding: 6px 20px;
 }
 
-.logoButton img {
+.logo-button img {
   height: 71px;
 }
 
-.serversSelectRoot {
+.servers-select-root {
   position: relative;
 }
 
-.serversBlock {
+.servers-block {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -99,7 +85,7 @@
   justify-content: center;
 }
 
-.serversToggleBtn {
+.servers-toggle-btn {
   background: transparent;
   border: none;
   display: flex;
@@ -109,22 +95,22 @@
   width: 32px;
   height: 32px;
   cursor: pointer;
+
+  img {
+    display: block;
+    width: 15px;
+    height: auto;
+    transform: rotate(90deg);
+    transform-origin: center;
+    transition: transform 0.28s ease;
+  }
+
+  &--open img {
+    transform: rotate(270deg);
+  }
 }
 
-.serversToggleBtn img {
-  display: block;
-  width: 15px;
-  height: auto;
-  transform: rotate(90deg);
-  transform-origin: center;
-  transition: transform 0.28s ease;
-}
-
-.serversToggleBtnOpen img {
-  transform: rotate(270deg);
-}
-
-.serversMenu {
+.servers-menu {
   position: absolute;
   top: calc(100% + 4px);
   left: 50%;
@@ -153,40 +139,40 @@
   z-index: 20;
 }
 
-.serversMenuOpen {
+.servers-menu-open {
   max-height: 220px;
   opacity: 1;
 }
 
-.serverOption {
+.server-option {
   background: transparent;
   border: none;
   color: #fff;
   text-align: left;
-  font-family: MinecraftSeven, sans-serif;
+  font-family: $font-minecraft-seven;
   padding-bottom: 8px;
   padding-top: 5px;
   padding-left: 15px;
   cursor: pointer;
 }
 
-.serverOption:hover {
+.server-option:hover {
   font-size: 16px;
 }
 
-.accountArea {
+.account-area {
   display: flex;
   align-items: center;
 }
 
-.avatarButton {
+.avatar-button {
   border: none;
   background: transparent;
   padding: 0;
   cursor: pointer;
 }
 
-.avatarOuter {
+.avatar-outer {
   width: 70px;
   height: 70px;
   border: 3px solid #fff;
@@ -196,7 +182,7 @@
   justify-content: center;
 }
 
-.avatarInner {
+.avatar-inner {
   width: 60px;
   height: 60px;
   border-radius: 50%;

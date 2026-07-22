@@ -10,7 +10,7 @@
   justify-content: center;
   width: 325px;
   height: 59px;
-  padding: 0px 0px 10px;
+  padding: 0 0 10px;
   border: none;
   background-color: transparent;
   background-image: url("/img/кнопка-bg.png");
@@ -19,8 +19,8 @@
   background-position: center;
   font-family: MinecraftSeven, sans-serif;
   font-size: 24px;
-  color: #EAEAEA;
-  text-shadow: 3px 3px 0 #3F3F3F;
+  color: #eaeaea;
+  text-shadow: 3px 3px 0 #3f3f3f;
   cursor: pointer;
   transition: all 0.1s ease;
 }
@@ -35,7 +35,7 @@
     width: 280px;
     height: 50px;
     font-size: 20px;
-    text-shadow: 2.5px 2.5px 0 #3F3F3F;
+    text-shadow: 2.5px 2.5px 0 #3f3f3f;
     margin-top: 25px;
   }
 }
@@ -45,7 +45,7 @@
     width: 250px;
     height: 45px;
     font-size: 18px;
-    text-shadow: 2px 2px 0 #3F3F3F;
+    text-shadow: 2px 2px 0 #3f3f3f;
     margin-top: 15px;
   }
 }
@@ -55,7 +55,7 @@
     width: 222px;
     height: 40px;
     font-size: 16px;
-    text-shadow: 2px 2px 0 #3F3F3F;
+    text-shadow: 2px 2px 0 #3f3f3f;
     margin-top: 5px;
   }
 }
@@ -65,7 +65,7 @@
     width: 180px;
     height: 32.5px;
     font-size: 12px;
-    text-shadow: 1px 1px 0 #3F3F3F;
+    text-shadow: 1px 1px 0 #3f3f3f;
     margin-top: 0;
   }
 }
@@ -75,8 +75,6 @@
     width: 200px;
     height: 36px;
     font-size: 14px;
-    text-shadow: 1px 1px 0 #3F3F3F;
+    text-shadow: 1px 1px 0 #3f3f3f;
   }
 }
-
-

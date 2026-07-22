@@ -75,7 +75,8 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
     }));
     try {
       const params = pickFeatureOverrideParams(window.location.search);
-      const currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '') || 'homepage';
+      const currentPath =
+        window.location.pathname.replace(/^\/+|\/+$/g, "") || "homepage";
       params.set("page", currentPath);
       const bootstrap = await getBootstrap(params);
       if (!isCurrentRequest(requestSeq)) {
@@ -127,7 +128,7 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
       originalPushState.apply(this, args);
       handleLocationChange();
     };
-    
+
     return () => {
       mountedRef.current = false;
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
@@ -145,7 +146,8 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
           error: null,
         }));
         const params = pickFeatureOverrideParams(window.location.search);
-        const currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '') || 'homepage';
+        const currentPath =
+          window.location.pathname.replace(/^\/+|\/+$/g, "") || "homepage";
         params.set("page", currentPath);
         const bootstrap = await getBootstrap(params);
         if (!isCurrentRequest(requestSeq)) {

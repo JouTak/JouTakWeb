@@ -1,15 +1,15 @@
 const events = [
-    {
-      title: "Бункер",
-      description: `На сервере JouTak произошла ужасающая катастрофа. 
+  {
+    title: "Бункер",
+    description: `На сервере JouTak произошла ужасающая катастрофа. 
                     Спасение есть, но доступно оно немногим. 
                     Лишь избранные смогут доказать, что достойны выживания и 
                     продолжения судьбы человечества.`,
-      location: 'JouTak', 
-      image: "/img/бункер.png",
-      date: new Date(2026, 1, 30, 19, 0),
-      to:'#'
-    }
-]
+    location: "JouTak",
+    image: "/img/бункер.png",
+    date: new Date(2026, 1, 30, 19, 0),
+    to: "#",
+  },
+];
 
-export default events
+export default events;

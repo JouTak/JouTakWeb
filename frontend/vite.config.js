@@ -4,6 +4,17 @@ import { defineConfig } from "vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  css: {
+    modules: {
+      localsConvention: "camelCaseOnly",
+    },
+    preprocessorOptions: {
+      scss: {
+        api: "modern-compiler",
+        additionalData: `@use "/src/assets/__fonts.scss" as *;`,
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.js"],

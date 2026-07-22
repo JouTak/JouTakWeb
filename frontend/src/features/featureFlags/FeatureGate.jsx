@@ -34,7 +34,12 @@ import {
 } from "@openfeature/react-sdk";
 import PropTypes from "prop-types";
 
-const FeatureGate = ({ flag, flag_type, variants = {}, fallback = null }) => {
+const FeatureGate = ({
+  flag,
+  flag_type = "",
+  variants = {},
+  fallback = null,
+}) => {
   const stringValue = useStringFlagValue(flag, "");
   const booleanValue = useBooleanFlagValue(flag, false);
 

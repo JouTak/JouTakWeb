@@ -11,7 +11,7 @@ import FeatureGate from "../../features/featureFlags/FeatureGate.jsx";
 
 function Hero({ hero }) {
   return (
-    <section className="rounded-4 p-4 p-lg-5 text-light mb-4 bg-dark">
+    <section className="rounded-4 p-4 p-lg-5 text-light mb-4 bg-dark container my-4">
       <div className="row g-4 align-items-center">
         <div className="col-lg-8">
           <div className="text-uppercase small text-warning mb-2">

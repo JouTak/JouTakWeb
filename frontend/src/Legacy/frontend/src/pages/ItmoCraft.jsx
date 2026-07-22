@@ -17,9 +17,9 @@ const ITMOCRAFT_CAROUSEL_ITEMS = [
   },
 ];
 
-const ItmoCraft = () => {
+const ITMOcraft = () => {
   return (
-    <div className="text-center">
+    <div className="text-center container my-4">
       <ImageCarousel items={ITMOCRAFT_CAROUSEL_ITEMS} />
 
       <div className="p-5 mb-4 rounded-3">
@@ -46,4 +46,4 @@ const ItmoCraft = () => {
   );
 };
 
-export default ItmoCraft;
+export default ITMOcraft;

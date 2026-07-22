@@ -113,7 +113,7 @@ export default function ThemeSwitcher() {
       <div className={styles.thumb}>
         {/* Фон ползунка */}
         <svg
-          className={styles.thumbBg}
+          className={styles.thumbBackground}
           viewBox="0 0 87 40"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -133,7 +133,12 @@ export default function ThemeSwitcher() {
             d="M7.42578 20.198V9.80199H9.80202V7.42575H20.1981V9.80199H22.5743V20.198H20.1981V22.5743H9.80202V20.198H7.42578Z"
             fill="currentColor"
           />
-          <rect y="13.3663" width="5.0495" height="2.9703" fill="currentColor" />
+          <rect
+            y="13.3663"
+            width="5.0495"
+            height="2.9703"
+            fill="currentColor"
+          />
           <rect
             x="16.3365"
             width="5.0495"
@@ -232,12 +237,15 @@ export default function ThemeSwitcher() {
 
         <svg
           className={styles.clouds}
-          width="23" 
-          height="14" 
+          width="23"
+          height="14"
           viewBox="0 0 23 14"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path d="M0 10V6H2V4H4V2H6V0H17V2H19V4H21V6H23V10H21V12H19V14H4V12H2V10H0Z" fill="currentColor" />
+          <path
+            d="M0 10V6H2V4H4V2H6V0H17V2H19V4H21V6H23V10H21V12H19V14H4V12H2V10H0Z"
+            fill="currentColor"
+          />
         </svg>
       </div>
     </button>

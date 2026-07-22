@@ -15,7 +15,7 @@
   gap: 32px;
 }
 
-.logoWrap {
+.logo-wrap {
   min-width: 260px;
 }
 
@@ -25,15 +25,15 @@
   height: auto;
 }
 
-.navCol {
+.nav-col {
   min-width: 160px;
 }
 
-.contactsCol {
+.contacts-col {
   min-width: 190px;
 }
 
-.socialCol {
+.social-col {
   min-width: 220px;
 }
 
@@ -54,17 +54,17 @@
   transition: color 0.2s ease;
 }
 
-.subitemLast {
+.subitem-last {
   margin-bottom: 0;
 }
 
-.socialRow {
+.social-row {
   display: flex;
   gap: 14px;
   margin-bottom: 24px;
 }
 
-.socialIcon {
+.social-icon {
   width: 50px;
   height: 50px;
   border-radius: 50%;
@@ -76,7 +76,7 @@
   font-size: 27px;
 }
 
-.socialIcon a {
+.social-icon a {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,11 +89,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.socialIcon a:visited {
+.social-icon a:visited {
   color: inherit;
 }
 
-.socialIcon a:focus-visible {
+.social-icon a:focus-visible {
   outline: 2px solid rgb(255 255 255 / 55%);
   outline-offset: 3px;
 }
@@ -133,7 +133,7 @@
     font-size: 15px;
   }
 
-  .socialIcon {
+  .social-icon {
     width: 44px;
     height: 44px;
     font-size: 24px;
@@ -167,12 +167,12 @@
     font-size: 14px;
   }
 
-  .socialRow {
+  .social-row {
     gap: 10px;
     margin-bottom: 16px;
   }
 
-  .socialIcon {
+  .social-icon {
     width: 40px;
     height: 40px;
     font-size: 20px;
@@ -187,18 +187,18 @@
     gap: 18px 16px;
   }
 
-  .logoWrap {
+  .logo-wrap {
     grid-column: 1 / -1;
     min-width: 0;
   }
 
-  .socialCol {
+  .social-col {
     grid-column: 1 / -1;
     min-width: 0;
   }
 
-  .navCol,
-  .contactsCol {
+  .nav-col,
+  .contacts-col {
     min-width: 0;
   }
 

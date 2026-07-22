@@ -16,7 +16,7 @@ Adding a new feature flag:
     4. Configure targeting rules in Django admin
 
 Example:
-    "itmocraft_new_events_section": {
+    "itmocraft_new_events": {
         "kind": "boolean",
         "default": False,
         "variants": [True, False],
@@ -35,19 +35,41 @@ from django.conf import settings
 
 FEATURE_REGISTRY: dict[str, dict] = {
     # ─── Homepage variant rollout ──────────────────────────────────────
-    "site_homepage_version": {
+    "site_new_homepage": {
         "kind": "variant",
-        "default_env": "FF_SITE_HOMEPAGE_VERSION",
-        "default_fallback": "legacy",
-        "variants": ["legacy", "v2"],
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
         "pages": ["homepage"],
         "sticky": False,
         "description": (
-            "Switches the /joutak homepage between the legacy carousel "
-            "layout and the new V2 layout (projects, events, gallery, "
-            "FAQ sections)."
+            "Switches the /joutak new/legacy homepage."
         ),
         "visual_impact": "Full page replacement on /joutak",
+    },
+    "site_new_minigames_page": {
+        "kind": "variant",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["homepage"],
+        "sticky": False,
+        "description": (
+            "Switches the /minigames new/legacy homepage."
+        ),
+        "visual_impact": "Full page replacement on /minigames",
+    },
+    "site_new_itmocraft_page": {
+        "kind": "variant",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["homepage"],
+        "sticky": False,
+        "description": (
+            "Switches the /itmocraft new/legacy homepage."
+        ),
+        "visual_impact": "Full page replacement on /itmocraft",
     },
     # ─── Profile personalization: UI toggle ────────────────────────────
     "profile_personalization_ui": {
@@ -92,7 +114,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "403 error for users without complete profiles",
     },
     # ─── New design elements from website-dev (PR #85) ─────────────────
-    "site_footer_v2": {
+    "site_new_footer": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -102,7 +124,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "description": "New footer design from the website-dev branch.",
         "visual_impact": "Replaces the site footer across all pages",
     },
-    "site_header_v2": {
+    "site_new_header": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -114,7 +136,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         ),
         "visual_impact": "Replaces the site header/nav across all pages",
     },
-    "joutak_projects_section": {
+    "section_projects": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -126,7 +148,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         ),
         "visual_impact": "Project cards grid below the hero on /joutak",
     },
-    "joutak_hero_section": {
+    "section_main": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -136,7 +158,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "description": "Shows the new full-viewport homepage hero.",
         "visual_impact": "Replaces the hero section on /joutak",
     },
-    "joutak_events_section": {
+    "section_events": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -146,7 +168,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "description": "Shows the events section on the homepage.",
         "visual_impact": "Events timeline/carousel on /joutak",
     },
-    "joutak_faq_section": {
+    "section_faq": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -156,7 +178,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "description": "Shows the FAQ accordion section on the homepage.",
         "visual_impact": "FAQ section on /joutak",
     },
-    "joutak_gallery_section": {
+    "section_gallery": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -165,16 +187,6 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "sticky": False,
         "description": "Shows the gallery section on the homepage.",
         "visual_impact": "Photo gallery with tab switching on /joutak",
-    },
-    "itmocraft_new_header": {
-        "kind": "boolean",
-        "default_env": None,
-        "default_fallback": False,
-        "variants": [True, False],
-        "pages": ["itmocraft"],
-        "sticky": False,
-        "description": "New header design for the /itmocraft page.",
-        "visual_impact": "Replaces the header on /itmocraft",
     },
 }
 

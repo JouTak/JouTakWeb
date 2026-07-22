@@ -29,7 +29,7 @@ const FALLBACK_HOMEPAGE_CONTENT = {
 
 export default function JouTak() {
   const bootstrapVariant = useStringFlagValue(
-    "site_homepage_version",
+    "site_homepage_page_version",
     "legacy",
   );
   const [state, setState] = useState({
@@ -70,6 +70,7 @@ export default function JouTak() {
     };
   }, [bootstrapVariant]);
 
+  console.log(state);
   if (state.loading && !state.payload) {
     return <div className="py-5 text-center text-secondary">Загрузка...</div>;
   }

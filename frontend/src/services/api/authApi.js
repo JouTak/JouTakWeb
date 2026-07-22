@@ -1,13 +1,30 @@
 import {
   allauthAppRequest,
+  extractSessionToken,
   sessionGet,
   sessionPost,
+  setSessionToken,
 } from "../auth/sessionClient";
 import {
   clearAuthStorage,
+  markPendingMfaSession,
   mergeStoredTokens,
   tokenStore,
 } from "../auth/tokenStore";
+
+function extractPendingMfa(payload) {
+  const flows = Array.isArray(payload?.data?.flows) ? payload.data.flows : [];
+  const pending = flows.find((flow) => flow?.id === "mfa_authenticate") || null;
+  if (!pending) {
+    return null;
+  }
+  return {
+    status: "pending_mfa",
+    flows,
+    types: Array.isArray(pending?.types) ? pending.types : [],
+    session_token: payload?.meta?.session_token || null,
+  };
+}
 
 function getAnonymousCompletionPayload(error) {
   const response = error?.response;
@@ -25,23 +42,40 @@ function getAnonymousCompletionPayload(error) {
 }
 
 export async function loginApp({ login, password }) {
-  const response = await allauthAppRequest("post", "/auth/login", {
-    data: {
-      username: String(login || "").trim(),
-      password,
-    },
-  });
+  try {
+    const response = await allauthAppRequest("post", "/auth/login", {
+      data: {
+        username: String(login || "").trim(),
+        password,
+      },
+    });
 
-  const sessionToken =
-    response?.data?.meta?.session_token ||
-    response?.headers?.["x-session-token"] ||
-    null;
-  if (!sessionToken) {
-    throw new Error("No session token returned on login");
+    const sessionToken =
+      response?.data?.meta?.session_token ||
+      response?.headers?.["x-session-token"] ||
+      null;
+    if (!sessionToken) {
+      throw new Error("No session token returned on login");
+    }
+
+    setSessionToken(sessionToken, { emit: true });
+    return {
+      status: "authenticated",
+      session_token: sessionToken,
+    };
+  } catch (error) {
+    const sessionToken = extractSessionToken(error?.response);
+    const pending = extractPendingMfa(error?.response?.data);
+    if (pending && sessionToken) {
+      setSessionToken(sessionToken, { emit: false });
+      markPendingMfaSession(true);
+      return {
+        ...pending,
+        session_token: sessionToken,
+      };
+    }
+    throw error;
   }
-
-  mergeStoredTokens({ session_token: sessionToken }, { emit: true });
-  return sessionToken;
 }
 
 export async function signupApp({ email, password }) {
@@ -60,7 +94,7 @@ export async function signupApp({ email, password }) {
     throw new Error("No session token returned on signup");
   }
 
-  mergeStoredTokens({ session_token: sessionToken }, { emit: true });
+  setSessionToken(sessionToken, { emit: true });
   return sessionToken;
 }
 
@@ -82,13 +116,19 @@ export async function jwtFromSession() {
 }
 
 export async function doLogin({ login, password }) {
-  await loginApp({ login, password });
+  const result = await loginApp({ login, password });
+  if (result?.status === "pending_mfa") {
+    return result;
+  }
   try {
     await jwtFromSession();
   } catch {
     // Session can still be valid for headless endpoints even if JWT exchange fails.
   }
-  return tokenStore.get();
+  return {
+    status: "authenticated",
+    tokens: tokenStore.get(),
+  };
 }
 
 export async function doSignupAndLogin({ email, password }) {
@@ -98,6 +138,19 @@ export async function doSignupAndLogin({ email, password }) {
   } catch {
     // Session can still be valid for headless endpoints even if JWT exchange fails.
   }
+  return {
+    status: "authenticated",
+    tokens: tokenStore.get(),
+  };
+}
+
+export async function finalizeSessionAuthentication() {
+  try {
+    await jwtFromSession();
+  } catch {
+    // Headless session may still be usable for app endpoints.
+  }
+  markPendingMfaSession(false);
   return tokenStore.get();
 }
 
@@ -136,6 +189,7 @@ export async function changePassword({
 export async function inspectEmailVerification(key) {
   const { data } = await allauthAppRequest("get", "/auth/email/verify", {
     headers: { "X-Email-Verification-Key": key },
+    includeSession: false,
   });
   return data;
 }
@@ -145,6 +199,7 @@ export async function confirmEmailVerification(key) {
     const { data } = await allauthAppRequest("post", "/auth/email/verify", {
       data: { key },
       headers: { "X-Email-Verification-Key": key },
+      includeSession: false,
     });
     return data;
   } catch (error) {

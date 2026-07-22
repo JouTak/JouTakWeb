@@ -43,24 +43,45 @@ function readJsonTokens(raw) {
 export function readStoredTokens() {
   const storage = tokenStorage();
   if (!storage) {
-    legacyTokenStorage()?.removeItem(TOKENS_KEY);
     return {};
   }
+  return readJsonTokens(storage.getItem(TOKENS_KEY));
+}
 
-  const tokens = readJsonTokens(storage.getItem(TOKENS_KEY));
-  if (Object.keys(tokens).length > 0) {
-    return tokens;
+/**
+ * One-shot migration: if tokens live in `localStorage` (legacy), move
+ * them into `sessionStorage` and drop the legacy entry. Call this once
+ * at application startup; subsequent reads use `readStoredTokens`
+ * unconditionally and stay O(1).
+ */
+export function migrateLegacyTokenStorage() {
+  const storage = tokenStorage();
+  const legacyStorage = legacyTokenStorage();
+
+  if (!storage) {
+    legacyStorage?.removeItem(TOKENS_KEY);
+    return;
   }
 
-  const legacyStorage = legacyTokenStorage();
-  const legacyTokens = readJsonTokens(legacyStorage?.getItem(TOKENS_KEY));
-  const { refresh, ...migratedTokens } = legacyTokens;
-  void refresh;
+  if (storage.getItem(TOKENS_KEY) !== null) {
+    legacyStorage?.removeItem(TOKENS_KEY);
+    return;
+  }
+
+  const legacyRaw = legacyStorage?.getItem(TOKENS_KEY);
+  if (!legacyRaw) {
+    return;
+  }
+
+  const legacyTokens = readJsonTokens(legacyRaw);
+  // Never migrate the old long-lived refresh token: it must only live
+  // in the HttpOnly cookie issued by the backend.
+  const { refresh: _legacyRefresh, ...migratedTokens } = legacyTokens;
+  void _legacyRefresh;
   if (Object.keys(migratedTokens).length > 0) {
     storage.setItem(TOKENS_KEY, JSON.stringify(migratedTokens));
-    legacyStorage?.removeItem(TOKENS_KEY);
   }
-  return migratedTokens;
+  legacyStorage?.removeItem(TOKENS_KEY);
 }
 
 export function writeStoredTokens(tokens, { emit = true } = {}) {
@@ -73,7 +94,6 @@ export function writeStoredTokens(tokens, { emit = true } = {}) {
   } else if (storage) {
     storage.setItem(TOKENS_KEY, JSON.stringify(nextTokens));
   }
-  legacyTokenStorage()?.removeItem(TOKENS_KEY);
 
   if (emit) {
     const previousState = hasAuthTokens(previousTokens);
@@ -95,6 +115,22 @@ export function mergeStoredTokens(partial, { emit = true } = {}) {
     nextTokens[key] = value;
   });
   writeStoredTokens(nextTokens, { emit });
+}
+
+export function markPendingMfaSession(pending = true) {
+  const currentTokens = readStoredTokens();
+  if (!pending) {
+    if (!currentTokens.pending_mfa) return;
+    const { pending_mfa: _pendingMfa, ...rest } = currentTokens;
+    void _pendingMfa;
+    writeStoredTokens(rest, { emit: false });
+    emitAuthStateChanged();
+    return;
+  }
+  if (!currentTokens.session_token) return;
+  if (currentTokens.pending_mfa) return;
+  writeStoredTokens({ ...currentTokens, pending_mfa: true }, { emit: false });
+  emitAuthStateChanged();
 }
 
 export function clearAuthStorage({ emit = true } = {}) {

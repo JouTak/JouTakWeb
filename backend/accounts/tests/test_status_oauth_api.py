@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 from accounts.tests.base import APITestCase
-from core.models import UserSessionMeta
+from core.models import UserProfile, UserSessionMeta
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.utils import timezone
@@ -44,10 +44,35 @@ class AccountStatusAndOAuthApiTests(APITestCase):
         data = response.json()
         self.assertEqual(data["profile_state"], "basic")
         self.assertEqual(data["profile_complete"], False)
+        self.assertEqual(data["personalization_context"], "new_registration")
+        self.assertEqual(
+            data["personalization_prompt_variant"], "registration_setup"
+        )
         self.assertIn("vk_username", data["missing_fields"])
         self.assertIn("minecraft_nick", data["missing_fields"])
         self.assertIn("minecraft_has_license", data["missing_fields"])
         self.assertIn("is_itmo_student", data["missing_fields"])
+
+    def test_account_status_marks_legacy_incomplete_profiles(self) -> None:
+        payload = self.signup_and_auth()
+        user = User.objects.get(email=payload["email"].lower())
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.personalization_origin = (
+            UserProfile.PERSONALIZATION_ORIGIN_LEGACY
+        )
+        profile.save(update_fields=["personalization_origin", "updated_at"])
+
+        response = self.client.get(
+            self.api("/account/status"),
+            **self.auth_headers(payload["session_token"]),
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        data = response.json()
+        self.assertEqual(data["personalization_context"], "legacy_required")
+        self.assertEqual(
+            data["personalization_prompt_variant"], "migration_notice"
+        )
 
     def test_oauth_providers_requires_auth(self) -> None:
         response = self.client.get(self.api("/oauth/providers"))

@@ -31,7 +31,13 @@ def raise_field_error(
     message: str,
     code: str = "invalid",
 ) -> Never:
+    # 422 Unprocessable Entity mirrors how ninja/pydantic signal
+    # schema-level validation failures. Keep field-level business
+    # rule violations on the same status code so callers have a single
+    # predicate (`status === 422` → render per-field errors); plain
+    # 400 stays reserved for non-field domain failures
+    # (`{"detail": "..."}`).
     raise StructuredHttpError(
-        400,
+        422,
         {field: [{"message": message, "code": code}]},
     )

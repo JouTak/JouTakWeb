@@ -144,7 +144,13 @@ def list_sessions(request: HttpRequest) -> SessionsOut:
 
 @account_router.post(
     "/sessions/bulk",
-    response={200: RevokeOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
+    response={
+        200: RevokeOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        409: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Revoke sessions in bulk",
     operation_id="account_revoke_sessions_bulk",
 )
@@ -158,9 +164,16 @@ def revoke_sessions_bulk(
 
 @account_router.post(
     "/sessions/_bulk",
-    response={200: RevokeOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
+    response={
+        200: RevokeOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        409: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Revoke sessions in bulk (compat)",
     operation_id="account_revoke_sessions_bulk_compat",
+    deprecated=True,
 )
 def revoke_sessions_bulk_compat(
     request: HttpRequest,
@@ -172,7 +185,13 @@ def revoke_sessions_bulk_compat(
 
 @account_router.delete(
     "/sessions/{sid}",
-    response={200: RevokeOut, 401: ErrorOut, 404: ErrorOut, 422: ErrorOut},
+    response={
+        200: RevokeOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        404: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Revoke single session",
     operation_id="account_revoke_session",
     openapi_extra={

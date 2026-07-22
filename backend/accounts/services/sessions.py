@@ -361,7 +361,24 @@ class SessionService:
     def _kill_django_session(
         request: HttpRequest,
         session_key: str,
+        *,
+        user: User,
     ) -> None:
+        # Only delete a raw Django session row that actually belongs to
+        # this user. `UserSessionMeta.session_key` may contain strings
+        # that do not correspond to a Django session (e.g. legacy tokens)
+        # and we must not delete arbitrary sessions belonging to other
+        # users sharing the same key space.
+        owned = (
+            UserSession.objects.filter(
+                user=user, session_key=session_key
+            ).exists()
+            or UserSessionMeta.objects.filter(
+                user=user, session_key=session_key
+            ).exists()
+        )
+        if not owned:
+            return
         Session.objects.filter(session_key=session_key).delete()
         if SessionService._session_key(request) == session_key:
             dj_logout(request)
@@ -447,7 +464,9 @@ class SessionService:
         if SessionService._session_key(request) == session_key:
             dj_logout(request)
         elif not us:
-            SessionService._kill_django_session(request, session_key)
+            SessionService._kill_django_session(
+                request, session_key, user=user
+            )
 
     @staticmethod
     def revoke_bulk(
@@ -463,6 +482,13 @@ class SessionService:
         )
 
         cur_key = SessionService._resolve_current_session_key(request, user)
+        if payload.all_except_current and not cur_key:
+            # Without a resolvable current session we would revoke *all*
+            # sessions (including the caller's). Refuse so the client can
+            # re-authenticate and retry instead of locking itself out.
+            raise HttpError(
+                409, "current session is not resolvable for bulk revoke"
+            )
         reason = (payload.reason or "bulk_except_current").lower()
         session_keys = SessionService._candidate_session_keys(
             user,
@@ -533,11 +559,9 @@ class SessionService:
         return {
             "ok": True,
             "id": sid,
-            "revoked_reason": (
-                (getattr(us, "ended_reason", None) if us else None)
-                or (getattr(us, "revoked_reason", None) if us else None)
-                or (meta.revoked_reason if meta else None)
-                or reason
-            ),
+            # Always return the reason that was just persisted so the
+            # caller doesn't observe a stale value from a concurrent
+            # write. `_revoke_session_key` always stores `reason`.
+            "revoked_reason": reason,
             "revoked_at": now,
         }

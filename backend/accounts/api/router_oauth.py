@@ -36,6 +36,7 @@ def list_providers(request: HttpRequest) -> ProvidersOut:
     "/link/{provider}",
     response={
         200: OAuthLinkOut,
+        400: ErrorOut,
         401: ErrorOut,
         403: ErrorOut,
         404: ErrorOut,

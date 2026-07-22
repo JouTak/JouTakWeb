@@ -188,4 +188,20 @@ cython_debug/
 <<<<<<< HEAD
 =======
 .husky/_
+<<<<<<< HEAD
 >>>>>>> 8c1ed38 (fix(frontend): strengthen linting workflow)
+=======
+
+# Node package managers: the SPA lives under frontend/, so the repo
+# root must never ship node_modules or a stray package.json/-lock.json.
+# They only appear when a tool is accidentally run from the repo root
+# instead of `frontend/`.
+node_modules/
+/package.json
+/package-lock.json
+
+# Local AI/coding-agent session transcripts. These may contain sensitive
+# context (secrets, internal URLs) and must not be committed.
+session-ses_*.md
+session-*.md
+>>>>>>> 1541f0a (feat(featureflags): add rate limiting, validation, and feature-flagged personalization (#104))

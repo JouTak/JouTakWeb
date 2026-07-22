@@ -69,6 +69,7 @@ ProviderIdStr = Annotated[
     ),
 ]
 
+
 # ---------- Generic ----------
 class FieldErrorItem(Schema):
     message: str
@@ -100,6 +101,7 @@ class ProfileUpdateIn(Schema):
     minecraft_has_license: bool | None = None
     is_itmo_student: bool | None = None
     itmo_isu: ItmoIsuStr | None = None
+
 
 # ---------- Sessions ----------
 class SessionRowOut(Schema):
@@ -150,7 +152,10 @@ class TokenRefreshIn(Schema):
 
 
 class TokenRefreshOut(Schema):
-    refresh: str | None = None
+    # Refresh token is intentionally *not* returned in the JSON body;
+    # it lives in an HTTP-only cookie set by `set_refresh_cookie`. Do
+    # not reintroduce a `refresh` field here without an explicit security
+    # review — doing so opens the token up to XSS exfiltration.
     access: str | None = None
 
 
@@ -189,6 +194,8 @@ class ProfileOut(Schema):
     personalization_ui_enabled: bool = True
     personalization_interstitial_enabled: bool = True
     personalization_enforce_enabled: bool = False
+    personalization_context: str = "legacy_required"
+    personalization_prompt_variant: str = "migration_notice"
     missing_fields: list[str]
     vk_username: str | None = None
     minecraft_nick: str | None = None
@@ -208,6 +215,8 @@ class AccountStatusOut(Schema):
     personalization_ui_enabled: bool = True
     personalization_interstitial_enabled: bool = True
     personalization_enforce_enabled: bool = False
+    personalization_context: str = "legacy_required"
+    personalization_prompt_variant: str = "migration_notice"
     missing_fields: list[str]
 
 
@@ -224,7 +233,10 @@ class ProfileUpdateOut(Schema):
     personalization_ui_enabled: bool = True
     personalization_interstitial_enabled: bool = True
     personalization_enforce_enabled: bool = False
+    personalization_context: str = "legacy_required"
+    personalization_prompt_variant: str = "migration_notice"
     missing_fields: list[str]
+
 
 # ---------- OAuth linking ----------
 class ProviderOut(Schema):

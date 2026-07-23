@@ -9,24 +9,23 @@ describe("ProjectsSection", () => {
     render(
       <MemoryRouter>
         <ProjectsSection
-          items={[
+          projects={[
             {
-              title: "ITMOcraft",
-              description: "Minecraft community",
-              path: "/itmocraft",
+              title: "Тестовый проект",
+              description: `Бла-бла-бла, бле-бле-бле, блю-блю-блю`,
+              image: "/img/cool.png",
+              imageHeight: "248px",
+              to: "/nevada",
             },
           ]}
         />
       </MemoryRouter>,
     );
-
-    expect(screen.getByRole("link", { name: /ITMOcraft/ })).toHaveAttribute(
-      "href",
-      "/itmocraft",
-    );
-    expect(screen.getByRole("img", { name: "ITMOcraft" })).toHaveAttribute(
-      "src",
-      "/img/itmocraft.png",
-    );
+    expect(
+      screen.getByRole("link", { name: /тестовый проект/i }),
+    ).toHaveAttribute("href", "/nevada");
+    expect(
+      screen.getByRole("img", { name: /тестовый проект/i }),
+    ).toHaveAttribute("src", "/img/cool.png");
   });
 });

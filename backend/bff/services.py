@@ -158,6 +158,7 @@ def build_bootstrap_payload(
     request: HttpRequest,
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
+    context.page = request.GET.get("page", "homepage")
     keys = get_flags_for_page(context.page)
     features = evaluate_many(context, keys)
     return {
@@ -168,9 +169,6 @@ def build_bootstrap_payload(
         },
         "layout": {
             "default_project": "jou_tak",
-            "homepage_variant": features.get(
-                "site_homepage_version", "legacy"
-            ),
         },
     }
 

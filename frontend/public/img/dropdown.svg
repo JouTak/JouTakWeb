@@ -1,0 +1,25 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_2059_132)">
+<rect x="8" y="8" width="124" height="124" fill="#2F669E"/>
+<rect x="8" y="132" width="124" height="4" fill="#112C47"/>
+<rect x="8" y="4" width="124" height="4" fill="#6198D0"/>
+<rect x="8" y="8" width="124" height="4" transform="rotate(90 8 8)" fill="#6198D0"/>
+<rect x="136" y="8" width="124" height="4" transform="rotate(90 136 8)" fill="#112C47"/>
+<rect x="4.00049" y="3.99902" width="4.00009" height="4.00023" fill="#070E14"/>
+<rect x="132" y="4" width="4.00009" height="4.00023" fill="#070E14"/>
+<rect x="132" y="132" width="4.00009" height="4.00023" fill="#070E14"/>
+<rect x="4" y="132" width="4.00009" height="4.00023" fill="#070E14"/>
+<rect y="7.99976" width="4" height="124" fill="#070E14"/>
+<rect x="136" y="8" width="4" height="124" fill="#070E14"/>
+<rect x="132" width="4" height="124" transform="rotate(90 132 0)" fill="#070E14"/>
+<rect x="132" y="136" width="4" height="124" transform="rotate(90 132 136)" fill="#070E14"/>
+<line x1="8" y1="39.5" x2="132" y2="39.5" stroke="#6198D0"/>
+<line x1="8" y1="71.5" x2="132" y2="71.5" stroke="#6198D0"/>
+<line x1="8" y1="103.5" x2="132" y2="103.5" stroke="#6198D0"/>
+</g>
+<defs>
+<clipPath id="clip0_2059_132">
+<rect width="140" height="140" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -185,7 +185,16 @@ cython_debug/
 .env.development
 .env.production
 .env.production.secrets
+<<<<<<< HEAD
 .husky/_
+=======
+<<<<<<< HEAD
+=======
+.husky/_
+<<<<<<< HEAD
+>>>>>>> 8c1ed38 (fix(frontend): strengthen linting workflow)
+=======
+>>>>>>> ecaac2a6ac1dc5779202d44d00448fdb1732ce36
 
 # Node package managers: the SPA lives under frontend/, so the repo
 # root must never ship node_modules or a stray package.json/-lock.json.
@@ -199,3 +208,7 @@ node_modules/
 # context (secrets, internal URLs) and must not be committed.
 session-ses_*.md
 session-*.md
+<<<<<<< HEAD
+=======
+>>>>>>> 1541f0a (feat(featureflags): add rate limiting, validation, and feature-flagged personalization (#104))
+>>>>>>> ecaac2a6ac1dc5779202d44d00448fdb1732ce36

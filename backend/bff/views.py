@@ -49,6 +49,25 @@ def homepage(request):
         build_payload=build_home_payload,
     )
 
+@require_GET
+@bff_ratelimit
+def minigames(request):
+    return _build_bff_response(
+        request,
+        page="minigames",
+        build_payload=build_home_payload,
+    )
+
+
+@require_GET
+@bff_ratelimit
+def itmocraft(request):
+    return _build_bff_response(
+        request,
+        page="itmocraft",
+        build_payload=build_home_payload,
+    )
+
 
 @require_GET
 @bff_ratelimit(rate=BFF_ACCOUNT_RATE)

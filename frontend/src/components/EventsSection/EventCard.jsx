@@ -1,55 +1,56 @@
-import PropTypes from "prop-types";
+import { FiCalendar } from "react-icons/fi";
+import { GrLocation } from "react-icons/gr";
 
-import styles from "./EventsSection.module.css";
+import MinecraftButton from "../MinecraftButton/MinecraftButton";
+import styles from "./eventCard.module.css";
 
-function formatDate(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("ru-RU", {
+export default function EventCard({
+  title,
+  description,
+  location,
+  image,
+  date,
+  to,
+  imageWidth,
+  alt = "Описание картинки",
+}) {
+  const formattedDate = new Date(date).toLocaleString("ru-RU", {
     day: "2-digit",
+    month: "long",
     hour: "2-digit",
     minute: "2-digit",
-    month: "long",
-  }).format(date);
-}
+  });
 
-export default function EventCard({ event }) {
-  const date = formatDate(event.date);
-  const href = event.href || event.to;
+  const eventImageStyle = imageWidth
+    ? { width: imageWidth, maxWidth: imageWidth, flex: `0 0 ${imageWidth}` }
+    : undefined;
 
   return (
-    <article className={styles.card}>
-      <div className={styles.content}>
-        <h3 className={styles.title}>{event.title}</h3>
-        {(date || event.location) && (
-          <div className={styles.meta}>
-            {date && <span>{date}</span>}
-            {event.location && <span>{event.location}</span>}
-          </div>
-        )}
-        <p className={styles.description}>{event.description}</p>
-        {href && (
-          <a className={styles.action} href={href}>
-            Регистрация
-          </a>
-        )}
+    <div className={styles.card}>
+      <div className={styles.text}>
+        <h3 className={styles.title}>{title}</h3>
+        <p className={styles.info}>
+          <FiCalendar /> {formattedDate || "Скоро"}
+        </p>
+        <p className={styles.info}>
+          <GrLocation /> {location}
+        </p>
+        <p className={styles.description}>{description}</p>
+        <MinecraftButton
+          onClick={() => {
+            if (to) window.location.assign(to);
+          }}
+        >
+          регистрация
+        </MinecraftButton>
       </div>
-      {event.image && (
-        <img className={styles.image} src={event.image} alt="" loading="lazy" />
-      )}
-    </article>
+      <img
+        className={styles.eventImg}
+        src={image}
+        width="739"
+        style={eventImageStyle}
+        alt={alt}
+      />
+    </div>
   );
 }
-
-EventCard.propTypes = {
-  event: PropTypes.shape({
-    date: PropTypes.string,
-    description: PropTypes.string.isRequired,
-    href: PropTypes.string,
-    image: PropTypes.string,
-    location: PropTypes.string,
-    to: PropTypes.string,
-    title: PropTypes.string.isRequired,
-  }).isRequired,
-};

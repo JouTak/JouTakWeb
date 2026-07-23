@@ -1,37 +1,33 @@
-import PropTypes from "prop-types";
+import clsx from "clsx";
 import { Link } from "react-router-dom";
 
-import styles from "./ProjectsSection.module.css";
+import styles from "./projectCard.module.css";
 
 export default function ProjectCard({
   title,
   description,
   image,
-  path,
+  to,
   extended = false,
+  imageHeight,
 }) {
+  const imageStyle = imageHeight
+    ? { height: imageHeight, aspectRatio: "auto" }
+    : undefined;
+
   return (
     <Link
-      to={path}
-      className={`${styles.card} ${extended ? styles.extended : ""}`}
+      to={to}
+      className={clsx(styles.card, { [styles.extended]: extended })}
     >
-      {image && (
-        <div className={styles["image-wrapper"]}>
-          <img src={image} alt={title} loading="lazy" />
-        </div>
-      )}
-      <div className={styles["project-info"]}>
+      <div className={styles.imageWrapper}>
+        <img src={image} alt={title} style={imageStyle} />
+      </div>
+
+      <div className={styles.projectInfo}>
         <h3>{title}</h3>
         <p>{description}</p>
       </div>
     </Link>
   );
 }
-
-ProjectCard.propTypes = {
-  description: PropTypes.string.isRequired,
-  extended: PropTypes.bool,
-  image: PropTypes.string,
-  path: PropTypes.string.isRequired,
-  title: PropTypes.string.isRequired,
-};

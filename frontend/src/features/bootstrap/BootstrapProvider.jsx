@@ -66,13 +66,18 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
   const loadBootstrap = useCallback(async () => {
     const requestSeq = ++requestSeqRef.current;
     setState((current) => ({
-      bootstrap: current.bootstrap,
+      bootstrap: {
+        ...current.bootstrap,
+        features: {}, // Временно очищаем фичи предыдущей страницы
+      },
       loading: true,
       error: null,
     }));
-
     try {
       const params = pickFeatureOverrideParams(window.location.search);
+      const currentPath =
+        window.location.pathname.replace(/^\/+|\/+$/g, "") || "homepage";
+      params.set("page", currentPath);
       const bootstrap = await getBootstrap(params);
       if (!isCurrentRequest(requestSeq)) {
         return;
@@ -111,7 +116,18 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
     const handleAuthStateChange = () => {
       void loadBootstrap();
     };
+
+    const handleLocationChange = () => {
+      void loadBootstrap();
+    };
+
     window.addEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
+
+    const originalPushState = history.pushState;
+    history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
 
     return () => {
       mountedRef.current = false;
@@ -130,6 +146,9 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
           error: null,
         }));
         const params = pickFeatureOverrideParams(window.location.search);
+        const currentPath =
+          window.location.pathname.replace(/^\/+|\/+$/g, "") || "homepage";
+        params.set("page", currentPath);
         const bootstrap = await getBootstrap(params);
         if (!isCurrentRequest(requestSeq)) {
           return bootstrap;
@@ -149,7 +168,7 @@ export function BootstrapProvider({ children, fallback = <RouteFallback /> }) {
     [isCurrentRequest, state],
   );
 
-  if (state.loading && !state.bootstrap) {
+  if (state.loading) {
     return fallback;
   }
 

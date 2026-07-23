@@ -16,7 +16,7 @@ Adding a new feature flag:
     4. Configure targeting rules in Django admin
 
 Example:
-    "itmocraft_new_events_section": {
+    "itmocraft_new_events": {
         "kind": "boolean",
         "default": False,
         "variants": [True, False],
@@ -33,21 +33,58 @@ from django.conf import settings
 
 # ─── Registry Definition ────────────────────────────────────────────────────
 
+VERSIONS_VARIANTS = ["legacy", "v2"]
+DEFAULT_VARIANT = "legacy"
+
 FEATURE_REGISTRY: dict[str, dict] = {
     # ─── Homepage variant rollout ──────────────────────────────────────
-    "site_homepage_version": {
+    "site_joutak_page_version": {
         "kind": "variant",
         "default_env": "FF_SITE_HOMEPAGE_VERSION",
-        "default_fallback": "legacy",
-        "variants": ["legacy", "v2"],
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
+        "pages": ["joutak"],
+        "sticky": False,
+        "description": (
+            "Switches the /joutak homepage between versions"
+        ),
+        "visual_impact": "Full page replacement on /joutak",
+    },
+    "site_minigames_page_version": {
+        "kind": "variant",
+        "default_env": "FF_SITE_HOMEPAGE_VERSION",
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
+        "pages": ["minigames"],
+        "sticky": False,
+        "description": (
+            "Switches the /minigames homepage between versions"
+        ),
+        "visual_impact": "Full page replacement on /minigames",
+    },
+    "site_homepage_page_version": {
+        "kind": "variant",
+        "default_env": "FF_SITE_HOMEPAGE_VERSION",
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
         "pages": ["homepage"],
         "sticky": False,
         "description": (
-            "Switches the /joutak homepage between the legacy carousel "
-            "layout and the new V2 layout (projects, events, gallery, "
-            "FAQ sections)."
+            "Switches the / homepage between versions"
         ),
-        "visual_impact": "Full page replacement on /joutak",
+        "visual_impact": "Full page replacement on /",
+    },
+    "site_itmocraft_page_version": {
+        "kind": "variant",
+        "default_env": "FF_SITE_HOMEPAGE_VERSION",
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
+        "pages": ["itmocraft"],
+        "sticky": False,
+        "description": (
+            "Switches the /itmocraft homepage between versions"
+        ),
+        "visual_impact": "Full page replacement on /itmocraft",
     },
     # ─── Profile personalization: UI toggle ────────────────────────────
     "profile_personalization_ui": {
@@ -92,20 +129,20 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "403 error for users without complete profiles",
     },
     # ─── New design elements from website-dev (PR #85) ─────────────────
-    "site_footer_v2": {
-        "kind": "boolean",
+    "site_footer_version": {
+        "kind": "variant",
         "default_env": None,
-        "default_fallback": False,
+        "default_fallback": DEFAULT_VARIANT,
         "variants": [True, False],
         "pages": ["*"],
         "sticky": False,
         "description": "New footer design from the website-dev branch.",
         "visual_impact": "Replaces the site footer across all pages",
     },
-    "site_header_v2": {
-        "kind": "boolean",
+    "site_header_version": {
+        "kind": "variant",
         "default_env": None,
-        "default_fallback": False,
+        "default_fallback": DEFAULT_VARIANT,
         "variants": [True, False],
         "pages": ["*"],
         "sticky": False,
@@ -114,19 +151,67 @@ FEATURE_REGISTRY: dict[str, dict] = {
         ),
         "visual_impact": "Replaces the site header/nav across all pages",
     },
-    "joutak_projects_section": {
+    "joutak_new_hero_section": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["homepage"],
+        "pages": ["joutak"],
         "sticky": False,
-        "description": (
-            "Shows the 'Our Projects' card section on the homepage."
-        ),
-        "visual_impact": "Project cards grid below the hero on /joutak",
+        "description": "Shows the new full-viewport homepage hero.",
+        "visual_impact": "Replaces the hero section on /joutak",
     },
-    "joutak_hero_section": {
+    "joutak_new_gallery_section": {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["joutak"],
+        "sticky": False,
+        "description": "Shows the gallery section on the homepage.",
+        "visual_impact": "Photo gallery with tab switching on /joutak",
+    },
+    "minigames_new_hero_section": {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["minigames"],
+        "sticky": False,
+        "description": "Shows the new full-viewport homepage hero.",
+        "visual_impact": "Replaces the hero section on /minigames",
+    },
+    "minigames_new_projects_section": {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["minigames"],
+        "sticky": False,
+        "description": "Shows the new projects section.",
+        "visual_impact": "Replaces the hero section on /minigames",
+    },
+    "minigames_new_gallery_section": {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["minigames"],
+        "sticky": False,
+        "description": "Shows the new gallery section.",
+        "visual_impact": "Replaces the gallery section on /minigames",
+    },
+    "minigames_new_events_section": {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": [True, False],
+        "pages": ["minigames"],
+        "sticky": False,
+        "description": "Shows the new events section.",
+        "visual_impact": "Replaces the events section on /minigames",
+    },
+    "itmocraft_new_hero_section": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
@@ -134,47 +219,47 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "pages": ["homepage"],
         "sticky": False,
         "description": "Shows the new full-viewport homepage hero.",
-        "visual_impact": "Replaces the hero section on /joutak",
+        "visual_impact": "Replaces the hero section on /itmocraft",
     },
-    "joutak_events_section": {
+    "itmocraft_new_projects_section": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
         "pages": ["homepage"],
         "sticky": False,
-        "description": "Shows the events section on the homepage.",
-        "visual_impact": "Events timeline/carousel on /joutak",
+        "description": "Shows the new projects section.",
+        "visual_impact": "Replaces the hero section on /itmocraft",
     },
-    "joutak_faq_section": {
+    "itmocraft_new_gallery_section": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
         "pages": ["homepage"],
         "sticky": False,
-        "description": "Shows the FAQ accordion section on the homepage.",
-        "visual_impact": "FAQ section on /joutak",
+        "description": "Shows the new gallery section.",
+        "visual_impact": "Replaces the gallery section on /itmocraft",
     },
-    "joutak_gallery_section": {
+    "itmocraft_new_events_section": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
         "pages": ["homepage"],
         "sticky": False,
-        "description": "Shows the gallery section on the homepage.",
-        "visual_impact": "Photo gallery with tab switching on /joutak",
+        "description": "Shows the new events section.",
+        "visual_impact": "Replaces the events section on /itmocraft",
     },
-    "itmocraft_new_header": {
+    "itmocraft_new_faq_section": {
         "kind": "boolean",
         "default_env": None,
         "default_fallback": False,
         "variants": [True, False],
-        "pages": ["itmocraft"],
+        "pages": ["homepage"],
         "sticky": False,
-        "description": "New header design for the /itmocraft page.",
-        "visual_impact": "Replaces the header on /itmocraft",
+        "description": "Shows the new projects section.",
+        "visual_impact": "Replaces the FAQ section on /itmocraft",
     },
 }
 

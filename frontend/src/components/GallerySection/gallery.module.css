@@ -1,0 +1,84 @@
+@font-face {
+  font-family: MinecraftSevenFont;
+  src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
+}
+
+.gallery {
+  position: relative;
+  margin-top: 60px;
+  width: fit-content;
+}
+
+.gallery-image {
+  display: block;
+  max-width: 1364px;
+}
+
+.photo-viewer {
+  position: absolute;
+  top: 64px;
+  left: 459px;
+  width: 786px;
+}
+
+.photo-viewer-image {
+  display: block;
+  width: 786px;
+  height: 442px;
+  object-fit: cover;
+  border: 4px solid #c6c6c6;
+  box-sizing: border-box;
+}
+
+.gallery-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.pagination-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  appearance: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.pagination-arrow {
+  display: block;
+  width: auto;
+  height: 30px;
+}
+
+.pagination-counter {
+  text-align: center;
+  font-family: MinecraftSevenFont, sans-serif;
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+.gallery-button {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  font-family: MinecraftSevenFont, sans-serif;
+  color: #000;
+  font-weight: 400;
+  font-size: 32px;
+  background: transparent;
+  border: none;
+  padding: 0 180px 0 0;
+  appearance: none;
+  cursor: pointer;
+  left: 34px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.chosen-button {
+  font-size: 40px;
+}

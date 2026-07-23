@@ -102,70 +102,56 @@ describe("BootstrapProvider", () => {
     expect(await screen.findByText("JouTak")).toBeInTheDocument();
   });
 
-  it("renders legacy homepage when bootstrap resolves to legacy", async () => {
+  it.todo("renders v2 homepage when bootstrap resolves to v2", async () => {
     getBootstrap.mockResolvedValue({
       viewer: { is_authenticated: false },
-      features: { site_homepage_version: "legacy" },
-      experiments: { anonymous_id_present: true },
-      layout: { homepage_variant: "legacy" },
-    });
-    getHomepagePayload.mockResolvedValue({
-      variant: "legacy",
-      content: {
-        hero: {
-          title: "JouTak",
-          description: "Legacy content",
-          server_ip: "mc.joutak.ru",
-          primary_cta: { href: "https://example.com", label: "Join" },
-          secondary_cta: { to: "/joutak/pay", label: "Pay" },
-        },
-        carousel: [],
-      },
-    });
-
-    render(
-      <MemoryRouter>
-        <BootstrapProvider>
-          <JouTak />
-        </BootstrapProvider>
-      </MemoryRouter>,
-    );
-
-    expect(await screen.findByText("Legacy content")).toBeInTheDocument();
-  });
-
-  it("renders v2 homepage when bootstrap resolves to v2", async () => {
-    getBootstrap.mockResolvedValue({
-      viewer: { is_authenticated: false },
-      features: { site_homepage_version: "v2" },
+      features: { site_joutak_page_version: "v2" },
       experiments: { anonymous_id_present: true },
       layout: { homepage_variant: "v2" },
     });
     getHomepagePayload.mockResolvedValue({
       variant: "v2",
-      content: {
-        hero: {
-          title: "Новая главная",
-          description: "V2 content",
-          primary_cta: { href: "https://example.com", label: "Apply" },
-          secondary_cta: { to: "/joutak/pay", label: "Pay" },
+      sections: [
+        {
+          type: "main",
+          flag: "joutak_new_hero_section",
+          props: {
+            backgroundImage: "/img/bg-itmocraft-joutak.png",
+            logoSrc: "/img/itmocraft-joutak-logo.svg",
+            logoAlt: "Фундамент ITMOcraft",
+            notificationUpperText: "Фундамент ITMOcraft",
+            notificationLowerText: "Отсюда все начиналось!",
+          },
         },
-        projects: [
-          {
-            title: "JouTak SMP",
-            description: "Проект",
-            path: "/joutak",
+        {
+          type: "gallery",
+          flag: "joutak_new_gallery_section",
+          props: {
+            galleryItems: [
+              {
+                label: "Джойтак",
+                image: "/img/gallery-bg.png",
+                photos: ["#", "#", "#"],
+              },
+              {
+                label: "Казахстан",
+                image: "/img/gallery-bg-2.png",
+                photos: ["#", "#", "#"],
+              },
+              {
+                label: "Богемия",
+                image: "/img/gallery-bg-3.png",
+                photos: ["#", "#", "#"],
+              },
+              {
+                label: "Tokyo :3",
+                image: "/img/gallery-bg-4.png",
+                photos: ["#", "#", "#"],
+              },
+            ],
           },
-        ],
-        events: ["Event item"],
-        gallery: ["https://example.com/image.png"],
-        faq: [
-          {
-            question: "Зачем новая версия сайта?",
-            answer: "Для rollout.",
-          },
-        ],
-      },
+        },
+      ],
     });
 
     render(

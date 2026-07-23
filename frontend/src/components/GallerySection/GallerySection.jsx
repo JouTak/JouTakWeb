@@ -1,71 +1,100 @@
-import PropTypes from "prop-types";
 import { useState } from "react";
 
-import styles from "./GallerySection.module.css";
+import sectionStyles from "../shared/sectionLayout.module.css";
+import styles from "./gallery.module.css";
 
-export default function GallerySection({ title = "Галерея", items = [] }) {
+export default function GallerySection({
+  title = "Галерея",
+  galleryItems = [],
+  leftArrowSrc = "/img/left-btn-gallery.png",
+  rightArrowSrc = "/img/right-btn-gallery.png",
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const activeGallery = galleryItems[activeIndex] ?? galleryItems[0];
 
-  if (items.length === 0) return null;
-
-  const normalizedIndex = activeIndex % items.length;
-  const activeItem = items[normalizedIndex];
-  const source = typeof activeItem === "string" ? activeItem : activeItem.src;
-  const alt =
-    typeof activeItem === "string"
-      ? `JouTak gallery ${normalizedIndex + 1}`
-      : activeItem.alt || `JouTak gallery ${normalizedIndex + 1}`;
-
-  function changePhoto(direction) {
-    setActiveIndex(
-      (index) => (index + direction + items.length) % items.length,
-    );
+  if (!activeGallery) {
+    return null;
   }
 
+  const totalPhotos = activeGallery.photos.length;
+
+  const handleProjectChange = (nextIndex) => {
+    setActiveIndex(nextIndex);
+    setActivePhotoIndex(0);
+  };
+
+  const handlePhotoChange = (direction) => {
+    if (!totalPhotos) {
+      return;
+    }
+
+    setActivePhotoIndex(
+      (prev) => (prev + direction + totalPhotos) % totalPhotos,
+    );
+  };
+
   return (
-    <section className={styles.section} aria-labelledby="gallery-title-v2">
-      <div className={styles.inner}>
-        <h2 id="gallery-title-v2" className={styles.title}>
-          {title}
-        </h2>
-        <div className={styles.viewer}>
-          <img className={styles.image} src={source} alt={alt} />
-          <div className={styles.controls}>
+    <section className={sectionStyles.section}>
+      <div className={sectionStyles.inner}>
+        <h2 className={sectionStyles.title}>{title}</h2>
+        <div className={styles.gallery}>
+          <img
+            className={styles.galleryImage}
+            src={activeGallery.image}
+            alt="Gallery main view"
+          />
+          {galleryItems.map((item, index) => (
             <button
+              key={item.label}
+              className={`${styles.galleryButton} ${
+                activeIndex === index ? styles.chosenButton : ""
+              }`}
+              style={{ top: `${46 + index * 100}px` }}
+              onClick={() => handleProjectChange(index)}
               type="button"
-              className={styles.button}
-              aria-label="Предыдущее фото"
-              onClick={() => changePhoto(-1)}
             >
-              ←
+              {item.label}
             </button>
-            <span className={styles.counter} aria-live="polite">
-              {normalizedIndex + 1}/{items.length}
-            </span>
-            <button
-              type="button"
-              className={styles.button}
-              aria-label="Следующее фото"
-              onClick={() => changePhoto(1)}
-            >
-              →
-            </button>
+          ))}
+          <div className={styles.photoViewer}>
+            <img
+              className={styles.photoViewerImage}
+              src={activeGallery.photos[activePhotoIndex]}
+              alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
+            />
+            <div className={styles.galleryPagination}>
+              <button
+                className={styles.paginationButton}
+                onClick={() => handlePhotoChange(-1)}
+                type="button"
+                aria-label="Previous photo"
+              >
+                <img
+                  className={styles.paginationArrow}
+                  src={leftArrowSrc}
+                  alt=""
+                />
+              </button>
+              <span className={styles.paginationCounter}>
+                {activePhotoIndex + 1}/{totalPhotos}
+              </span>
+              <button
+                className={styles.paginationButton}
+                onClick={() => handlePhotoChange(1)}
+                type="button"
+                aria-label="Next photo"
+              >
+                <img
+                  className={styles.paginationArrow}
+                  src={rightArrowSrc}
+                  alt=""
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </section>
   );
 }
-
-GallerySection.propTypes = {
-  title: PropTypes.string,
-  items: PropTypes.arrayOf(
-    PropTypes.oneOfType([
-      PropTypes.string,
-      PropTypes.shape({
-        alt: PropTypes.string,
-        src: PropTypes.string.isRequired,
-      }),
-    ]),
-  ),
-};

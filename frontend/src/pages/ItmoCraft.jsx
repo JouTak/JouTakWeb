@@ -1,49 +1,46 @@
-import ImageCarousel from "../components/ImageCarousel";
+import { lazy } from "react";
 
-const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+import MinecraftButton from "../components/MinecraftButton/MinecraftButton";
+import sectionStyles from "../components/shared/sectionLayout.module.css";
+import FeatureGate from "../features/featureFlags/FeatureGate";
+import { itmocraftPageContent } from "./landingContent";
+const ITMOcraftLegacy = lazy(
+  () => import("../Legacy/frontend/src/pages/ItmoCraft"),
+);
+const styles = lazy(() => import("./ItmoCraft.module.css"));
+const LandingPageBuilder = lazy(
+  () => import("../components/LandingPageBuilder/LandingPageBuilder"),
+);
 
-const ITMOCRAFT_CAROUSEL_ITEMS = [
-  {
-    src: `${PUBLIC_IMG_BASE}/itmocraft_1.png`,
-    alt: "Выезд клуба в Ягодное 2025",
-  },
-  {
-    src: `${PUBLIC_IMG_BASE}/itmocraft_2.png`,
-    alt: "Сходка итмокрафта — комьюнити <3",
-  },
-  {
-    src: `${PUBLIC_IMG_BASE}/itmocraft_3.png`,
-    alt: "Здание корпуса на Кронверкском, построенное на сервере",
-  },
-];
-
-const ItmoCraft = () => {
+const ITMOcraft = () => {
   return (
-    <div className="text-center">
-      <ImageCarousel items={ITMOCRAFT_CAROUSEL_ITEMS} />
-
-      <div className="p-5 mb-4 rounded-3">
-        <div className="container pb-5">
-          <h1 className="display-5 fw-bold">ITMOcraft</h1>
-          <p className="col-md-8 fs-4 lh-xs mx-auto">
-            Комьюнити итмошников, любящих майнкрафт и&nbsp;всё, что с&nbsp;ним
-            связано. Орг.&nbsp;состав итмокрафта занимается разработкой
-            плагинов, строительством ивентов, а&nbsp;также медиа.
-            <br />
-            Подавай заявку:
-          </p>
-          <a
-            className="btn btn-primary btn-lg"
-            href="https://forms.yandex.ru/u/67773408068ff0452320c8b4/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Подать заявку в команду организаторов
-          </a>
-        </div>
-      </div>
-    </div>
+    <FeatureGate
+      flag="site_homepage_page_version"
+      flag_type="variant"
+      variants={{
+        legacy: <ITMOcraftLegacy />,
+        v2: (
+          <>
+            <LandingPageBuilder sections={itmocraftPageContent.sections} />
+            <section className={sectionStyles.section}>
+              <div className={`${sectionStyles.inner} ${styles.ctaInner}`}>
+                <h1 className={styles.title}>
+                  Остались вопросы? Смотри <a href="/joutak">наши гайды</a>
+                </h1>
+                <h2 className={styles.subtitle}>
+                  Будем ждать тебя на нашем сервере!
+                </h2>
+                <MinecraftButton className={styles.ctaButton}>
+                  зарегистрироваться
+                </MinecraftButton>
+              </div>
+            </section>
+          </>
+        ),
+      }}
+      fallback={<ITMOcraftLegacy />}
+    />
   );
 };
 
-export default ItmoCraft;
+export default ITMOcraft;

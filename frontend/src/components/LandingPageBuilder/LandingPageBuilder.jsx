@@ -1,10 +1,6 @@
 import FeatureGate from "../../features/featureFlags/FeatureGate";
 import EventsSection from "../EventsSection/EventsSection";
-<<<<<<< HEAD
 import FAQsection from "../FAQSection/SectionFAQ";
-=======
-import FAQsection from "../FAQSection/FAQSection";
->>>>>>> e0bb6bc (chore(landing_builder): fix naming)
 import GallerySection from "../GallerySection/GallerySection";
 import MainSection from "../MainSection/MainSection";
 import ProjectsSection from "../ProjectsSection/ProjectsSection";

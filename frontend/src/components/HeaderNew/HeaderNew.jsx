@@ -43,6 +43,7 @@ function ProjectSelect() {
     (projectKey) => {
       const target = getPathByProject(projectKey);
       setIsOpen(false);
+      if (!target) return;
       if (target !== location.pathname) navigate(target);
     },
     [location.pathname, navigate],
@@ -206,7 +207,7 @@ export default function HeaderNew() {
       <header className={styles.header}>
         <div className={styles.container}>
           <div className={styles.row}>
-            <div className={styles.Side}>
+            <div className={styles.side}>
               <ThemeSwitcher />
             </div>
 
@@ -215,7 +216,7 @@ export default function HeaderNew() {
                 <button
                   type="button"
                   className={styles.navButton}
-                  onClick={() => navigate("/itmocraft")}
+                  onClick={() => navigate("/")}
                 >
                   ITMOcraft
                 </button>

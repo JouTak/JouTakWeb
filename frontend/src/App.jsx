@@ -1,20 +1,11 @@
 import { lazy, Suspense } from "react";
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import AuthModal from "./components/AuthModal.jsx";
 import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
-const JouTak = lazy(() => import("./pages/JouTak.jsx"));
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
-const MiniGames = lazy(() => import("./pages/Minigames.jsx"));
-const ITMOcraft = lazy(() => import("./pages/ItmoCraft.jsx"));
 const Contact = lazy(() => import("./pages/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
@@ -23,8 +14,12 @@ const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
-const ITMOcraftLegacy = lazy(
-  () => import("./Legacy/frontend/src/pages/ItmoCraft.jsx"),
+const ItmoCraftRoute = lazy(
+  () => import("./pages/itmocraft/ItmoCraftRoute.jsx"),
+);
+const JouTakRoute = lazy(() => import("./pages/joutak/JouTakRoute.jsx"));
+const MinigamesRoute = lazy(
+  () => import("./pages/minigames/MinigamesRoute.jsx"),
 );
 
 function safeInternalPath(path) {
@@ -64,11 +59,11 @@ function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
       <Routes location={background || location}>
-        <Route path="/" element={<ITMOcraft />} />
-        <Route path="/joutak" element={<JouTak />} />
+        <Route path="/" element={<ItmoCraftRoute />} />
+        <Route path="/joutak" element={<JouTakRoute />} />
         <Route path="/legacy" element={<Legacy />} />
-        <Route path="/minigames" element={<MiniGames />} />
-        <Route path="/itmocraft" element={<ITMOcraftLegacy />} />
+        <Route path="/minigames" element={<MinigamesRoute />} />
+        <Route path="/itmocraft" element={<ItmoCraftRoute legacyAlias />} />
         <Route path="/contact" element={<Contact />} />
         <Route
           path="/account/security"
@@ -122,11 +117,11 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <Router>
+    <>
       <ScrollToTop />
       <Layout>
         <AppRoutes />
       </Layout>
-    </Router>
+    </>
   );
 }

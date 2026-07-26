@@ -1,0 +1,9 @@
+**
+!backend/
+!backend/**
+!pyproject.toml
+!uv.lock
+backend/__pycache__/
+backend/**/__pycache__/
+backend/staticfiles/
+backend/media/

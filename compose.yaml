@@ -122,8 +122,8 @@ services:
   frontend:
     #    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     pull_policy: always
     environment:
       REACT_APP_API_URL: ${PUBLIC_API_URL:-http://127.0.0.1:8000}

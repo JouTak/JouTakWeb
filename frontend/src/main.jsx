@@ -10,9 +10,10 @@ import {
   ToasterProvider,
 } from "@gravity-ui/uikit";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 
 import App from "./App.jsx";
-import { BootstrapProvider } from "./features/bootstrap/BootstrapProvider.jsx";
+import { PageDocumentProvider } from "./features/pageDocument/PageDocumentProvider";
 import { setupOpenTelemetry } from "./observability/otel.js";
 import { setupAxiosInterceptors } from "./services/api";
 import { migrateLegacyTokenStorage } from "./services/auth/tokenStore";
@@ -40,14 +41,16 @@ configure({ lang: "ru" });
 
 export function Root() {
   return (
-    <ThemeProvider theme="dark">
-      <ToasterProvider>
-        <BootstrapProvider>
-          <App />
-        </BootstrapProvider>
-        <ToasterComponent />
-      </ToasterProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider theme="dark">
+        <ToasterProvider>
+          <PageDocumentProvider>
+            <App />
+          </PageDocumentProvider>
+          <ToasterComponent />
+        </ToasterProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

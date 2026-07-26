@@ -22,7 +22,7 @@ const projects = [
     title: "ITMOcraft",
     description: "Клуб любителей Майнкрафта в Университете ИТМО",
     image: "/img/itmocraft.png",
-    to: "/itmocraft",
+    to: "/",
     extended: true,
   },
 ];

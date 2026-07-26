@@ -2,7 +2,7 @@ export const projectMapping = {
   jou_tak: "/joutak",
   mini_games: "/minigames",
   legacy: "/legacy",
-  itmo_craft: "/itmocraft",
+  itmo_craft: "/",
 };
 
 export function getProjectByPath(path) {
@@ -17,5 +17,5 @@ export function getProjectByPath(path) {
 }
 
 export function getPathByProject(project) {
-  return projectMapping[project] || "/";
+  return projectMapping[project] ?? null;
 }

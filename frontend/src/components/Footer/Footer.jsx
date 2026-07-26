@@ -12,7 +12,7 @@ const defaultNavigationItems = [
   { label: "JouTak", href: "/joutak" },
   { label: "MiniGames", href: "/minigames" },
   { label: "Legacy", href: "/legacy" },
-  { label: "ITMOcraft", href: "/itmocraft" },
+  { label: "ITMOcraft", href: "/" },
 ];
 
 const defaultContactItems = [
@@ -83,7 +83,12 @@ const CustomFooter = ({
 
                 return (
                   <div key={`${type}-${index}`} className={styles.socialIcon}>
-                    <a href={href} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={type}
+                    >
                       <Icon />
                     </a>
                   </div>

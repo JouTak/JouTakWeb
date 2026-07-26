@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
-import { hasStoredAuth, me } from "../services/api";
+import { hasStoredAuth, me, readStoredTokens } from "../services/api";
 
 export default function RequireAuth({ children }) {
   const location = useLocation();
@@ -13,7 +13,7 @@ export default function RequireAuth({ children }) {
     let cancelled = false;
 
     async function verify() {
-      if (!hasStoredAuth()) {
+      if (!hasStoredAuth() || readStoredTokens()?.pending_mfa) {
         if (!cancelled) setStatus("denied");
         return;
       }

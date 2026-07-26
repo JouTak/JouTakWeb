@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.backends.db import SessionStore
+from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 
 from backend.admin_site import (
@@ -27,6 +28,41 @@ User = get_user_model()
     FRONTEND_BASE_URL="http://localhost:8080",
 )
 class AdminHostPolicyTests(TestCase):
+    def test_mfa_template_renders_totp_autofocus_without_passkeys(self):
+        html = render_to_string(
+            "admin/mfa_verify.html",
+            {
+                "title": "Подтверждение входа",
+                "site_title": "JouTak Staff Admin",
+                "site_header": "JouTak Staff Admin",
+                "username": "staff",
+                "has_passkeys": False,
+            },
+        )
+
+        self.assertIn('id="id_mfa_code"', html)
+        self.assertIn("autofocus", html)
+        self.assertNotIn("{%", html)
+
+    def test_mfa_template_renders_passkey_flow_without_totp_autofocus(self):
+        html = render_to_string(
+            "admin/mfa_verify.html",
+            {
+                "title": "Подтверждение входа",
+                "site_title": "JouTak Staff Admin",
+                "site_header": "JouTak Staff Admin",
+                "username": "staff",
+                "has_passkeys": True,
+            },
+        )
+
+        self.assertIn('id="passkey-section"', html)
+        code_input = html.split('id="id_mfa_code"', maxsplit=1)[1].split(
+            "/>", maxsplit=1
+        )[0]
+        self.assertNotIn("autofocus", code_input)
+        self.assertNotIn("{%", html)
+
     def test_admin_host_redirects_root_to_admin(self):
         response = self.client.get("/", HTTP_HOST="admin.localhost")
 

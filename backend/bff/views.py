@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import json
+
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
-from featureflags.services import build_context, resolve_optional_user
+from django.views.decorators.http import require_GET, require_http_methods
+from featureflags.services import (
+    build_context,
+    clear_override_cookie,
+    resolve_optional_user,
+    set_override_cookie,
+)
 
 from backend.ratelimiting import (
     BFF_ACCOUNT_RATE,
@@ -11,7 +18,7 @@ from backend.ratelimiting import (
 from bff.services import (
     build_account_summary_payload,
     build_bootstrap_payload,
-    build_home_payload,
+    build_page_document,
 )
 
 
@@ -26,7 +33,11 @@ def _build_bff_response(request, *, page, build_payload):
     response = JsonResponse({}, content_type="application/json")
     context, _ = build_context(request, page=page, response=response)
     payload = build_payload(request, context)
+    if hasattr(payload, "model_dump"):
+        payload = payload.model_dump(mode="json")
     response.content = JsonResponse(payload).content
+    response["Cache-Control"] = "private, no-store"
+    response["Vary"] = "Cookie, X-Session-Token, Origin"
     return response
 
 
@@ -35,27 +46,8 @@ def _build_bff_response(request, *, page, build_payload):
 def bootstrap(request):
     return _build_bff_response(
         request,
-        page="homepage",
+        page="bootstrap",
         build_payload=build_bootstrap_payload,
-    )
-
-
-@require_GET
-@bff_ratelimit
-def homepage(request):
-    return _build_bff_response(
-        request,
-        page="homepage",
-        build_payload=build_home_payload,
-    )
-
-@require_GET
-@bff_ratelimit
-def minigames(request):
-    return _build_bff_response(
-        request,
-        page="minigames",
-        build_payload=build_home_payload,
     )
 
 
@@ -65,7 +57,58 @@ def itmocraft(request):
     return _build_bff_response(
         request,
         page="itmocraft",
-        build_payload=build_home_payload,
+        build_payload=lambda req, context: build_page_document(
+            req,
+            context,
+            product_id="itmocraft",
+            requested_path="/",
+        ),
+    )
+
+
+@require_GET
+@bff_ratelimit
+def minigames(request):
+    return _build_bff_response(
+        request,
+        page="minigames",
+        build_payload=lambda req, context: build_page_document(
+            req,
+            context,
+            product_id="minigames",
+            requested_path="/minigames",
+        ),
+    )
+
+
+@require_GET
+@bff_ratelimit
+def joutak(request):
+    return _build_bff_response(
+        request,
+        page="joutak",
+        build_payload=lambda req, context: build_page_document(
+            req,
+            context,
+            product_id="joutak",
+            requested_path="/joutak",
+        ),
+    )
+
+
+@require_GET
+@bff_ratelimit
+def itmocraft_legacy(request):
+    return _build_bff_response(
+        request,
+        page="itmocraft",
+        build_payload=lambda req, context: build_page_document(
+            req,
+            context,
+            product_id="itmocraft",
+            requested_path="/itmocraft",
+            fixed_legacy=True,
+        ),
     )
 
 
@@ -86,3 +129,31 @@ def account_summary(request):
         page="account",
         build_payload=build_account_summary_payload,
     )
+
+
+@require_http_methods(["POST", "DELETE"])
+def feature_overrides(request):
+    """Manage staff previews through a CSRF-protected unsafe method."""
+    user = resolve_optional_user(request)
+    if not user or not getattr(user, "is_staff", False):
+        return JsonResponse({"detail": "Staff access required."}, status=403)
+
+    response = JsonResponse({"overrides": {}})
+    if request.method == "DELETE":
+        clear_override_cookie(response)
+        return response
+
+    try:
+        payload = json.loads(request.body or b"{}")
+        overrides = payload.get("overrides")
+        if not isinstance(overrides, dict):
+            raise ValueError("overrides must be an object")
+        validated = set_override_cookie(
+            response,
+            user=user,
+            overrides=overrides,
+        )
+    except (json.JSONDecodeError, ValueError) as exc:
+        return JsonResponse({"detail": str(exc)}, status=400)
+    response.content = JsonResponse({"overrides": validated}).content
+    return response

@@ -1,8 +1,3 @@
-@font-face {
-  font-family: MinecraftSeven;
-  src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
-}
-
 .button {
   margin-top: 15px;
   display: flex;

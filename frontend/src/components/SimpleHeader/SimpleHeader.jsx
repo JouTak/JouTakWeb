@@ -244,7 +244,7 @@ const SimpleHeader = () => {
               />
             </a>
 
-            <div className="mx-auto g-root_theme_dark text-light">
+            <div className="mx-auto">
               <ProjectSelect />
             </div>
 

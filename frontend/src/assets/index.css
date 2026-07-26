@@ -1,5 +1,43 @@
-:root {
+:root,
+:root[data-theme="dark"] {
   color-scheme: dark;
+  --site-background: #070e14;
+  --site-surface: #101a23;
+  --site-text: #ecf7ff;
+  --site-text-muted: #aebbc7;
+  --site-border: rgb(236 247 255 / 14%);
+  --site-accent: #3c9bf9;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --site-background: #f4f8fb;
+  --site-surface: #fff;
+  --site-text: #101820;
+  --site-text-muted: #53616f;
+  --site-border: rgb(16 24 32 / 16%);
+  --site-accent: #0969c7;
+}
+
+@font-face {
+  font-family: GeologicaFont;
+  src: url("/img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf")
+    format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: MinecraftTenFont;
+  src: url("/img/fonts/minecraft-ten-font-cyrillic.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: MinecraftSeven;
+  src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
+  font-display: swap;
 }
 
 html {
@@ -16,8 +54,8 @@ body,
 }
 
 body {
-  background: var(--g-color-base-background);
-  color: var(--g-color-text-primary);
+  background: var(--site-background);
+  color: var(--site-text);
   display: flex;
   flex-direction: column;
 }
@@ -107,8 +145,24 @@ footer {
 }
 
 .inline-edit {
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--site-border);
   padding-top: 12px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--site-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .lh-xs {

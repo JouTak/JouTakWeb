@@ -1,16 +1,16 @@
-import { useState } from "react";
-
+import { useThemePreference } from "../../theme/themeContext";
 import styles from "./ThemeSwitcher.module.css";
 
 export default function ThemeSwitcher() {
-  const [isNight, setIsNight] = useState(true);
+  const { theme, toggleTheme } = useThemePreference();
+  const isNight = theme === "dark";
 
   return (
     <button
       type="button"
       className={`${styles.switch} ${isNight ? styles.night : ""}`}
-      onClick={() => setIsNight((prev) => !prev)}
-      aria-label="Switch theme"
+      onClick={toggleTheme}
+      aria-label={isNight ? "Включить светлую тему" : "Включить тёмную тему"}
     >
       {/* Контур */}
       <svg

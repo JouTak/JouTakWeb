@@ -13,9 +13,14 @@ Usage:
 from __future__ import annotations
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 from featureflags.models import FeatureDefinition, FeatureKind
-from featureflags.registry import FEATURE_REGISTRY, get_default_value
+from featureflags.registry import (
+    FEATURE_REGISTRY,
+    get_default_value,
+    validate_registry,
+)
 
 
 class Command(BaseCommand):
@@ -42,8 +47,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        dry_run = options["dry_run"]
-        force_defaults = options["force_defaults"]
+        validate_registry()
+        with transaction.atomic():
+            self._sync(**options)
+
+    def _sync(self, *, dry_run: bool, force_defaults: bool, **_options):
         created_count = 0
         updated_count = 0
         skipped_count = 0
@@ -58,7 +66,11 @@ class Command(BaseCommand):
             sticky = spec.get("sticky", False)
             description = spec.get("description", "")
 
-            existing = FeatureDefinition.objects.filter(key=key).first()
+            existing = (
+                FeatureDefinition.objects.select_for_update()
+                .filter(key=key)
+                .first()
+            )
 
             if existing is None:
                 if dry_run:

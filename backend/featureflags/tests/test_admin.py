@@ -24,7 +24,7 @@ User = get_user_model()
 class FeatureFlagsAdminTests(TestCase):
     def setUp(self) -> None:
         self.feature = FeatureDefinition.objects.create(
-            key="admin_feature",
+            key="profile_personalization_ui",
             kind=FeatureKind.BOOLEAN,
             default_value="false",
         )

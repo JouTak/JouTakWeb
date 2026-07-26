@@ -27,7 +27,6 @@ from featureflags.models import (
 )
 from featureflags.registry import (
     get_default_value,
-    get_valid_variants,
     is_valid_override_value,
 )
 
@@ -35,8 +34,10 @@ logger = logging.getLogger(__name__)
 
 FEATURE_OVERRIDE_QUERY_PREFIX = "ff_"
 FEATURE_OVERRIDE_CLEAR_QUERY = "ff_clear_overrides"
-FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v1"
+FEATURE_OVERRIDE_SIGNING_SALT = "featureflags.override_cookie.v2"
 ANONYMOUS_ID_SIGNING_SALT = "featureflags.anonymous_id.v1"
+FEATURE_OVERRIDE_COOKIE_VERSION = 1
+FEATURE_OVERRIDE_COOKIE_MAX_BYTES = 4096
 _UUID_HEX_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
@@ -139,18 +140,12 @@ def resolve_optional_user(request: HttpRequest) -> object | None:
 
 
 def extract_or_create_anonymous_id(request: HttpRequest) -> tuple[str, bool]:
-    """Extract anonymous ID from cookie, or create a new one.
-
-    Supports graceful migration: accepts both signed (new) and unsigned
-    (legacy UUID hex) cookies. Legacy cookies are re-signed on the next
-    response via ensure_anonymous_cookie().
-    """
+    """Extract a signed anonymous ID or create a new one."""
     cookie_name = settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE
     raw = (request.COOKIES.get(cookie_name) or "").strip()
     if not raw:
         return uuid4().hex, True
 
-    # Try signed cookie first (new format)
     max_age = settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE_MAX_AGE
     try:
         value = signing.loads(
@@ -166,16 +161,6 @@ def extract_or_create_anonymous_id(request: HttpRequest) -> tuple[str, bool]:
             extra={"raw_length": len(raw)},
         )
 
-    # Graceful migration: accept legacy unsigned UUID hex cookies.
-    # We mark created=True so the cookie is re-set in signed form.
-    if _UUID_HEX_RE.match(raw):
-        logger.info(
-            "featureflags.anonymous_id.legacy_migration",
-            extra={"anonymous_id": raw[:8] + "..."},
-        )
-        return raw, True  # created=True triggers re-signing
-
-    # Invalid cookie value — generate fresh ID
     logger.warning(
         "featureflags.anonymous_id.invalid_cookie",
         extra={"raw_length": len(raw)},
@@ -184,8 +169,6 @@ def extract_or_create_anonymous_id(request: HttpRequest) -> tuple[str, bool]:
 
 
 def _can_use_request_overrides(user: object | None) -> bool:
-    if getattr(settings, "FEATURE_FLAG_OVERRIDE_QUERY_ENABLED", False):
-        return True
     return bool(
         user
         and getattr(user, "is_authenticated", False)
@@ -193,9 +176,15 @@ def _can_use_request_overrides(user: object | None) -> bool:
     )
 
 
-def read_override_cookie(request: HttpRequest) -> dict[str, str]:
+def read_override_cookie(
+    request: HttpRequest,
+    *,
+    user: object | None,
+) -> dict[str, str]:
     raw = request.COOKIES.get(settings.FEATURE_FLAG_OVERRIDE_COOKIE)
-    if not raw:
+    if not raw or len(raw.encode("utf-8")) > FEATURE_OVERRIDE_COOKIE_MAX_BYTES:
+        return {}
+    if not _can_use_request_overrides(user):
         return {}
     max_age = getattr(
         settings,
@@ -214,87 +203,51 @@ def read_override_cookie(request: HttpRequest) -> dict[str, str]:
         )
     except signing.BadSignature:
         return {}
-    if not isinstance(payload, dict):
+    if (
+        not isinstance(payload, dict)
+        or payload.get("version") != FEATURE_OVERRIDE_COOKIE_VERSION
+        or payload.get("staff_user_id") != getattr(user, "pk", None)
+        or not isinstance(payload.get("overrides"), dict)
+    ):
         return {}
     return {
         str(key): str(value)
-        for key, value in payload.items()
-        if key and value is not None
+        for key, value in payload["overrides"].items()
+        if is_valid_override_value(str(key), value)
     }
 
 
-def sync_override_cookie(
-    request: HttpRequest,
+def set_override_cookie(
     response: HttpResponse,
     *,
-    user: object | None,
+    user: object,
+    overrides: dict[str, object],
 ) -> dict[str, str]:
-    """Sync feature flag override cookie from query params.
-
-    Validates override values against the registry and logs changes
-    for audit purposes.
-    """
-    existing = read_override_cookie(request)
+    """Persist an allowlisted, staff-bound preview payload."""
     if not _can_use_request_overrides(user):
-        return existing
-
-    if request.GET.get(FEATURE_OVERRIDE_CLEAR_QUERY) == "1":
-        response.delete_cookie(settings.FEATURE_FLAG_OVERRIDE_COOKIE)
-        logger.info(
-            "featureflags.override.cleared",
-            extra={
-                "user_id": (
-                    getattr(user, "pk", None)
-                    if user and getattr(user, "is_authenticated", False)
-                    else None
-                ),
-                "ip": request.META.get("REMOTE_ADDR"),
-            },
-        )
-        return {}
-
-    updates = {}
-    rejected = {}
-    for key, value in request.GET.items():
-        if not key.startswith(FEATURE_OVERRIDE_QUERY_PREFIX) or not value:
-            continue
-        flag_key = key[len(FEATURE_OVERRIDE_QUERY_PREFIX) :]
-        if is_valid_override_value(flag_key, value):
-            updates[flag_key] = value
-        else:
-            rejected[flag_key] = value
-            logger.warning(
-                "featureflags.override.invalid_value",
-                extra={
-                    "flag": flag_key,
-                    "value": value,
-                    "valid_variants": get_valid_variants(flag_key),
-                    "ip": request.META.get("REMOTE_ADDR"),
-                },
-            )
-
-    if not updates:
-        return existing
-
-    merged = {**existing, **updates}
-
-    # Audit log: record what changed
-    user_id = (
-        getattr(user, "pk", None)
-        if user and getattr(user, "is_authenticated", False)
-        else None
-    )
+        raise PermissionError("Feature previews require an active staff user")
+    validated = {
+        str(key): str(value)
+        for key, value in overrides.items()
+        if is_valid_override_value(str(key), value)
+    }
+    if len(validated) != len(overrides):
+        raise ValueError("Unknown feature flag or invalid preview value")
+    payload = {
+        "version": FEATURE_OVERRIDE_COOKIE_VERSION,
+        "staff_user_id": user.pk,
+        "overrides": validated,
+    }
+    encoded = signing.dumps(payload, salt=FEATURE_OVERRIDE_SIGNING_SALT)
+    if len(encoded.encode("utf-8")) > FEATURE_OVERRIDE_COOKIE_MAX_BYTES:
+        raise ValueError("Feature preview payload is too large")
     logger.info(
         "featureflags.override.updated",
         extra={
-            "user_id": user_id,
-            "ip": request.META.get("REMOTE_ADDR"),
-            "updates": updates,
-            "rejected": rejected or None,
-            "resulting_overrides": merged,
+            "user_id": user.pk,
+            "resulting_overrides": validated,
         },
     )
-
     max_age = getattr(
         settings,
         "FEATURE_FLAG_OVERRIDE_COOKIE_MAX_AGE",
@@ -302,13 +255,17 @@ def sync_override_cookie(
     )
     response.set_cookie(
         settings.FEATURE_FLAG_OVERRIDE_COOKIE,
-        signing.dumps(merged, salt=FEATURE_OVERRIDE_SIGNING_SALT),
+        encoded,
         max_age=max_age,
         httponly=True,
         samesite="Lax",
         secure=not settings.DEBUG,
     )
-    return merged
+    return validated
+
+
+def clear_override_cookie(response: HttpResponse) -> None:
+    response.delete_cookie(settings.FEATURE_FLAG_OVERRIDE_COOKIE)
 
 
 def ensure_anonymous_cookie(
@@ -339,14 +296,14 @@ def build_context(
 ) -> tuple[RequestEvaluationContext, bool]:
     user = resolve_optional_user(request)
     anonymous_id, created = extract_or_create_anonymous_id(request)
-    overrides = (
-        read_override_cookie(request)
-        if _can_use_request_overrides(user)
-        else {}
-    )
+    overrides = read_override_cookie(request, user=user)
     if response is not None:
         ensure_anonymous_cookie(response, anonymous_id, created=created)
-        overrides = sync_override_cookie(request, response, user=user)
+        if (
+            request.COOKIES.get(settings.FEATURE_FLAG_OVERRIDE_COOKIE)
+            and not overrides
+        ):
+            clear_override_cookie(response)
     return (
         RequestEvaluationContext(
             request=request,
@@ -363,14 +320,39 @@ def _coerce_value(kind: str, value: object) -> bool | str:
     if kind == FeatureKind.BOOLEAN:
         if isinstance(value, bool):
             return value
-        return str(value).strip().lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-            "enabled",
-        }
+        normalized = str(value).strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+        raise ValueError(f"Invalid boolean feature value: {value!r}")
     return str(value)
+
+
+def _validated_feature_value(
+    feature: FeatureDefinition,
+    value: object,
+) -> bool | str | None:
+    if not is_valid_override_value(feature.key, value):
+        logger.warning(
+            "featureflags.invalid_stored_value",
+            extra={"flag": feature.key, "value": str(value)[:64]},
+        )
+        return None
+    try:
+        return _coerce_value(feature.kind, value)
+    except ValueError:
+        return None
+
+
+def _safe_default(feature: FeatureDefinition) -> bool | str:
+    value = _validated_feature_value(feature, feature.default_value)
+    if value is not None:
+        return value
+    try:
+        return get_default_value(feature.key)
+    except KeyError:
+        return False
 
 
 def _reason_for_match(source: str) -> Reason:
@@ -466,25 +448,32 @@ def _db_override(
     feature: FeatureDefinition,
     context: RequestEvaluationContext,
 ) -> str | None:
-    # Iterate .all() to leverage prefetch_related cache.
-    # Using .filter() would bypass the prefetch and hit the DB again.
+    matches: dict[str, str] = {}
     for override in feature.overrides.all():
         if not override.enabled:
             continue
         if override.scope_type == FeatureOverrideScope.GLOBAL:
-            return override.value
-        if (
+            matches[FeatureOverrideScope.GLOBAL] = override.value
+        elif (
             override.scope_type == FeatureOverrideScope.USER
             and context.user_id is not None
             and override.scope_value == str(context.user_id)
         ):
-            return override.value
-        if (
+            matches[FeatureOverrideScope.USER] = override.value
+        elif (
             override.scope_type == FeatureOverrideScope.ANONYMOUS
+            and context.user_id is None
             and context.anonymous_id
             and override.scope_value == context.anonymous_id
         ):
-            return override.value
+            matches[FeatureOverrideScope.ANONYMOUS] = override.value
+    for scope in (
+        FeatureOverrideScope.USER,
+        FeatureOverrideScope.ANONYMOUS,
+        FeatureOverrideScope.GLOBAL,
+    ):
+        if scope in matches:
+            return matches[scope]
     return None
 
 
@@ -502,7 +491,7 @@ def get_feature_spec(key: str) -> FeatureSpec | None:
         return FeatureSpec(
             key=feature.key,
             kind=feature.kind,
-            default_value=_coerce_value(feature.kind, feature.default_value),
+            default_value=_safe_default(feature),
             sticky_assignment=feature.sticky_assignment,
         )
 
@@ -569,27 +558,32 @@ def _evaluate_definition(
 ) -> tuple[bool | str, Reason, str | None]:
     overrides = context.request_overrides or {}
     if feature.key in overrides:
-        value = _coerce_value(feature.kind, overrides[feature.key])
-        return value, _reason_for_match("override"), str(value)
+        value = _validated_feature_value(feature, overrides[feature.key])
+        if value is not None:
+            return value, _reason_for_match("override"), str(value)
 
     db_override = _db_override(feature, context)
     if db_override is not None:
-        value = _coerce_value(feature.kind, db_override)
-        return value, _reason_for_match("override"), str(value)
+        value = _validated_feature_value(feature, db_override)
+        if value is not None:
+            return value, _reason_for_match("override"), str(value)
 
     sticky_value = _sticky_assignment(feature, context)
     if sticky_value is not None:
-        value = _coerce_value(feature.kind, sticky_value)
-        return value, Reason.CACHED, str(value)
+        value = _validated_feature_value(feature, sticky_value)
+        if value is not None:
+            return value, Reason.CACHED, str(value)
 
     for rule in feature.rules.all():
         if _rule_matches(rule, context):
             value = _rule_result(rule)
-            _persist_assignment(feature, context, value)
-            coerced = _coerce_value(feature.kind, value)
+            coerced = _validated_feature_value(feature, value)
+            if coerced is None:
+                continue
+            _persist_assignment(feature, context, str(coerced))
             return coerced, _reason_for_match("rule"), str(coerced)
 
-    default_value = _coerce_value(feature.kind, feature.default_value)
+    default_value = _safe_default(feature)
     return default_value, Reason.DEFAULT, str(default_value)
 
 
@@ -720,17 +714,3 @@ def evaluate_many(
             resolved[key] = False
 
     return resolved
-
-
-def seed_homepage_feature() -> None:
-    spec = _get_default_features()["site_homepage_version"]
-    FeatureDefinition.objects.get_or_create(
-        key="site_homepage_version",
-        defaults={
-            "description": "Homepage version rollout for /joutak",
-            "kind": spec["kind"],
-            "default_value": str(spec["default"]),
-            "active": True,
-            "sticky_assignment": bool(spec["sticky_assignment"]),
-        },
-    )

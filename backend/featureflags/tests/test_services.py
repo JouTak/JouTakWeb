@@ -19,9 +19,9 @@ User = get_user_model()
 
 
 class FeatureFlagServiceTests(TestCase):
-    def homepage_feature(self) -> FeatureDefinition:
+    def itmocraft_feature(self) -> FeatureDefinition:
         feature = FeatureDefinition.objects.get_or_create(
-            key="site_homepage_version",
+            key="site_itmocraft_page_version",
             defaults={
                 "kind": FeatureKind.VARIANT,
                 "default_value": "legacy",
@@ -43,7 +43,7 @@ class FeatureFlagServiceTests(TestCase):
         self.assertEqual(decisions["unknown_flag"], False)
 
     def test_request_override_has_highest_priority(self):
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="everyone-v2",
@@ -60,19 +60,15 @@ class FeatureFlagServiceTests(TestCase):
         decisions = evaluate_many(
             RequestEvaluationContext(
                 anonymous_id="anon-a",
-                request_overrides={"site_homepage_version": "v2"},
+                request_overrides={"site_itmocraft_page_version": "v2"},
             ),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
 
-        self.assertEqual(decisions["site_homepage_version"], "v2")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "v2")
 
     def test_percentage_rollout_is_stable_for_same_identity(self):
-        feature = FeatureDefinition.objects.create(
-            key="homepage_percentage",
-            kind=FeatureKind.VARIANT,
-            default_value="legacy",
-        )
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="half-rollout",
@@ -84,14 +80,14 @@ class FeatureFlagServiceTests(TestCase):
 
         context = RequestEvaluationContext(
             anonymous_id="anon-fixed",
-            page="homepage",
+            page="itmocraft",
         )
-        first = evaluate_many(context, ["homepage_percentage"])
-        second = evaluate_many(context, ["homepage_percentage"])
+        first = evaluate_many(context, ["site_itmocraft_page_version"])
+        second = evaluate_many(context, ["site_itmocraft_page_version"])
 
         self.assertEqual(
-            first["homepage_percentage"],
-            second["homepage_percentage"],
+            first["site_itmocraft_page_version"],
+            second["site_itmocraft_page_version"],
         )
 
     def test_authenticated_user_identity_overrides_anonymous_default(
@@ -102,7 +98,7 @@ class FeatureFlagServiceTests(TestCase):
             email="tester@example.com",
             password="StrongPass123!",
         )
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="specific-user",
@@ -114,18 +110,18 @@ class FeatureFlagServiceTests(TestCase):
 
         anonymous = evaluate_many(
             RequestEvaluationContext(anonymous_id="anon-before-login"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
         authenticated = evaluate_many(
             RequestEvaluationContext(
                 user=user,
                 anonymous_id="anon-before-login",
             ),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
 
-        self.assertEqual(anonymous["site_homepage_version"], "legacy")
-        self.assertEqual(authenticated["site_homepage_version"], "v2")
+        self.assertEqual(anonymous["site_itmocraft_page_version"], "legacy")
+        self.assertEqual(authenticated["site_itmocraft_page_version"], "v2")
 
     def test_user_override_wins_over_matching_rule(self):
         user = User.objects.create_user(
@@ -133,7 +129,7 @@ class FeatureFlagServiceTests(TestCase):
             email="override@example.com",
             password="StrongPass123!",
         )
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="everyone-v2",
@@ -150,10 +146,10 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(user=user, anonymous_id="anon-user"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
 
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     # ─── Denylist Tests ──────────────────────────────────────────────
 
@@ -164,7 +160,7 @@ class FeatureFlagServiceTests(TestCase):
             email="denied@example.com",
             password="StrongPass123!",
         )
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="deny-user",
@@ -183,13 +179,13 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(user=user, anonymous_id="anon"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     def test_anonymous_denylist_forces_default_value(self):
         """Anonymous user in denylist gets the feature default."""
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="deny-anon",
@@ -208,9 +204,9 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(anonymous_id="blocked-anon-id"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     # ─── Group Targeting Tests ───────────────────────────────────────
 
@@ -226,7 +222,7 @@ class FeatureFlagServiceTests(TestCase):
         )
         group.members.add(user)
 
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="beta-v2",
@@ -238,9 +234,9 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(user=user, anonymous_id="anon"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
-        self.assertEqual(decisions["site_homepage_version"], "v2")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "v2")
 
     def test_group_rule_does_not_match_non_member(self):
         """User not in the target group does not get the rule value."""
@@ -252,7 +248,7 @@ class FeatureFlagServiceTests(TestCase):
         group = FeatureGroup.objects.create(name="VIP Users", slug="vip-users")
         # user is NOT added to the group
 
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="vip-v2",
@@ -264,16 +260,16 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(user=user, anonymous_id="anon"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     def test_group_rule_does_not_match_anonymous(self):
         """Anonymous users never match group rules."""
         group = FeatureGroup.objects.create(
             name="Staff Group", slug="staff-group"
         )
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="group-v2",
@@ -285,15 +281,15 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(anonymous_id="anon-visitor"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     # ─── Disabled Rules / Inactive Features ──────────────────────────
 
     def test_disabled_rule_is_skipped(self):
         """A rule with enabled=False should not match."""
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
             name="disabled-rule",
@@ -305,13 +301,13 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(anonymous_id="anon"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     def test_inactive_feature_returns_default(self):
         """A feature with active=False is not loaded."""
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         feature.active = False
         feature.save(update_fields=["active"])
         FeatureRule.objects.create(
@@ -324,45 +320,47 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(anonymous_id="anon"),
-            ["site_homepage_version"],
+            ["site_itmocraft_page_version"],
         )
         # Falls through to DEFAULT_FEATURES since DB feature is inactive
-        self.assertEqual(decisions["site_homepage_version"], "legacy")
+        self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
 
     # ─── Page-Scoped Rules ───────────────────────────────────────────
 
     def test_page_scoped_rule_only_matches_matching_page(self):
-        """A rule with page='homepage' only matches that page context."""
-        feature = self.homepage_feature()
+        """A rule with page='itmocraft' only matches that page context."""
+        feature = self.itmocraft_feature()
         FeatureRule.objects.create(
             feature=feature,
-            name="homepage-only-v2",
+            name="itmocraft-only-v2",
             priority=10,
             rule_type=FeatureRuleType.EVERYONE,
             value="v2",
-            page="homepage",
+            page="itmocraft",
         )
 
         homepage_ctx = RequestEvaluationContext(
-            anonymous_id="anon", page="homepage"
+            anonymous_id="anon", page="itmocraft"
         )
         other_ctx = RequestEvaluationContext(
             anonymous_id="anon", page="account"
         )
 
         homepage_result = evaluate_many(
-            homepage_ctx, ["site_homepage_version"]
+            homepage_ctx, ["site_itmocraft_page_version"]
         )
-        other_result = evaluate_many(other_ctx, ["site_homepage_version"])
+        other_result = evaluate_many(
+            other_ctx, ["site_itmocraft_page_version"]
+        )
 
-        self.assertEqual(homepage_result["site_homepage_version"], "v2")
-        self.assertEqual(other_result["site_homepage_version"], "legacy")
+        self.assertEqual(homepage_result["site_itmocraft_page_version"], "v2")
+        self.assertEqual(other_result["site_itmocraft_page_version"], "legacy")
 
     # ─── Sticky Assignment Tests ─────────────────────────────────────
 
     def test_sticky_assignment_persists_and_reuses(self):
         """Once assigned, sticky assignment is returned on next eval."""
-        feature = self.homepage_feature()
+        feature = self.itmocraft_feature()
         feature.sticky_assignment = True
         feature.save(update_fields=["sticky_assignment"])
         FeatureRule.objects.create(
@@ -374,8 +372,8 @@ class FeatureFlagServiceTests(TestCase):
         )
 
         context = RequestEvaluationContext(anonymous_id="sticky-user", page="")
-        first = evaluate_many(context, ["site_homepage_version"])
-        self.assertEqual(first["site_homepage_version"], "v2")
+        first = evaluate_many(context, ["site_itmocraft_page_version"])
+        self.assertEqual(first["site_itmocraft_page_version"], "v2")
 
         # Verify assignment was persisted
         assignment = ExperimentAssignment.objects.get(
@@ -385,20 +383,20 @@ class FeatureFlagServiceTests(TestCase):
 
         # Now delete the rule — sticky value should still be returned
         feature.rules.all().delete()
-        second = evaluate_many(context, ["site_homepage_version"])
-        self.assertEqual(second["site_homepage_version"], "v2")
+        second = evaluate_many(context, ["site_itmocraft_page_version"])
+        self.assertEqual(second["site_itmocraft_page_version"], "v2")
 
     # ─── Batch Evaluation Tests ──────────────────────────────────────
 
     def test_batch_evaluation_loads_multiple_features(self):
         """evaluate_many handles multiple keys in a single call."""
         FeatureDefinition.objects.create(
-            key="flag_alpha",
+            key="profile_personalization_ui",
             kind=FeatureKind.BOOLEAN,
             default_value="true",
         )
         feature_b = FeatureDefinition.objects.create(
-            key="flag_beta",
+            key="profile_personalization_enforce",
             kind=FeatureKind.BOOLEAN,
             default_value="false",
         )
@@ -412,9 +410,13 @@ class FeatureFlagServiceTests(TestCase):
 
         decisions = evaluate_many(
             RequestEvaluationContext(anonymous_id="multi"),
-            ["flag_alpha", "flag_beta", "missing_flag"],
+            [
+                "profile_personalization_ui",
+                "profile_personalization_enforce",
+                "missing_flag",
+            ],
         )
 
-        self.assertEqual(decisions["flag_alpha"], True)
-        self.assertEqual(decisions["flag_beta"], True)
+        self.assertEqual(decisions["profile_personalization_ui"], True)
+        self.assertEqual(decisions["profile_personalization_enforce"], True)
         self.assertEqual(decisions["missing_flag"], False)

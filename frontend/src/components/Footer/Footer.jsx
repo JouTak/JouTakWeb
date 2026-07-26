@@ -102,7 +102,7 @@ const CustomFooter = ({
           </div>
         </div>
       </footer>
-      <img src={bottomImageSrc} alt="" />
+      <img className={styles.bottomImage} src={bottomImageSrc} alt="" />
     </>
   );
 };

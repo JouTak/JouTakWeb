@@ -5,6 +5,13 @@
   font-family: GeologicaFont, sans-serif;
 }
 
+.bottom-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
 .inner {
   max-width: 1440px;
   margin: 0 auto;

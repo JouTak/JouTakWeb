@@ -61,15 +61,46 @@
   max-width: 325px;
 }
 
-.event-img {
+.event-media {
   margin-left: 0;
   flex: 0 0 739px;
   width: 739px;
   max-width: 739px;
+}
+
+.event-img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }
 
 .text button {
   margin-top: 20px !important;
+}
+
+@media (max-width: 900px) {
+  .card {
+    flex-direction: column;
+    min-height: 0;
+    padding: 32px;
+  }
+
+  .event-media {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 24px 18px;
+  }
+
+  .title {
+    font-size: 42px;
+  }
 }

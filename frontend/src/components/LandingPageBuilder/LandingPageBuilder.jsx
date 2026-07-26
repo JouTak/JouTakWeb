@@ -10,8 +10,8 @@ import ProjectsSection from "../ProjectsSection/ProjectsSection";
 function sectionProps(section) {
   if (section.type === "hero") {
     return {
-      backgroundImage: resolveMedia(section.background),
-      logoSrc: resolveMedia(section.logo),
+      backgroundMedia: section.background,
+      logoMedia: section.logo,
       logoAlt: section.logo?.alt || section.title,
       notificationUpperText: section.eyebrow || section.title,
       notificationLowerText: section.description || section.title,
@@ -23,7 +23,7 @@ function sectionProps(section) {
       projects: section.items.map((item) => ({
         title: item.title,
         description: item.description,
-        image: resolveMedia(item.image),
+        imageMedia: item.image,
         to: resolveAction(item.action),
       })),
     };
@@ -35,7 +35,7 @@ function sectionProps(section) {
         title: item.title,
         description: item.description,
         location: item.location,
-        image: resolveMedia(item.image),
+        imageMedia: item.image,
         date: new Date(item.starts_at),
         to: resolveAction(item.action),
       })),

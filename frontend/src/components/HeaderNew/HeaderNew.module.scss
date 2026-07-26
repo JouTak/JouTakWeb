@@ -1,5 +1,5 @@
 .header {
-  position: absolute;
+  position: relative;
   margin: 0;
   width: 100%;
   height: auto;
@@ -13,6 +13,7 @@
 
   font-family: $font-minecraft-seven;
   font-size: 14px;
+  min-height: 88px;
 }
 
 .container {
@@ -158,6 +159,61 @@
 
 .server-option:hover {
   font-size: 16px;
+}
+
+@media (max-width: 900px) {
+  .header {
+    aspect-ratio: auto;
+    background: #070e14;
+  }
+
+  .container {
+    padding: 10px 16px;
+  }
+
+  .center-group {
+    order: 3;
+    width: 100%;
+  }
+
+  .row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .left-nav-group,
+  .right-nav-group {
+    padding: 0;
+    gap: 4px;
+  }
+
+  .nav-button {
+    padding: 6px 8px;
+  }
+
+  .logo-button img {
+    height: 48px;
+  }
+
+  .avatar-outer {
+    width: 48px;
+    height: 48px;
+  }
+
+  .avatar-inner {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 560px) {
+  .right-nav-group {
+    display: none;
+  }
+
+  .center-group {
+    justify-content: space-between;
+  }
 }
 
 .account-area {

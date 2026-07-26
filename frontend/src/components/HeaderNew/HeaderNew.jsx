@@ -77,12 +77,14 @@ function ProjectSelect() {
 
       <div
         className={`${styles.serversMenu} ${isOpen ? styles.serversMenuOpen : ""}`}
+        aria-hidden={!isOpen}
       >
         {options.map((option) => (
           <button
             key={option.value}
             type="button"
             className={styles.serverOption}
+            tabIndex={isOpen ? 0 : -1}
             onClick={() => onSelectServer(option.value)}
           >
             {option.content}

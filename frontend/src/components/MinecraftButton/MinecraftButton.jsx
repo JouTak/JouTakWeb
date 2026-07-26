@@ -1,11 +1,16 @@
 import styles from "./MinecraftButton.module.css";
 
-export default function MinecraftButton({ children, onClick, className = "" }) {
+export default function MinecraftButton({
+  children,
+  className = "",
+  type = "button",
+  ...buttonProps
+}) {
   return (
     <button
+      {...buttonProps}
       className={`${styles.button} ${className}`}
-      onClick={onClick}
-      type="button"
+      type={type}
     >
       {children}
     </button>

@@ -5,7 +5,6 @@ import "./assets/index.css";
 
 import {
   configure,
-  ThemeProvider,
   ToasterComponent,
   ToasterProvider,
 } from "@gravity-ui/uikit";
@@ -17,6 +16,7 @@ import { PageDocumentProvider } from "./features/pageDocument/PageDocumentProvid
 import { setupOpenTelemetry } from "./observability/otel.js";
 import { setupAxiosInterceptors } from "./services/api";
 import { migrateLegacyTokenStorage } from "./services/auth/tokenStore";
+import { ThemePreferenceProvider } from "./theme/ThemePreferenceProvider";
 
 migrateLegacyTokenStorage();
 setupOpenTelemetry();
@@ -42,14 +42,14 @@ configure({ lang: "ru" });
 export function Root() {
   return (
     <BrowserRouter>
-      <ThemeProvider theme="dark">
+      <ThemePreferenceProvider>
         <ToasterProvider>
           <PageDocumentProvider>
             <App />
           </PageDocumentProvider>
           <ToasterComponent />
         </ToasterProvider>
-      </ThemeProvider>
+      </ThemePreferenceProvider>
     </BrowserRouter>
   );
 }

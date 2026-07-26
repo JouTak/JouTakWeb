@@ -6,17 +6,6 @@
   --background-color: #070e14;
 }
 
-@font-face {
-  font-family: MinecraftFont;
-  src: url("/img/fonts/minecraft-ten-font-cyrillic.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: GeologicaFont;
-  src: url("/img/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf")
-    format("truetype");
-}
-
 .title {
   margin-bottom: 60px;
 }

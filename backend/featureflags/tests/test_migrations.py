@@ -48,9 +48,7 @@ class DesignRolloutMigrationTests(TransactionTestCase):
 
     def test_forward_preserves_children_and_seeds_closed_rollout(self):
         apps = self._migrate(self.migrate_to)
-        FeatureDefinition = apps.get_model(
-            "featureflags", "FeatureDefinition"
-        )
+        FeatureDefinition = apps.get_model("featureflags", "FeatureDefinition")
         FeatureGroup = apps.get_model("featureflags", "FeatureGroup")
 
         design_keys = {
@@ -91,9 +89,7 @@ class DesignRolloutMigrationTests(TransactionTestCase):
     def test_reverse_restores_original_key_and_active_state(self):
         self._migrate(self.migrate_to)
         apps = self._migrate(self.migrate_from)
-        FeatureDefinition = apps.get_model(
-            "featureflags", "FeatureDefinition"
-        )
+        FeatureDefinition = apps.get_model("featureflags", "FeatureDefinition")
 
         restored = FeatureDefinition.objects.get(pk=self.old_pk)
         self.assertEqual(restored.key, "site_header_version")

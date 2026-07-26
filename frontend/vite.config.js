@@ -18,6 +18,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.js"],
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
     restoreMocks: true,
     clearMocks: true,
     pool: "threads",

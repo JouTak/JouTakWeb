@@ -176,10 +176,7 @@ class FeatureOverride(models.Model):
     def clean(self) -> None:
         if not is_valid_override_value(self.feature.key, self.value):
             raise ValidationError({"value": "Invalid value for this flag."})
-        if (
-            self.scope_type == FeatureOverrideScope.GLOBAL
-            and self.scope_value
-        ):
+        if self.scope_type == FeatureOverrideScope.GLOBAL and self.scope_value:
             raise ValidationError(
                 {"scope_value": "Global overrides cannot have a subject."}
             )

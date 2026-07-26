@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Django ORM keyword names are not credentials"
+condition = "AND"
+regexTarget = "match"
+paths = ['''backend/accounts/services/sessions\.py''']
+regexes = ['''session_key,\s+revoked_at__isnull''']

@@ -1,0 +1,877 @@
+{
+  "$defs": {
+    "AssetMedia": {
+      "additionalProperties": false,
+      "properties": {
+        "alt": {
+          "title": "Alt",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "asset",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "alt"
+      ],
+      "title": "AssetMedia",
+      "type": "object"
+    },
+    "DesignPlaceholderAction": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {
+          "enum": [
+            "no_op",
+            "hash"
+          ],
+          "title": "Behavior",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "design_placeholder",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "behavior"
+      ],
+      "title": "DesignPlaceholderAction",
+      "type": "object"
+    },
+    "DesignPlaceholderMedia": {
+      "additionalProperties": false,
+      "properties": {
+        "alt": {
+          "title": "Alt",
+          "type": "string"
+        },
+        "broken": {
+          "default": false,
+          "title": "Broken",
+          "type": "boolean"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "const": "design_placeholder",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "alt"
+      ],
+      "title": "DesignPlaceholderMedia",
+      "type": "object"
+    },
+    "EventItem": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "discriminator": {
+            "mapping": {
+              "design_placeholder": "#/$defs/DesignPlaceholderAction",
+              "external": "#/$defs/ExternalAction",
+              "internal": "#/$defs/InternalAction"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/InternalAction"
+            },
+            {
+              "$ref": "#/$defs/ExternalAction"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderAction"
+            }
+          ],
+          "title": "Action"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "image": {
+          "discriminator": {
+            "mapping": {
+              "asset": "#/$defs/AssetMedia",
+              "design_placeholder": "#/$defs/DesignPlaceholderMedia",
+              "remote": "#/$defs/RemoteMedia"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AssetMedia"
+            },
+            {
+              "$ref": "#/$defs/RemoteMedia"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderMedia"
+            }
+          ],
+          "title": "Image"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        },
+        "starts_at": {
+          "format": "date-time",
+          "title": "Starts At",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "location",
+        "image",
+        "starts_at",
+        "action"
+      ],
+      "title": "EventItem",
+      "type": "object"
+    },
+    "EventsSection": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/EventItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "events",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "title": "EventsSection",
+      "type": "object"
+    },
+    "ExternalAction": {
+      "additionalProperties": false,
+      "properties": {
+        "href": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Href",
+          "type": "string"
+        },
+        "kind": {
+          "const": "external",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "href"
+      ],
+      "title": "ExternalAction",
+      "type": "object"
+    },
+    "FAQItem": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "title": "Answer",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "question",
+        "answer"
+      ],
+      "title": "FAQItem",
+      "type": "object"
+    },
+    "FAQSection": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/FAQItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "faq",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "title": "FAQSection",
+      "type": "object"
+    },
+    "GalleryItem": {
+      "additionalProperties": false,
+      "properties": {
+        "cover": {
+          "discriminator": {
+            "mapping": {
+              "asset": "#/$defs/AssetMedia",
+              "design_placeholder": "#/$defs/DesignPlaceholderMedia",
+              "remote": "#/$defs/RemoteMedia"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AssetMedia"
+            },
+            {
+              "$ref": "#/$defs/RemoteMedia"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderMedia"
+            }
+          ],
+          "title": "Cover"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "photos": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "asset": "#/$defs/AssetMedia",
+                "design_placeholder": "#/$defs/DesignPlaceholderMedia",
+                "remote": "#/$defs/RemoteMedia"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/AssetMedia"
+              },
+              {
+                "$ref": "#/$defs/RemoteMedia"
+              },
+              {
+                "$ref": "#/$defs/DesignPlaceholderMedia"
+              }
+            ]
+          },
+          "title": "Photos",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "cover",
+        "photos"
+      ],
+      "title": "GalleryItem",
+      "type": "object"
+    },
+    "GallerySection": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/GalleryItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "gallery",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "title": "GallerySection",
+      "type": "object"
+    },
+    "HeroSection": {
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "discriminator": {
+            "mapping": {
+              "asset": "#/$defs/AssetMedia",
+              "design_placeholder": "#/$defs/DesignPlaceholderMedia",
+              "remote": "#/$defs/RemoteMedia"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AssetMedia"
+            },
+            {
+              "$ref": "#/$defs/RemoteMedia"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderMedia"
+            }
+          ],
+          "title": "Background"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "logo": {
+          "discriminator": {
+            "mapping": {
+              "asset": "#/$defs/AssetMedia",
+              "design_placeholder": "#/$defs/DesignPlaceholderMedia",
+              "remote": "#/$defs/RemoteMedia"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AssetMedia"
+            },
+            {
+              "$ref": "#/$defs/RemoteMedia"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderMedia"
+            }
+          ],
+          "title": "Logo"
+        },
+        "primary_action": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "design_placeholder": "#/$defs/DesignPlaceholderAction",
+                  "external": "#/$defs/ExternalAction",
+                  "internal": "#/$defs/InternalAction"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/InternalAction"
+                },
+                {
+                  "$ref": "#/$defs/ExternalAction"
+                },
+                {
+                  "$ref": "#/$defs/DesignPlaceholderAction"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Primary Action"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "hero",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "background",
+        "logo",
+        "title"
+      ],
+      "title": "HeroSection",
+      "type": "object"
+    },
+    "InternalAction": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "internal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ],
+      "title": "InternalAction",
+      "type": "object"
+    },
+    "LayoutDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "default_project": {
+          "enum": [
+            "itmo_craft",
+            "jou_tak",
+            "mini_games"
+          ],
+          "title": "Default Project",
+          "type": "string"
+        },
+        "footer_variant": {
+          "enum": [
+            "legacy",
+            "v2"
+          ],
+          "title": "Footer Variant",
+          "type": "string"
+        },
+        "header_variant": {
+          "enum": [
+            "legacy",
+            "v2"
+          ],
+          "title": "Header Variant",
+          "type": "string"
+        }
+      },
+      "required": [
+        "header_variant",
+        "footer_variant",
+        "default_project"
+      ],
+      "title": "LayoutDecision",
+      "type": "object"
+    },
+    "PageContent": {
+      "additionalProperties": false,
+      "properties": {
+        "sections": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "events": "#/$defs/EventsSection",
+                "faq": "#/$defs/FAQSection",
+                "gallery": "#/$defs/GallerySection",
+                "hero": "#/$defs/HeroSection",
+                "projects": "#/$defs/ProjectsSection"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/HeroSection"
+              },
+              {
+                "$ref": "#/$defs/ProjectsSection"
+              },
+              {
+                "$ref": "#/$defs/EventsSection"
+              },
+              {
+                "$ref": "#/$defs/GallerySection"
+              },
+              {
+                "$ref": "#/$defs/FAQSection"
+              }
+            ]
+          },
+          "title": "Sections",
+          "type": "array"
+        },
+        "template": {
+          "enum": [
+            "landing-legacy",
+            "landing-v2"
+          ],
+          "title": "Template",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template",
+        "sections"
+      ],
+      "title": "PageContent",
+      "type": "object"
+    },
+    "ProductInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_path": {
+          "title": "Canonical Path",
+          "type": "string"
+        },
+        "id": {
+          "enum": [
+            "itmocraft",
+            "joutak",
+            "minigames"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "is_legacy_alias": {
+          "title": "Is Legacy Alias",
+          "type": "boolean"
+        },
+        "requested_path": {
+          "title": "Requested Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "canonical_path",
+        "requested_path",
+        "is_legacy_alias"
+      ],
+      "title": "ProductInfo",
+      "type": "object"
+    },
+    "ProjectItem": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "discriminator": {
+            "mapping": {
+              "design_placeholder": "#/$defs/DesignPlaceholderAction",
+              "external": "#/$defs/ExternalAction",
+              "internal": "#/$defs/InternalAction"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/InternalAction"
+            },
+            {
+              "$ref": "#/$defs/ExternalAction"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderAction"
+            }
+          ],
+          "title": "Action"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "image": {
+          "discriminator": {
+            "mapping": {
+              "asset": "#/$defs/AssetMedia",
+              "design_placeholder": "#/$defs/DesignPlaceholderMedia",
+              "remote": "#/$defs/RemoteMedia"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AssetMedia"
+            },
+            {
+              "$ref": "#/$defs/RemoteMedia"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderMedia"
+            }
+          ],
+          "title": "Image"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "image",
+        "action"
+      ],
+      "title": "ProjectItem",
+      "type": "object"
+    },
+    "ProjectsSection": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProjectItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "projects",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "items"
+      ],
+      "title": "ProjectsSection",
+      "type": "object"
+    },
+    "RemoteMedia": {
+      "additionalProperties": false,
+      "properties": {
+        "alt": {
+          "title": "Alt",
+          "type": "string"
+        },
+        "kind": {
+          "const": "remote",
+          "title": "Kind",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "url",
+        "alt"
+      ],
+      "title": "RemoteMedia",
+      "type": "object"
+    },
+    "Viewer": {
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "is_authenticated": {
+          "title": "Is Authenticated",
+          "type": "boolean"
+        },
+        "personalization_context": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Personalization Context"
+        },
+        "profile_complete": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profile Complete"
+        },
+        "profile_state": {
+          "title": "Profile State",
+          "type": "string"
+        },
+        "username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Username"
+        }
+      },
+      "required": [
+        "is_authenticated",
+        "profile_state"
+      ],
+      "title": "Viewer",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "content": {
+      "$ref": "#/$defs/PageContent"
+    },
+    "effective_page_variant": {
+      "enum": [
+        "legacy",
+        "v2"
+      ],
+      "title": "Effective Page Variant",
+      "type": "string"
+    },
+    "layout": {
+      "$ref": "#/$defs/LayoutDecision"
+    },
+    "product": {
+      "$ref": "#/$defs/ProductInfo"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "variant_source": {
+      "enum": [
+        "default",
+        "feature_flag",
+        "staff_preview",
+        "fixed_legacy"
+      ],
+      "title": "Variant Source",
+      "type": "string"
+    },
+    "viewer": {
+      "$ref": "#/$defs/Viewer"
+    }
+  },
+  "required": [
+    "product",
+    "effective_page_variant",
+    "variant_source",
+    "layout",
+    "viewer",
+    "content"
+  ],
+  "title": "PageDocument",
+  "type": "object"
+}

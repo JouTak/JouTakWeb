@@ -2,189 +2,141 @@ from __future__ import annotations
 
 from accounts.services.auth import AuthService
 from django.http import HttpRequest
+from featureflags.models import FeatureGroup
 from featureflags.registry import get_flags_for_page
 from featureflags.services import RequestEvaluationContext, evaluate_many
 
-LEGACY_HOMEPAGE = {
-    "hero": {
-        "title": "JouTak",
-        "description": (
-            "Джоутек — колыбель итмокрафта. Запускавшийся парой школьников "
-            "как летсплей в 2018 году, этот сервер смог пройти сквозь года "
-            "без вайпов, сохранить память и честность."
-        ),
-        "server_ip": "mc.joutak.ru",
-        "primary_cta": {
-            "label": "Зарегистрироваться на приватном сервере",
-            "href": "https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/",
-        },
-        "secondary_cta": {
-            "label": "Оплатить проходку",
-            "to": "/joutak/pay",
-        },
-    },
-    "carousel": [
-        {
-            "src": "https://cloud.joutak.ru/s/ZZg89sgcx6X9cxp/preview",
-            "alt": "Центральный район сервера",
-        },
-        {
-            "src": "https://cloud.joutak.ru/s/mFfm4HqBzYm5Wxc/preview",
-            "alt": "Большой гриб на нулевых координатах",
-        },
-        {
-            "src": "https://cloud.joutak.ru/s/z3zBa6cBZ8jbnsS/preview",
-            "alt": "Летучий Голландец в Казахстане",
-        },
-        {
-            "src": "https://cloud.joutak.ru/s/2kZ8WNN49aqn8yd/preview",
-            "alt": "Крупная сходка новых игроков 2025",
-        },
-        {
-            "src": "https://cloud.joutak.ru/s/RcA26gKCY495Y8j/preview",
-            "alt": "Центральный хаб в Нижнем мире",
-        },
-    ],
-}
+from bff.content import PRODUCT_CONTENT
+from bff.schemas import (
+    LayoutDecision,
+    PageDocument,
+    ProductInfo,
+    Viewer,
+)
 
-V2_HOMEPAGE = {
-    "hero": {
-        "eyebrow": "JouTak Community",
-        "title": "Новая главная для поэтапного rollout",
-        "description": (
-            "Обновлённая версия главной собирает проекты сообщества, события, "
-            "галерею и ответы на частые вопросы в одном сценарии."
-        ),
-        "server_ip": "mc.joutak.ru",
-        "primary_cta": {
-            "label": "Подать заявку",
-            "href": "https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/",
-        },
-        "secondary_cta": {
-            "label": "Оплатить проходку",
-            "to": "/joutak/pay",
-        },
+PRODUCTS = {
+    "itmocraft": {
+        "canonical_path": "/",
+        "page_flag": "site_itmocraft_page_version",
+        "default_project": "itmo_craft",
     },
-    "projects": [
-        {
-            "title": "JouTak SMP",
-            "description": (
-                "Приватный survival-мир без вайпов и донатных привилегий."
-            ),
-            "path": "/joutak",
-        },
-        {
-            "title": "ITMOcraft",
-            "description": (
-                "Университетское комьюнити вокруг Minecraft и "
-                "совместных ивентов."
-            ),
-            "path": "/itmocraft",
-        },
-        {
-            "title": "miniGAMES",
-            "description": (
-                "Небольшие режимы, быстрые игровые сессии и "
-                "внутренняя тусовка."
-            ),
-            "path": "/minigames",
-        },
-        {
-            "title": "Legacy",
-            "description": (
-                "Исторический срез проекта и старые пространства сообщества."
-            ),
-            "path": "/legacy",
-        },
-    ],
-    "events": [
-        "Сезонные ивенты и городские сборы игроков.",
-        "Командные стройки и общественные проекты.",
-        "Внутреннее тестирование новых интерфейсов и механик.",
-    ],
-    "gallery": [
-        "https://cloud.joutak.ru/s/2oQALeqNkndEQMw/preview",
-        "https://cloud.joutak.ru/s/fAn6tq8jn3wcbzy/preview",
-        "https://cloud.joutak.ru/s/D8MH8Bmia4f6Ab5/preview",
-    ],
-    "faq": [
-        {
-            "question": "Зачем новая версия сайта?",
-            "answer": (
-                "Чтобы постепенно выкатывать новый UX и не ломать "
-                "основной поток пользователей."
-            ),
-        },
-        {
-            "question": "Как попасть на приват?",
-            "answer": (
-                "Через заявку, после которой команда проверяет профиль "
-                "и доступ."
-            ),
-        },
-        {
-            "question": "Что будет с legacy-версией?",
-            "answer": (
-                "Она остаётся fallback-версией, пока rollout новой "
-                "главной не станет основным."
-            ),
-        },
-    ],
+    "joutak": {
+        "canonical_path": "/joutak",
+        "page_flag": "site_joutak_page_version",
+        "default_project": "jou_tak",
+    },
+    "minigames": {
+        "canonical_path": "/minigames",
+        "page_flag": "site_minigames_page_version",
+        "default_project": "mini_games",
+    },
 }
 
 
-def viewer_summary(
-    request: HttpRequest, user: object | None
-) -> dict[str, object]:
+def viewer_summary(request: HttpRequest, user: object | None) -> Viewer:
     if not user or not getattr(user, "is_authenticated", False):
-        return {
-            "is_authenticated": False,
-            "username": None,
-            "email": None,
-            "profile_state": "guest",
-        }
+        return Viewer(
+            is_authenticated=False,
+            profile_state="guest",
+        )
     profile = AuthService.profile(user)
-    return {
-        "is_authenticated": True,
-        "username": profile.username,
-        "email": profile.email,
-        "profile_state": profile.profile_state,
-        "profile_complete": profile.profile_complete,
-        "personalization_context": profile.personalization_context,
-    }
+    return Viewer(
+        is_authenticated=True,
+        username=profile.username,
+        email=profile.email,
+        profile_state=profile.profile_state,
+        profile_complete=profile.profile_complete,
+        personalization_context=profile.personalization_context,
+    )
+
+
+def _is_design_tester(context: RequestEvaluationContext) -> bool:
+    if context.user_id is None:
+        return False
+    return FeatureGroup.objects.filter(
+        slug="website-design-testers",
+        members__pk=context.user_id,
+    ).exists()
+
+
+def _safe_variant(value: object) -> str:
+    return str(value) if value in {"legacy", "v2"} else "legacy"
+
+
+def build_page_document(
+    request: HttpRequest,
+    context: RequestEvaluationContext,
+    *,
+    product_id: str,
+    requested_path: str,
+    fixed_legacy: bool = False,
+) -> PageDocument:
+    product = PRODUCTS[product_id]
+    decisions = evaluate_many(
+        context,
+        [
+            product["page_flag"],
+            "site_header_version",
+            "site_footer_version",
+        ],
+    )
+    staff_preview = bool(
+        context.is_staff
+        and context.request_overrides
+        and any(value == "v2" for value in context.request_overrides.values())
+    )
+    can_see_v2 = _is_design_tester(context) or staff_preview
+
+    page_variant = _safe_variant(decisions[product["page_flag"]])
+    if fixed_legacy or not can_see_v2:
+        page_variant = "legacy"
+    header_variant = _safe_variant(decisions["site_header_version"])
+    footer_variant = _safe_variant(decisions["site_footer_version"])
+    if not can_see_v2:
+        header_variant = "legacy"
+        footer_variant = "legacy"
+
+    if fixed_legacy:
+        source = "fixed_legacy"
+    elif staff_preview and page_variant == "v2":
+        source = "staff_preview"
+    elif page_variant == "v2":
+        source = "feature_flag"
+    else:
+        source = "default"
+
+    return PageDocument(
+        product=ProductInfo(
+            id=product_id,
+            canonical_path=product["canonical_path"],
+            requested_path=requested_path,
+            is_legacy_alias=fixed_legacy,
+        ),
+        effective_page_variant=page_variant,
+        variant_source=source,
+        layout=LayoutDecision(
+            header_variant=header_variant,
+            footer_variant=footer_variant,
+            default_project=product["default_project"],
+        ),
+        viewer=viewer_summary(request, context.user),
+        content=PRODUCT_CONTENT[product_id][page_variant],
+    )
 
 
 def build_bootstrap_payload(
     request: HttpRequest,
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
-    context.page = request.GET.get("page", "homepage")
-    keys = get_flags_for_page(context.page)
-    features = evaluate_many(context, keys)
+    keys = get_flags_for_page("bootstrap")
     return {
-        "viewer": viewer_summary(request, context.user),
-        "features": features,
+        "viewer": viewer_summary(request, context.user).model_dump(
+            mode="json"
+        ),
+        "features": evaluate_many(context, keys),
         "experiments": {
             "anonymous_id_present": bool(context.anonymous_id),
         },
-        "layout": {
-            "default_project": "jou_tak",
-        },
-    }
-
-
-def build_home_payload(
-    _request: HttpRequest,
-    context: RequestEvaluationContext,
-) -> dict[str, object]:
-    keys = get_flags_for_page(context.page)
-    features = evaluate_many(context, keys)
-    variant = str(features.get("site_homepage_version", "legacy"))
-    payload = LEGACY_HOMEPAGE if variant == "legacy" else V2_HOMEPAGE
-    return {
-        "variant": variant,
-        "content": payload,
-        "features": features,
     }
 
 
@@ -194,6 +146,8 @@ def build_account_summary_payload(
 ) -> dict[str, object]:
     keys = get_flags_for_page(context.page)
     return {
-        "viewer": viewer_summary(request, context.user),
+        "viewer": viewer_summary(request, context.user).model_dump(
+            mode="json"
+        ),
         "features": evaluate_many(context, keys),
     }

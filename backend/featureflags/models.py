@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from simple_history.models import HistoricalRecords
+
+from featureflags.registry import (
+    FEATURE_REGISTRY,
+    is_valid_override_value,
+)
 
 
 class FeatureKind(models.TextChoices):
@@ -59,6 +65,25 @@ class FeatureDefinition(models.Model):
     def __str__(self) -> str:
         return self.key
 
+    def clean(self) -> None:
+        if self.key.startswith(("p129_", "rollback_p129_")):
+            if self.active:
+                raise ValidationError(
+                    {"active": "Archived definitions cannot be reactivated."}
+                )
+            return
+        spec = FEATURE_REGISTRY.get(self.key)
+        if spec is None:
+            raise ValidationError({"key": "Flag is not declared in registry."})
+        if self.kind != spec["kind"]:
+            raise ValidationError(
+                {"kind": f"Registry requires kind {spec['kind']}."}
+            )
+        if not is_valid_override_value(self.key, self.default_value):
+            raise ValidationError(
+                {"default_value": "Value is not valid for this flag."}
+            )
+
 
 class FeatureRule(models.Model):
     feature = models.ForeignKey(
@@ -98,6 +123,12 @@ class FeatureRule(models.Model):
 
     def __str__(self) -> str:
         return f"{self.feature.key}:{self.name}"
+
+    def clean(self) -> None:
+        if not is_valid_override_value(self.feature.key, self.value):
+            raise ValidationError({"value": "Invalid value for this flag."})
+        if self.percentage is not None and not 0 <= self.percentage <= 100:
+            raise ValidationError({"percentage": "Use a value from 0 to 100."})
 
 
 class FeatureOverride(models.Model):
@@ -141,6 +172,17 @@ class FeatureOverride(models.Model):
         if self.scope_value:
             return f"{self.feature.key}:{self.scope_type}:{self.scope_value}"
         return f"{self.feature.key}:{self.scope_type}"
+
+    def clean(self) -> None:
+        if not is_valid_override_value(self.feature.key, self.value):
+            raise ValidationError({"value": "Invalid value for this flag."})
+        if (
+            self.scope_type == FeatureOverrideScope.GLOBAL
+            and self.scope_value
+        ):
+            raise ValidationError(
+                {"scope_value": "Global overrides cannot have a subject."}
+            )
 
 
 class ExperimentAssignment(models.Model):

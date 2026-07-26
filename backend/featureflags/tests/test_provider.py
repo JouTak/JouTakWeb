@@ -19,10 +19,12 @@ class DjangoAdminFeatureProviderTests(TestCase):
         self.provider = DjangoAdminFeatureProvider()
 
     def test_resolve_string_details_from_targeting_rule(self):
-        feature = FeatureDefinition.objects.create(
-            key="provider_homepage_variant",
-            kind=FeatureKind.VARIANT,
-            default_value="legacy",
+        feature, _ = FeatureDefinition.objects.update_or_create(
+            key="site_itmocraft_page_version",
+            defaults={
+                "kind": FeatureKind.VARIANT,
+                "default_value": "legacy",
+            },
         )
         FeatureRule.objects.create(
             feature=feature,
@@ -33,7 +35,7 @@ class DjangoAdminFeatureProviderTests(TestCase):
         )
 
         details = self.provider.resolve_string_details(
-            "provider_homepage_variant",
+            "site_itmocraft_page_version",
             "legacy",
             evaluation_context=EvaluationContext(
                 targeting_key="user:7",
@@ -56,14 +58,16 @@ class DjangoAdminFeatureProviderTests(TestCase):
         self.assertEqual(details.error_code, ErrorCode.FLAG_NOT_FOUND)
 
     def test_resolve_boolean_details_reports_type_mismatch(self):
-        FeatureDefinition.objects.create(
-            key="provider_homepage_variant_mismatch",
-            kind=FeatureKind.VARIANT,
-            default_value="legacy",
+        FeatureDefinition.objects.update_or_create(
+            key="site_itmocraft_page_version",
+            defaults={
+                "kind": FeatureKind.VARIANT,
+                "default_value": "legacy",
+            },
         )
 
         details = self.provider.resolve_boolean_details(
-            "provider_homepage_variant_mismatch",
+            "site_itmocraft_page_version",
             False,
         )
 

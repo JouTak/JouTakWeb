@@ -350,6 +350,26 @@ class FeatureDefinitionAdmin(SimpleHistoryAdmin):
     readonly_fields = ("created_at", "updated_at")
     inlines = (FeatureRuleInline, FeatureOverrideInline)
 
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            readonly.extend(("key", "kind"))
+        return tuple(readonly)
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            if (
+                isinstance(instance, FeatureOverride)
+                and instance.created_by_id is None
+            ):
+                instance.created_by = request.user
+            instance.full_clean()
+            instance.save()
+        for instance in formset.deleted_objects:
+            instance.delete()
+        formset.save_m2m()
+
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.annotate(

@@ -331,9 +331,6 @@ FEATURE_FLAG_OVERRIDE_COOKIE_MAX_AGE = config(
     # do not want a stale signed payload to survive indefinitely.
     default=60 * 60 * 24 * 30,
 )
-FEATURE_FLAG_OVERRIDE_QUERY_ENABLED = config(
-    "FEATURE_FLAG_OVERRIDE_QUERY_ENABLED", cast=bool, default=DEBUG
-)
 
 # ─── Caching ────────────────────────────────────────────────────────────────
 # DatabaseCache is used as the shared backend for django-ratelimit counters.
@@ -409,7 +406,6 @@ FF_PROFILE_PERSONALIZATION_INTERSTITIAL = config(
 FF_PROFILE_PERSONALIZATION_ENFORCE = config(
     "FF_PROFILE_PERSONALIZATION_ENFORCE", cast=bool, default=False
 )
-FF_SITE_HOMEPAGE_VERSION = config("FF_SITE_HOMEPAGE_VERSION", default="legacy")
 
 
 def as_public_settings() -> dict[str, object]:

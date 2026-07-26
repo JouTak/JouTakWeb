@@ -8,9 +8,7 @@ from unittest.mock import patch
 
 
 class ProdSettingsFrontendBaseUrlTests(TestCase):
-    VALID_SECRET_KEY = (
-        "test-secret-key-change-me-please-very-long-1234567890"
-    )
+    VALID_SECRET_KEY = "test-secret-key-change-me-please-very-long-1234567890"
 
     def _import_prod_settings(self):
         sys.modules.pop("backend.settings.prod", None)

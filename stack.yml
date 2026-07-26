@@ -19,7 +19,7 @@ x-backend-environment: &backend-environment
 
 services:
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.1@sha256:74d72c7a1345984f186bddbabcc462b2128d0d8054177dc84afaeac4db1f0f56
     command:
       - --api.dashboard=false
       - --providers.docker=true
@@ -38,7 +38,7 @@ services:
       - joutak_net
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     environment:
       POSTGRES_DB: joutak
       POSTGRES_USER: joutak

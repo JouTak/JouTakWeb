@@ -41,7 +41,7 @@ defusedxml==0.7.1
     # via py-serializable
 dj-database-url==3.0.1
     # via backend
-django==5.2.15
+django==5.2.16
     # via
     #   backend
     #   dj-database-url
@@ -177,7 +177,7 @@ packaging==25.0
 parameterized==0.9.0
 phonenumberslite==9.0.12
     # via django-phonenumber-field
-pillow==12.2.0
+pillow==12.3.0
     # via backend
 pip==26.1
     # via pip-api

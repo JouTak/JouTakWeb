@@ -29,9 +29,7 @@ class FeaturePreviewCookieTests(SimpleTestCase):
             user=self.staff,
             overrides={"site_header_version": "v2"},
         )
-        encoded = response.cookies[
-            settings.FEATURE_FLAG_OVERRIDE_COOKIE
-        ].value
+        encoded = response.cookies[settings.FEATURE_FLAG_OVERRIDE_COOKIE].value
 
         request = self.factory.get("/")
         request.COOKIES[settings.FEATURE_FLAG_OVERRIDE_COOKIE] = encoded
@@ -65,9 +63,7 @@ class FeaturePreviewCookieTests(SimpleTestCase):
 
     def test_unsigned_anonymous_id_is_rotated(self):
         request = self.factory.get("/")
-        request.COOKIES[
-            settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE
-        ] = "0" * 32
+        request.COOKIES[settings.FEATURE_FLAG_ANONYMOUS_ID_COOKIE] = "0" * 32
 
         anonymous_id, created = extract_or_create_anonymous_id(request)
 

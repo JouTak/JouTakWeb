@@ -1,6 +1,7 @@
 import { FiCalendar } from "react-icons/fi";
 import { GrLocation } from "react-icons/gr";
 
+import ResponsiveMedia from "../../media/ResponsiveMedia";
 import MinecraftButton from "../MinecraftButton/MinecraftButton";
 import styles from "./eventCard.module.css";
 
@@ -9,6 +10,7 @@ export default function EventCard({
   description,
   location,
   image,
+  imageMedia,
   date,
   to,
   imageWidth,
@@ -44,13 +46,24 @@ export default function EventCard({
           регистрация
         </MinecraftButton>
       </div>
-      <img
-        className={styles.eventImg}
-        src={image}
-        width="739"
-        style={eventImageStyle}
-        alt={alt}
-      />
+      {imageMedia ? (
+        <ResponsiveMedia
+          media={imageMedia}
+          alt={alt}
+          className={styles.eventImg}
+          pictureClassName={styles.eventMedia}
+          sizes="(max-width: 768px) 100vw, 50vw"
+        />
+      ) : (
+        <img
+          className={styles.eventImg}
+          src={image}
+          width="739"
+          style={eventImageStyle}
+          alt={alt}
+          loading="lazy"
+        />
+      )}
     </div>
   );
 }

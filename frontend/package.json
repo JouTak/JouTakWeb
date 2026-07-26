@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "generate:media": "node ./scripts/generate-media.mjs",
+    "check:assets": "node ./scripts/check-asset-budgets.mjs",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
     "format": "prettier . --check",
@@ -16,7 +18,7 @@
     "lint:styles": "stylelint \"**/*.{css,scss}\" --cache",
     "lint:styles:fix": "stylelint \"**/*.{css,scss}\" --fix --cache",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "check": "npm run lint && npm run format && npm run lint:styles && npm run test:run && npm run build",
     "prepare": "node ./prepare-husky.mjs",
     "preview": "vite preview"
@@ -70,6 +72,7 @@
     "msw": "^2.13.6",
     "prettier": "^3.5.0",
     "sass-embedded": "^1.100.0",
+    "sharp": "^0.34.4",
     "stylelint": "^16.14.1",
     "stylelint-config-standard": "^37.0.0",
     "vite": "^6.4.2",
@@ -79,6 +82,8 @@
     "@parcel/watcher@2.6.0": true,
     "msw@2.13.6": true,
     "esbuild@0.25.9": true,
-    "@swc/core@1.10.15": true
+    "@swc/core@1.10.15": true,
+    "sharp@0.34.4": true,
+    "fsevents@2.3.3": false
   }
 }

@@ -6,7 +6,9 @@
 
 .gallery-image {
   display: block;
+  width: 100%;
   max-width: 1364px;
+  height: auto;
 }
 
 .photo-viewer {
@@ -76,4 +78,36 @@
 
 .chosen-button {
   font-size: 40px;
+}
+
+@media (max-width: 1024px) {
+  .gallery {
+    width: 100%;
+  }
+
+  .gallery-image {
+    display: none;
+  }
+
+  .gallery-button {
+    position: static;
+    padding: 10px 16px;
+    font-size: 24px;
+  }
+
+  .chosen-button {
+    font-size: 28px;
+  }
+
+  .photo-viewer {
+    position: static;
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  .photo-viewer-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
 }

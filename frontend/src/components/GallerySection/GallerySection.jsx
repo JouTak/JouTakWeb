@@ -14,7 +14,14 @@ export default function GallerySection({
   const activeGallery = galleryItems[activeIndex] ?? galleryItems[0];
 
   if (!activeGallery) {
-    return null;
+    return (
+      <section className={sectionStyles.section}>
+        <div className={sectionStyles.inner}>
+          <h2 className={sectionStyles.title}>{title}</h2>
+          <p role="status">Фотографии пока не добавлены.</p>
+        </div>
+      </section>
+    );
   }
 
   const totalPhotos = activeGallery.photos.length;
@@ -53,16 +60,24 @@ export default function GallerySection({
               style={{ top: `${46 + index * 100}px` }}
               onClick={() => handleProjectChange(index)}
               type="button"
+              aria-pressed={activeIndex === index}
             >
               {item.label}
             </button>
           ))}
           <div className={styles.photoViewer}>
-            <img
-              className={styles.photoViewerImage}
-              src={activeGallery.photos[activePhotoIndex]}
-              alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
-            />
+            <div aria-live="polite">
+              {totalPhotos ? (
+                <img
+                  className={styles.photoViewerImage}
+                  src={activeGallery.photos[activePhotoIndex]}
+                  alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
+                  loading="lazy"
+                />
+              ) : (
+                <p role="status">Для этого раздела пока нет фотографий.</p>
+              )}
+            </div>
             <div className={styles.galleryPagination}>
               <button
                 className={styles.paginationButton}
@@ -77,7 +92,7 @@ export default function GallerySection({
                 />
               </button>
               <span className={styles.paginationCounter}>
-                {activePhotoIndex + 1}/{totalPhotos}
+                {totalPhotos ? activePhotoIndex + 1 : 0}/{totalPhotos}
               </span>
               <button
                 className={styles.paginationButton}

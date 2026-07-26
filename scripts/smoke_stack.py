@@ -136,8 +136,39 @@ def run_smoke() -> None:
     )
     assert_status(bootstrap, expected=200, label="bff bootstrap")
     bootstrap_payload = json.loads(bootstrap.body)
+    assert "viewer" in bootstrap_payload
     assert "features" in bootstrap_payload
-    assert "layout" in bootstrap_payload
+    assert "layout" not in bootstrap_payload
+    assert "content" not in bootstrap_payload
+
+    itmocraft_page = fetch_step(
+        "ITMOcraft page document",
+        "/bff/pages/itmocraft",
+        host="api.localhost",
+        port=8000,
+        retries=3,
+    )
+    assert_status(
+        itmocraft_page,
+        expected=200,
+        label="bff ITMOcraft page document",
+    )
+    page_payload = json.loads(itmocraft_page.body)
+    assert page_payload["schema_version"] == 1
+    assert page_payload["product"] == {
+        "id": "itmocraft",
+        "canonical_path": "/",
+        "requested_path": "/",
+        "is_legacy_alias": False,
+    }
+    assert page_payload["effective_page_variant"] == "legacy"
+    assert page_payload["layout"]["header_variant"] == "legacy"
+    assert page_payload["layout"]["footer_variant"] == "legacy"
+    assert page_payload["content"]["template"] == "landing-legacy"
+    assert itmocraft_page.headers["Cache-Control"] == "private, no-store"
+    assert itmocraft_page.headers["Vary"] == (
+        "Cookie, X-Session-Token, Origin"
+    )
 
     admin_login = fetch_step(
         "admin login",

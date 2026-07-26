@@ -253,7 +253,7 @@ jobs:
           docker compose -f stack.yml config >/dev/null
           rm -f .env.production
       - run: docker build -f ./backend/Dockerfile -t joutakweb-api:ci .
-      - run: docker build -f ./frontend/Dockerfile -t joutakweb:ci ./frontend
+      - run: docker build -f ./frontend/Dockerfile -t joutakweb:ci .
 
   smoke_stack:
     name: Smoke stack

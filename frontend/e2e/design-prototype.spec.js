@@ -150,12 +150,15 @@ test("route and viewport matrix has no horizontal overflow or header overlap", a
       await expect(page.locator("main")).toBeVisible();
       await expect
         .poll(() =>
-          page.evaluate(() => ({
-            body: document.body.scrollWidth,
-            document: document.documentElement.scrollWidth,
-          })),
+          page.evaluate(() => {
+            const layoutWidth = document.documentElement.clientWidth;
+            return {
+              body: document.body.scrollWidth > layoutWidth,
+              document: document.documentElement.scrollWidth > layoutWidth,
+            };
+          }),
         )
-        .toEqual({ body: width, document: width });
+        .toEqual({ body: false, document: false });
 
       const header = await page.locator("header").boundingBox();
       const main = await page.locator("main").boundingBox();

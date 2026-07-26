@@ -1,0 +1,11 @@
+**
+!frontend/
+!frontend/**
+!contracts/
+!contracts/page-document.schema.json
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/.eslintcache
+frontend/.stylelintcache

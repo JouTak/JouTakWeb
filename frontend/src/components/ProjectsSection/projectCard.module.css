@@ -1,11 +1,3 @@
-:root {
-  --big-title-color: #3c9bf9;
-  --big-title-shadow: #003e7cb0;
-  --small-title-color: #3c9bf9;
-  --description-color: #ecf7ff;
-  --background-color: #070e14;
-}
-
 .title {
   margin-bottom: 60px;
 }
@@ -37,13 +29,13 @@
 }
 
 .project-info h3 {
-  color: var(--small-title-color);
+  color: var(--site-accent);
   font-size: 40px;
   font-weight: 500;
 }
 
 .project-info p {
-  color: var(--description-color);
+  color: var(--site-text);
   font-size: 20px;
   font-weight: 300;
   line-height: 1.2;

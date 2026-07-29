@@ -16,7 +16,7 @@
 .question {
   font-weight: 500;
   font-size: 24px;
-  color: #3c9bf9;
+  color: var(--site-accent);
   margin: 0;
 }
 
@@ -24,7 +24,7 @@
   margin-top: 10px;
   margin-left: 64px;
   font-size: 16px;
-  color: #ecf7ff;
+  color: var(--site-text);
   font-weight: 300;
   line-height: 1.35;
 }

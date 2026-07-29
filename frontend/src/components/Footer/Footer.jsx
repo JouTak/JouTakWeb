@@ -17,8 +17,8 @@ const defaultNavigationItems = [
 
 const defaultContactItems = [
   { label: "Контакты", href: "/contact" },
-  { label: "Наша команда", href: "/team" },
-  { label: "Документы", href: "/documents" },
+  { label: "Наша команда", designPlaceholder: true },
+  { label: "Документы", designPlaceholder: true },
 ];
 
 const defaultSocialItems = [
@@ -61,15 +61,34 @@ const CustomFooter = ({
 
           <div className={styles.contactsCol}>
             <h3 className={styles.heading}>{contactsTitle}</h3>
-            {contactItems.map((item, index) => (
-              <a
-                key={`${item.label}-${index}`}
-                href={item.href}
-                className={`${styles.subitem} ${index === contactItems.length - 1 ? styles.subitemLast : ""}`}
-              >
-                {item.label}
-              </a>
-            ))}
+            {contactItems.map((item, index) => {
+              const className = `${styles.subitem} ${
+                index === contactItems.length - 1 ? styles.subitemLast : ""
+              }`;
+
+              if (item.designPlaceholder) {
+                return (
+                  <span
+                    key={`${item.label}-${index}`}
+                    className={`${className} ${styles.subitemDisabled}`}
+                    aria-disabled="true"
+                    data-design-placeholder="true"
+                  >
+                    {item.label}
+                  </span>
+                );
+              }
+
+              return (
+                <a
+                  key={`${item.label}-${index}`}
+                  href={item.href}
+                  className={className}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
           </div>
 
           <div className={styles.socialCol}>

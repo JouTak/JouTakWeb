@@ -8,10 +8,11 @@ import {
   logout,
   me,
 } from "../../services/api";
+import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
-  getProfileDisplayName,
-  getProfileIdentityKey,
-} from "../../utils/accountIdentity";
+  hasSeenPersonalizationNotice,
+  markPersonalizationNoticeSeen,
+} from "../../utils/personalizationNotice";
 import {
   isPersonalizedProfile,
   needsPersonalization,
@@ -20,8 +21,6 @@ import { getPathByProject } from "../../utils/projectUtils";
 import AuthModal from "../AuthModal";
 import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
 import styles from "./HeaderNew.module.scss";
-
-const PERSONALIZATION_NOTICE_KEY_PREFIX = "joutak_personalization_notice_v1:";
 
 function ProjectSelect() {
   const navigate = useNavigate();
@@ -158,18 +157,14 @@ export default function HeaderNew() {
     [profile],
   );
 
-  const personalizationNoticeKey = useMemo(() => {
-    return `${PERSONALIZATION_NOTICE_KEY_PREFIX}${getProfileIdentityKey(profile)}`;
-  }, [profile]);
-
   const closePersonalizationModal = useCallback(
     ({ markSeen = true } = {}) => {
-      if (markSeen && getProfileIdentityKey(profile) !== "guest") {
-        localStorage.setItem(personalizationNoticeKey, "1");
+      if (markSeen) {
+        markPersonalizationNoticeSeen(profile);
       }
       setPersonalizationModalOpen(false);
     },
-    [personalizationNoticeKey, profile],
+    [profile],
   );
 
   const openPersonalizationFlow = useCallback(() => {
@@ -184,9 +179,9 @@ export default function HeaderNew() {
     if (location.pathname.startsWith("/account/onboarding")) return;
     if (!needsPersonalization(profile)) return;
     if (profile?.personalization_interstitial_enabled === false) return;
-    if (localStorage.getItem(personalizationNoticeKey) === "1") return;
+    if (hasSeenPersonalizationNotice(profile)) return;
     setPersonalizationModalOpen(true);
-  }, [authOpen, location.pathname, personalizationNoticeKey, profile]);
+  }, [authOpen, location.pathname, profile]);
 
   const renderAccountSwitcher = (switcherProps) => (
     <button

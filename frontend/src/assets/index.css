@@ -7,6 +7,7 @@
   --site-text-muted: #aebbc7;
   --site-border: rgb(236 247 255 / 14%);
   --site-accent: #3c9bf9;
+  --site-accent-shadow: rgb(0 62 124 / 69%);
 }
 
 :root[data-theme="light"] {
@@ -17,6 +18,7 @@
   --site-text-muted: #53616f;
   --site-border: rgb(16 24 32 / 16%);
   --site-accent: #0969c7;
+  --site-accent-shadow: rgb(9 105 199 / 24%);
 }
 
 @font-face {

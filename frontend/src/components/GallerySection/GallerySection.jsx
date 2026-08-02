@@ -1,7 +1,47 @@
+import PropTypes from "prop-types";
 import { useState } from "react";
 
+import { getMediaDescriptor } from "../../media/mediaResolver";
 import sectionStyles from "../shared/sectionLayout.module.css";
 import styles from "./gallery.module.css";
+
+function mediaDescriptor(media) {
+  if (typeof media === "string") {
+    return { src: media, sources: [] };
+  }
+  return getMediaDescriptor(media);
+}
+
+function GalleryMedia({ media, alt, className }) {
+  const descriptor = mediaDescriptor(media);
+
+  if (descriptor?.designPlaceholder) {
+    return (
+      <div
+        className={`${className} ${styles.designPlaceholder}`}
+        data-design-placeholder={descriptor.designPlaceholder}
+        role="status"
+      >
+        <span>Скриншот готовится</span>
+        <small>Здесь появится игровой кадр после передачи ассета.</small>
+      </div>
+    );
+  }
+
+  if (!descriptor?.src) {
+    return null;
+  }
+
+  return (
+    <img className={className} src={descriptor.src} alt={alt} loading="lazy" />
+  );
+}
+
+GalleryMedia.propTypes = {
+  media: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  alt: PropTypes.string.isRequired,
+  className: PropTypes.string.isRequired,
+};
 
 export default function GallerySection({
   title = "Галерея",
@@ -46,9 +86,9 @@ export default function GallerySection({
       <div className={sectionStyles.inner}>
         <h2 className={sectionStyles.title}>{title}</h2>
         <div className={styles.gallery}>
-          <img
+          <GalleryMedia
             className={styles.galleryImage}
-            src={activeGallery.image}
+            media={activeGallery.image}
             alt="Gallery main view"
           />
           {galleryItems.map((item, index) => (
@@ -68,11 +108,10 @@ export default function GallerySection({
           <div className={styles.photoViewer}>
             <div aria-live="polite">
               {totalPhotos ? (
-                <img
+                <GalleryMedia
                   className={styles.photoViewerImage}
-                  src={activeGallery.photos[activePhotoIndex]}
+                  media={activeGallery.photos[activePhotoIndex]}
                   alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
-                  loading="lazy"
                 />
               ) : (
                 <p role="status">Для этого раздела пока нет фотографий.</p>

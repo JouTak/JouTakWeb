@@ -1,6 +1,6 @@
 import PropTypes from "prop-types";
 
-import { resolveAction, resolveMedia } from "../../media/mediaResolver";
+import { resolveAction } from "../../media/mediaResolver";
 import EventsSection from "../EventsSection/EventsSection";
 import FAQSection from "../FAQSection/FAQSection";
 import GallerySection from "../GallerySection/GallerySection";
@@ -46,8 +46,8 @@ function sectionProps(section) {
       title: section.title,
       galleryItems: section.items.map((item) => ({
         label: item.label,
-        image: resolveMedia(item.cover),
-        photos: item.photos.map(resolveMedia),
+        image: item.cover,
+        photos: item.photos,
       })),
     };
   }

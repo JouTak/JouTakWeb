@@ -51,4 +51,32 @@ describe("GallerySection", () => {
     ).toHaveAttribute("src", "/second-one.jpg");
     expect(screen.getByText("1/2")).toBeInTheDocument();
   });
+
+  it("renders missing design media as a deliberate placeholder", () => {
+    render(
+      <GallerySection
+        galleryItems={[
+          {
+            label: "JouTak SMP",
+            image: "/gallery-frame.jpg",
+            photos: [
+              {
+                kind: "design_placeholder",
+                id: "joutak-photo-1",
+                broken: true,
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Скриншот готовится");
+    expect(
+      document.querySelector('[data-design-placeholder="joutak-photo-1"]'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /JouTak SMP screenshot/i }),
+    ).not.toBeInTheDocument();
+  });
 });

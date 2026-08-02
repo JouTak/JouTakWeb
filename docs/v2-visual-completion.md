@@ -10,7 +10,7 @@
 - `/itmocraft` — совместимый старый адрес, который должен перенаправлять на
   канонический `/`, а не открывать вторую версию ITMOcraft.
 
-## Что уже адаптировано в `dev/design-visual-fixes`
+## Текущее состояние V2 после этой ветки
 
 - Header, hero, gallery, event cards и footer больше не создают горизонтальный
   overflow на desktop; добавлены отдельные tablet/mobile layouts.
@@ -41,24 +41,70 @@
   пользователя мимо вводного блока.
 - Контакты представлены как самостоятельные понятные destinations с описанием
   назначения Telegram, VK и Discord, а не как ряд не подписанных иконок.
+- Галерея переходит в линейную адаптивную компоновку до того, как фиксированный
+  desktop-макет начинает выходить за viewport. Отсутствующий дизайнерский ассет
+  теперь показывается как управляемый placeholder, а не как broken image.
+
+## Проверенные экраны
+
+Все скриншоты сняты локально на `1280×720` с реальным BFF-документом V2 для
+пользователя из `website-design-testers`. В кадрах нет production-данных.
+
+### Продуктовые поверхности
+
+![Главная ITMOcraft V2](screenshots/v2-itmocraft-home.jpg)
+
+![Адаптивная галерея JouTak с fallback для отсутствующего ассета](screenshots/v2-joutak-gallery.jpg)
+
+### Авторизация и аккаунт
+
+![Вход в аккаунт](screenshots/v2-auth-login.jpg)
+
+![Настройки и безопасность тестового аккаунта](screenshots/v2-account-security.jpg)
+
+### Системные сценарии
+
+![Контакты](screenshots/v2-contact.jpg)
+
+![Оплата доступа JouTak](screenshots/v2-payment.jpg)
+
+## Наблюдения локального прогона
+
+- На `/`, `/joutak`, `/minigames`, `/contact`, `/joutak/pay`,
+  `/account/security`, `/session-expired`, `/reset-password` и 404 при ширине
+  `1280` нет horizontal scroll и broken images.
+- V2 выдаётся только после локальной авторизации пользователем из
+  `website-design-testers`; без правила остаётся fail-closed `legacy`. Сессия и
+  account-состояние сохраняются при переходах между продуктовой и системной
+  поверхностями.
+- Для аккаунта без TOTP backend отвечает `404` на запрос конкретного
+  authenticator; UI корректно трактует это как «выключена». Контракт стоит
+  закрепить API-тестом либо заменить на явное пустое состояние, чтобы 404 не
+  выглядел как неисправность в наблюдаемости.
+- В локальном SQLite один из двух одновременных запросов JWT bootstrap получил
+  `database is locked`; следующий запрос успешно завершил авторизацию. Это не
+  блокирует UI-проверку, но локальный concurrency-сценарий стоит стабилизировать
+  отдельно; поведение production-БД этим прогоном не проверялось.
 
 ## Что осталось инженерам
 
 ### P0 — до расширения rollout
 
-1. Привести backend/frontend registry к одной фактической схеме
-   `site_*_version`. Сейчас frontend registry всё ещё описывает часть старых
-   имён, а `site_header_version`/`site_footer_version` объявлены variant-флагами
-   с boolean-набором допустимых значений. Изменение надо делать отдельной
-   миграцией с аудитом существующих definitions, rules и overrides.
-2. Заменить hardcoded `landingContent.js` на versioned content payload:
+1. Зафиксировать процедуру расширения rollout: владелец tester group, критерии
+   повышения процента, наблюдаемые метрики и быстрый rollback. Registry уже
+   использует единые variant-флаги `site_*_version` со значениями
+   `legacy/v2` и fail-closed default `legacy`.
+2. Довести versioned content payload до управляемого контента:
    event dates/statuses, registration URLs, gallery groups, alt-тексты и CTA.
-3. Перенести gallery assets в контролируемое хранилище/CDN и добавить
+3. Передать отсутствующий кадр `joutak-photo-1`, перенести gallery assets в
+   контролируемое хранилище/CDN и добавить
    pre-deploy проверку `200 + image/* + ненулевой размер`. В payload не должны
-   попадать `#`, design placeholders и временные ссылки без срока жизни.
-4. Проверить единый V2 shell на реальном authenticated-профиле для всех
-   вариантов MFA/passkey/session management и согласовать, должен ли Legacy
-   намеренно оставаться отдельной визуальной поверхностью. Для
+   попадать `#` и временные ссылки без срока жизни; design placeholder допустим
+   только как явно отслеживаемый временный fallback.
+4. Базовый authenticated-профиль и account security проверены локально.
+   Отдельно пройти состояния MFA setup/challenge/recovery, passkey,
+   session revoke и длинные/неполные профили. Также согласовать, должен ли
+   Legacy намеренно оставаться отдельной визуальной поверхностью. Для
    `admin.joutak.ru` нужен отдельный аудит: его экраны не входят в этот frontend.
 5. Добавить реальные destinations для Calendar/News/Modex/Team/Documents или
    оставить их disabled до релиза соответствующего route.

@@ -18,6 +18,7 @@ const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
 const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
+const LegalDocument = lazy(() => import("./pages/LegalDocument.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
 const ItmoCraftRoute = lazy(
   () => import("./pages/itmocraft/ItmoCraftRoute.jsx"),
@@ -124,6 +125,14 @@ function AppRoutes() {
         <Route path="/session-expired" element={<SessionExpired />} />
         <Route path="/confirm-email" element={<ConfirmEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/privacy-policy"
+          element={<LegalDocument documentType="privacy" />}
+        />
+        <Route
+          path="/terms-of-use"
+          element={<LegalDocument documentType="terms" />}
+        />
 
         <Route path="/login" element={<LoginModalRoute />} />
         <Route path="*" element={<NotFound />} />

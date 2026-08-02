@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { doLogin } from "../api/authApi";
+import {
+  announceAuthenticatedSession,
+  doLogin,
+  finalizeSessionAuthentication,
+} from "../api/authApi";
 import { AUTH_STATE_EVENT, tokenStore } from "../auth/tokenStore";
 import { bareClient } from "../http/client";
 
@@ -49,6 +53,35 @@ describe("authApi MFA login", () => {
     expect(tokenStore.get().pending_mfa).toBe(true);
     expect(authStateListener).toHaveBeenCalled();
     expect(refreshSpy).not.toHaveBeenCalled();
+    window.removeEventListener(AUTH_STATE_EVENT, authStateListener);
+  });
+
+  it("publishes successful auth only after one JWT exchange", async () => {
+    const authStateListener = vi.fn();
+    window.addEventListener(AUTH_STATE_EVENT, authStateListener);
+    const requestSpy = vi
+      .spyOn(bareClient, "request")
+      .mockResolvedValueOnce({
+        data: { meta: { session_token: "authenticated-session" } },
+        headers: {},
+      })
+      .mockResolvedValueOnce({ data: { access: "access-token" }, headers: {} });
+
+    await expect(
+      doLogin({ login: "player@example.com", password: "StrongPass123!" }),
+    ).resolves.toMatchObject({ status: "authenticated" });
+    expect(authStateListener).not.toHaveBeenCalled();
+
+    await finalizeSessionAuthentication();
+    expect(authStateListener).not.toHaveBeenCalled();
+    expect(requestSpy).toHaveBeenCalledTimes(2);
+    expect(requestSpy.mock.calls[1][0]).toMatchObject({
+      method: "post",
+      url: "/auth/jwt/from_session",
+    });
+
+    announceAuthenticatedSession();
+    expect(authStateListener).toHaveBeenCalledTimes(1);
     window.removeEventListener(AUTH_STATE_EVENT, authStateListener);
   });
 });

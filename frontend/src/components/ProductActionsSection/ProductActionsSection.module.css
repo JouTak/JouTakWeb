@@ -1,0 +1,154 @@
+.panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.6fr);
+  gap: 28px 44px;
+  padding: clamp(28px, 4vw, 56px);
+  border: 3px solid color-mix(in srgb, var(--site-accent) 58%, #c6c6c6);
+  background:
+    linear-gradient(135deg, rgb(23 32 47 / 94%), rgb(6 14 23 / 96%)),
+    repeating-linear-gradient(
+      -45deg,
+      rgb(255 255 255 / 4%) 0,
+      rgb(255 255 255 / 4%) 10px,
+      transparent 10px,
+      transparent 20px
+    );
+  box-shadow: 10px 10px 0 rgb(0 0 0 / 32%);
+}
+
+.copy {
+  min-width: 0;
+}
+
+.eyebrow {
+  width: fit-content;
+  margin: 0 0 16px;
+  padding: 7px 12px;
+  border: 2px solid var(--site-accent);
+  font-family: MinecraftSeven, sans-serif;
+  font-size: 18px;
+  color: var(--site-accent);
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-family: MinecraftTenFont, sans-serif;
+  font-size: clamp(42px, 5vw, 72px);
+  font-weight: 400;
+  line-height: 0.95;
+  color: var(--site-text);
+  overflow-wrap: anywhere;
+}
+
+.description {
+  max-width: 820px;
+  margin: 24px 0 0;
+  font-family: GeologicaFont, sans-serif;
+  font-size: clamp(17px, 1.8vw, 22px);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--site-text) 82%, transparent);
+}
+
+.facts {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  margin: 0;
+}
+
+.fact {
+  padding: 18px 20px;
+  border: 2px solid rgb(255 255 255 / 24%);
+  background: rgb(0 0 0 / 28%);
+}
+
+.fact dt {
+  margin-bottom: 8px;
+  font-family: GeologicaFont, sans-serif;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--site-text) 65%, transparent);
+  text-transform: uppercase;
+}
+
+.fact dd {
+  margin: 0;
+  font-family: MinecraftSeven, monospace;
+  font-size: clamp(22px, 2.5vw, 32px);
+  color: var(--site-accent);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.action {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border: 2px solid var(--site-accent);
+  font-family: MinecraftSeven, sans-serif;
+  font-size: 18px;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    transform 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.action:hover,
+.action:focus-visible {
+  transform: translateY(-2px);
+}
+
+.primary {
+  color: #111820;
+  background: var(--site-accent);
+}
+
+.secondary {
+  color: var(--site-text);
+  background: color-mix(in srgb, var(--site-accent) 18%, transparent);
+}
+
+.tertiary {
+  color: var(--site-accent);
+  border-color: color-mix(in srgb, var(--site-accent) 50%, transparent);
+  background: transparent;
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.disabled:hover {
+  transform: none;
+}
+
+@media (max-width: 760px) {
+  .panel {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 26px 22px;
+  }
+
+  .actions {
+    grid-column: 1;
+    display: grid;
+  }
+
+  .action {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

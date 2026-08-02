@@ -47,6 +47,7 @@ export async function getMfaConfig() {
 export async function authenticateMfaCode(code) {
   const { data } = await allauthAppRequest("post", "/auth/2fa/authenticate", {
     data: { code: String(code || "").trim() },
+    emitSession: false,
   });
   return data;
 }
@@ -80,6 +81,7 @@ export async function authenticateWithWebAuthnCredential(usage, credential) {
         : "/auth/webauthn/authenticate";
   const { data } = await allauthAppRequest("post", endpoint, {
     data: { credential },
+    emitSession: false,
   });
   return data;
 }

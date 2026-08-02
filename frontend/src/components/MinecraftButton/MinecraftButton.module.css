@@ -25,6 +25,16 @@
   transition: all 0.1s ease;
 }
 
+.button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.85);
+  opacity: 0.58;
+}
+
+.button:disabled:hover {
+  background-image: url("/img/кнопка-bg.png");
+}
+
 @media (max-width: 1270px) {
   .button {
     width: 280px;

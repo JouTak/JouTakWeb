@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
+  announceAuthenticatedSession,
   authenticateMfaCode,
   authenticateWithWebAuthnCredential,
   doLogin,
@@ -176,6 +177,7 @@ export default function AuthModal({
   async function completeAuthenticatedFlow(successMessage) {
     await finalizeSessionAuthentication();
     const profile = await me();
+    announceAuthenticatedSession();
     toaster.add({
       title: "Готово!",
       content: successMessage,
@@ -340,6 +342,7 @@ export default function AuthModal({
         theme: "success",
       });
       const profile = await me();
+      announceAuthenticatedSession();
       if (needsPersonalization(profile)) {
         markPostSignupPersonalizationSession();
         close({ notifyParent: !safeSuccessRedirectTo });

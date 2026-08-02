@@ -123,6 +123,7 @@ export default function GallerySection({
                 onClick={() => handlePhotoChange(-1)}
                 type="button"
                 aria-label="Previous photo"
+                disabled={totalPhotos <= 1}
               >
                 <img
                   className={styles.paginationArrow}
@@ -138,6 +139,7 @@ export default function GallerySection({
                 onClick={() => handlePhotoChange(1)}
                 type="button"
                 aria-label="Next photo"
+                disabled={totalPhotos <= 1}
               >
                 <img
                   className={styles.paginationArrow}

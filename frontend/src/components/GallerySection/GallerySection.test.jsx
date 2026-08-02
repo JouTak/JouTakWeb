@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import GallerySection from "./GallerySection.jsx";
+
+afterEach(cleanup);
 
 describe("GallerySection", () => {
   it("cycles through gallery images", async () => {
@@ -78,5 +80,9 @@ describe("GallerySection", () => {
     expect(
       screen.queryByRole("img", { name: /JouTak SMP screenshot/i }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /previous photo/i }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /next photo/i })).toBeDisabled();
   });
 });

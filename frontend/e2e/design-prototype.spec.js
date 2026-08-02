@@ -13,8 +13,8 @@ function asset(id, alt) {
   return { kind: "asset", id, alt };
 }
 
-function pageDocument({ path, product, legacyAlias }) {
-  const legacy = legacyAlias;
+function pageDocument({ path, product, legacyAlias }, variant = "v2") {
+  const legacy = legacyAlias || variant === "legacy";
   return {
     schema_version: 1,
     product: {
@@ -24,10 +24,14 @@ function pageDocument({ path, product, legacyAlias }) {
       is_legacy_alias: legacyAlias,
     },
     effective_page_variant: legacy ? "legacy" : "v2",
-    variant_source: legacy ? "fixed_legacy" : "feature_flag",
+    variant_source: legacyAlias
+      ? "fixed_legacy"
+      : legacy
+        ? "default"
+        : "feature_flag",
     layout: {
-      header_variant: "v2",
-      footer_variant: "v2",
+      header_variant: legacyAlias ? variant : legacy ? "legacy" : "v2",
+      footer_variant: legacyAlias ? variant : legacy ? "legacy" : "v2",
       default_project:
         product === "itmocraft"
           ? "itmo_craft"
@@ -59,6 +63,40 @@ function pageDocument({ path, product, legacyAlias }) {
               title: product,
               description: "Tester-only page",
               primary_action: null,
+            },
+            {
+              type: "actions",
+              eyebrow: "Доступ",
+              title: `Действия ${product}`,
+              description:
+                "Проверяем, что основные пользовательские действия доступны на каждой ширине.",
+              facts:
+                product === "joutak"
+                  ? [
+                      {
+                        id: "server",
+                        label: "Адрес сервера",
+                        value: "mc.joutak.ru",
+                      },
+                    ]
+                  : [],
+              items: [
+                {
+                  id: "primary-action",
+                  label: "Основное действие",
+                  emphasis: "primary",
+                  action: {
+                    kind: "external",
+                    href: "https://example.com/action",
+                  },
+                },
+                {
+                  id: "secondary-action",
+                  label: "Внутреннее действие",
+                  emphasis: "secondary",
+                  action: { kind: "internal", path: "/contact" },
+                },
+              ],
             },
             {
               type: "events",
@@ -103,7 +141,7 @@ function pageDocument({ path, product, legacyAlias }) {
   };
 }
 
-async function mockPageDocuments(page) {
+async function mockPageDocuments(page, { variant = "v2" } = {}) {
   await page.route("http://127.0.0.1:8000/bff/pages/**", async (route) => {
     const request = route.request();
     if (request.method() === "OPTIONS") {
@@ -131,7 +169,7 @@ async function mockPageDocuments(page) {
         "access-control-allow-origin": "http://127.0.0.1:4173",
         "access-control-allow-credentials": "true",
       },
-      body: JSON.stringify(pageDocument(routeSpec)),
+      body: JSON.stringify(pageDocument(routeSpec, variant)),
     });
   });
 }
@@ -143,28 +181,60 @@ test.beforeEach(async ({ page }) => {
 test("route and viewport matrix has no horizontal overflow or header overlap", async ({
   page,
 }) => {
-  for (const width of WIDTHS) {
-    await page.setViewportSize({ width, height: 900 });
-    for (const route of ROUTES) {
-      await page.goto(route.path);
-      await expect(page.locator("main")).toBeVisible();
-      await expect
-        .poll(() =>
-          page.evaluate(() => {
-            const layoutWidth = document.documentElement.clientWidth;
-            return {
-              body: document.body.scrollWidth > layoutWidth,
-              document: document.documentElement.scrollWidth > layoutWidth,
-            };
-          }),
-        )
-        .toEqual({ body: false, document: false });
+  for (const variant of ["legacy", "v2"]) {
+    await page.unroute("http://127.0.0.1:8000/bff/pages/**");
+    await mockPageDocuments(page, { variant });
 
-      const header = await page.locator("header").boundingBox();
-      const main = await page.locator("main").boundingBox();
-      expect(header).not.toBeNull();
-      expect(main).not.toBeNull();
-      expect(main.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const route of ROUTES) {
+        await test.step(`${variant} ${width}px ${route.path}`, async () => {
+          await page.goto(route.path);
+          await expect(page.locator("main")).toBeVisible();
+          await expect
+            .poll(
+              () =>
+                page.evaluate(() => {
+                  const layoutWidth = document.documentElement.clientWidth;
+                  const bodyOverflow = document.body.scrollWidth > layoutWidth;
+                  const documentOverflow =
+                    document.documentElement.scrollWidth > layoutWidth;
+                  if (!bodyOverflow && !documentOverflow) return null;
+                  return {
+                    bodyWidth: document.body.scrollWidth,
+                    documentWidth: document.documentElement.scrollWidth,
+                    layoutWidth,
+                    offenders: [...document.querySelectorAll("body *")]
+                      .map((element) => {
+                        const rect = element.getBoundingClientRect();
+                        return {
+                          tag: element.tagName,
+                          className:
+                            typeof element.className === "string"
+                              ? element.className
+                              : "",
+                          left: Math.round(rect.left),
+                          right: Math.round(rect.right),
+                        };
+                      })
+                      .filter(
+                        ({ left, right }) =>
+                          left < -1 || right > layoutWidth + 1,
+                      )
+                      .slice(0, 8),
+                  };
+                }),
+              { message: `${variant} ${width}px ${route.path} overflow` },
+            )
+            .toBeNull();
+
+          const header = await page.locator("header").boundingBox();
+          const main = await page.locator("main").boundingBox();
+          expect(header).not.toBeNull();
+          expect(main).not.toBeNull();
+          expect(main.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+        });
+      }
     }
   }
 });

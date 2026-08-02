@@ -1,0 +1,45 @@
+.stack {
+  display: grid;
+  gap: 18px;
+}
+
+.stack h2,
+.stack h3,
+.stack p {
+  margin: 0;
+}
+
+.message {
+  color: var(--g-color-text-secondary);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.loading {
+  display: flex;
+  min-height: 140px;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  color: var(--g-color-text-secondary);
+}
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.identity {
+  padding: 12px 14px;
+  overflow-wrap: anywhere;
+  background: var(--g-color-base-generic);
+  border-left: 4px solid #5cb8f6;
+}
+
+.centered {
+  text-align: center;
+}
+
+.muted {
+  color: var(--g-color-text-secondary);
+}

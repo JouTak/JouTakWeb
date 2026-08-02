@@ -3,21 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
+  PageActions,
+  PageNotice,
+  PagePanel,
+  PageShell,
+} from "../components/ui/PageShell.jsx";
+import {
   confirmEmailVerification,
   hasStoredAuth,
   inspectEmailVerification,
 } from "../services/api";
 import { extractErrorMessage } from "../services/errors";
-
-const cardStyle = {
-  maxWidth: 760,
-  margin: "0 auto",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 20,
-  display: "grid",
-  gap: 12,
-};
+import styles from "./SystemPages.module.css";
 
 export default function ConfirmEmail() {
   const location = useLocation();
@@ -95,52 +92,79 @@ export default function ConfirmEmail() {
   }
 
   return (
-    <section style={cardStyle}>
-      <h2 style={{ margin: 0 }}>Подтверждение email</h2>
-
-      {loading ? (
-        <Loader size="m" />
-      ) : success ? (
-        <>
-          <p style={{ margin: 0, opacity: 0.9 }}>Email успешно подтверждён.</p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Button view="action" onClick={() => navigate(accountPath)}>
-              {isAuthenticated ? "Перейти в аккаунт" : "Войти"}
-            </Button>
-            <Button view="outlined" onClick={() => navigate("/joutak")}>
-              На главную
-            </Button>
+    <PageShell
+      narrow
+      eyebrow="Аккаунт"
+      title="Подтверждение email"
+      description="Проверяем ссылку и подтверждаем адрес, привязанный к аккаунту."
+    >
+      <PagePanel className={styles.stack} aria-busy={loading}>
+        {loading ? (
+          <div className={styles.loading} aria-live="polite">
+            <Loader size="l" />
+            <span>Проверяем ссылку подтверждения…</span>
           </div>
-        </>
-      ) : error ? (
-        <>
-          <p style={{ margin: 0, opacity: 0.9 }}>{error}</p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Button view="outlined" onClick={() => navigate(accountPath)}>
-              {isAuthenticated ? "Вернуться в аккаунт" : "Ко входу"}
-            </Button>
-            <Button view="flat" onClick={() => navigate("/joutak")}>
-              На главную
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p style={{ margin: 0, opacity: 0.9 }}>
-            {email
-              ? `Подтвердите адрес ${email}, чтобы завершить операцию.`
-              : "Подтвердите адрес электронной почты, чтобы завершить операцию."}
-          </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Button view="action" loading={busy} onClick={onConfirm}>
-              Подтвердить email
-            </Button>
-            <Button view="outlined" onClick={() => navigate("/joutak")}>
-              Отмена
-            </Button>
-          </div>
-        </>
-      )}
-    </section>
+        ) : success ? (
+          <>
+            <PageNotice tone="success">
+              Email подтверждён. Теперь аккаунт готов к защищённым сценариям.
+            </PageNotice>
+            <PageActions>
+              <Button
+                view="action"
+                size="l"
+                onClick={() => navigate(accountPath)}
+              >
+                {isAuthenticated ? "Перейти в аккаунт" : "Войти"}
+              </Button>
+              <Button view="outlined" size="l" onClick={() => navigate("/")}>
+                На главную ITMOcraft
+              </Button>
+            </PageActions>
+          </>
+        ) : error ? (
+          <>
+            <PageNotice tone="danger">{error}</PageNotice>
+            <p className={styles.message}>
+              Ссылки подтверждения имеют ограниченный срок действия. Если адрес
+              ещё не подтверждён, запроси новое письмо в настройках аккаунта.
+            </p>
+            <PageActions>
+              <Button
+                view="action"
+                size="l"
+                onClick={() => navigate(accountPath)}
+              >
+                {isAuthenticated ? "Вернуться в аккаунт" : "Ко входу"}
+              </Button>
+              <Button view="outlined" size="l" onClick={() => navigate("/")}>
+                На главную
+              </Button>
+            </PageActions>
+          </>
+        ) : (
+          <>
+            <p className={styles.message}>
+              {email
+                ? `Подтверди адрес ${email}, чтобы завершить операцию.`
+                : "Подтверди адрес электронной почты, чтобы завершить операцию."}
+            </p>
+            <PageActions>
+              <Button view="action" size="l" loading={busy} onClick={onConfirm}>
+                Подтвердить email
+              </Button>
+              <Button
+                view="outlined"
+                size="l"
+                disabled={busy}
+                onClick={() => navigate("/")}
+              >
+                Отмена
+              </Button>
+            </PageActions>
+          </>
+        )}
+      </PagePanel>
+    </PageShell>
   );
 }

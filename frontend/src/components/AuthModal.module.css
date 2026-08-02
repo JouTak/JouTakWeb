@@ -1,0 +1,113 @@
+@font-face {
+  font-family: MinecraftSeven;
+  src: url("/img/fonts/Minecraft Seven_2.ttf") format("truetype");
+}
+
+.shell {
+  display: grid;
+  width: min(520px, calc(100vw - 24px));
+  max-height: min(820px, calc(100vh - 24px));
+  gap: 18px;
+  padding: clamp(20px, 5vw, 28px);
+  overflow-y: auto;
+  background:
+    linear-gradient(145deg, rgb(17 43 62 / 14%), transparent 56%),
+    var(--g-color-base-modal);
+  border: 2px solid color-mix(in srgb, var(--g-color-line-generic) 70%, #75c5ff);
+  box-shadow: 8px 8px 0 rgb(0 0 0 / 36%);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--g-color-line-generic);
+}
+
+.header img {
+  width: 72px;
+  height: 72px;
+  padding: 10px;
+  object-fit: contain;
+  background: #0c2d45;
+  border: 2px solid #8dd1ff;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 32%);
+}
+
+.kicker {
+  color: var(--g-color-text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 3px 0 0;
+  font-family: MinecraftSeven, sans-serif;
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.subtitle,
+.copy,
+.error,
+.success {
+  margin: 6px 0 0;
+  line-height: 1.45;
+}
+
+.subtitle,
+.copy {
+  color: var(--g-color-text-secondary);
+}
+
+.form,
+.field {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  gap: 6px;
+}
+
+.label {
+  color: var(--g-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.error {
+  color: var(--g-color-text-danger);
+}
+
+.success {
+  padding: 12px;
+  color: var(--g-color-text-positive);
+  background: rgb(57 199 135 / 10%);
+  border-left: 3px solid var(--g-color-line-positive);
+}
+
+.close-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+@media (max-width: 480px) {
+  .header {
+    grid-template-columns: 54px 1fr;
+  }
+
+  .header img {
+    width: 54px;
+    height: 54px;
+    padding: 8px;
+  }
+
+  .title {
+    font-size: 25px;
+  }
+}

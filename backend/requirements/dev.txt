@@ -30,7 +30,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
 contextlib2==21.6.0
     # via django-ninja-extra
 coverage==7.13.5
-cryptography==48.0.1
+cryptography==50.0.0
     # via
     #   backend
     #   fido2
@@ -179,7 +179,7 @@ phonenumberslite==9.0.12
     # via django-phonenumber-field
 pillow==12.3.0
     # via backend
-pip==26.1
+pip==26.1.2
     # via pip-api
 pip-api==0.0.34
     # via pip-audit

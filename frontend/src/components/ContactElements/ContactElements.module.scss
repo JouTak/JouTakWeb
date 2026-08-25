@@ -1,14 +1,18 @@
 .contact-category {
-  width: 50%;
+  width: 100%;
+  margin-top: 20px;
 
-  @media screen and (max-width: 600px) {
+  @media screen and (min-width: 500px) {
+    width: 80%;
+  }
+
+  @media screen and (min-width: 700px) {
     width: 100%;
   }
 
   h6 {
     font-size: 14px;
     margin: 20px;
-    color: #3c9bf9;
   }
 
   &-content {
@@ -23,11 +27,13 @@
 .contact-button {
   aspect-ratio: 1 / 1;
   border: 20px solid transparent;
-  border-image: url("/img/9-tiling/contact-button.svg") 20 fill round;
+  border-image: url("/img/9-tiling/contact-button.svg") fill 20 / 1.5;
   width: calc(50% - 10px);
   max-width: 240px;
   text-decoration: none;
-  color: black;
+
+  font-size: 12px;
+  color: #070e14;
 
   box-sizing: border-box;
   display: flex;
@@ -35,7 +41,6 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  padding: 10px;
 
   span {
     display: block;
@@ -49,7 +54,7 @@
     }
 
     img {
-      width: 50%;
+      width: 57%;
       height: auto;
       display: block;
       margin: 0 auto;

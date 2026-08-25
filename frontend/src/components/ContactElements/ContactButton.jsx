@@ -5,12 +5,10 @@ import styles from "./ContactElements.module.scss";
 export default function ContactButton({ link, iconPath, label }) {
   return (
     <a className={styles.contactButton} href={link}>
-      <div className={styles.contactButtonInner}>
-        <span>
-          <img src={iconPath} alt={[label, "ico"].join("-")} />
-        </span>
-        <span>{label}</span>
-      </div>
+      <span>
+        <img src={iconPath} alt={[label, "ico"].join("-")} />
+      </span>
+      <span>{label}</span>
     </a>
   );
 }

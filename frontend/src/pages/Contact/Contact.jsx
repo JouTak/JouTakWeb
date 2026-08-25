@@ -9,7 +9,22 @@ const CONTACTS_DATA = [
     contactsData: [
       {
         link: "https://t.me/+HHAU5go3GqIzYmI6",
+        label: "телеграм-канал",
+        iconPath: "/img/icons/telegram.svg",
+      },
+      {
+        link: "https://t.me/+HHAU5go3GqIzYmI6",
         label: "Телеграм-канал",
+        iconPath: "/img/icons/telegram.svg",
+      },
+    ],
+  },
+  {
+    title: "Самые свежие новости:",
+    contactsData: [
+      {
+        link: "https://t.me/+HHAU5go3GqIzYmI6",
+        label: "телеграм-канал",
         iconPath: "/img/icons/telegram.svg",
       },
       {
@@ -24,7 +39,10 @@ const CONTACTS_DATA = [
 const Contact = () => {
   return (
     <div className={styles.contactMain}>
-      <ContactCategory {...CONTACTS_DATA[0]} />
+      <h1>НАШИ КОНТАКТЫ</h1>
+      {CONTACTS_DATA.map((contactData, index) => {
+        return <ContactCategory {...contactData} key={index} />;
+      })}
     </div>
     //   <div
     //     className="p-5 mb-4 bg-light shadow-lg position-relative"

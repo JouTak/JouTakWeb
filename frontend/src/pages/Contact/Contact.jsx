@@ -1,16 +1,30 @@
-import ContactButton from "../../components/ContactButton/ContactButton";
+import ContactCategory from "../../components/ContactElements/ContactCategory";
 import styles from "./Contact.module.scss";
 
-const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+// const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
+
+const CONTACTS_DATA = [
+  {
+    title: "Самые свежие новости:",
+    contactsData: [
+      {
+        link: "https://t.me/+HHAU5go3GqIzYmI6",
+        label: "Телеграм-канал",
+        iconPath: "/img/icons/telegram.svg",
+      },
+      {
+        link: "https://t.me/+HHAU5go3GqIzYmI6",
+        label: "Телеграм-канал",
+        iconPath: "/img/icons/telegram.svg",
+      },
+    ],
+  },
+];
 
 const Contact = () => {
   return (
     <div className={styles.contactMain}>
-      <ContactButton
-        link="https://t.me/+HHAU5go3GqIzYmI6"
-        label="Telegram-канал"
-        iconPath="/img/icons/telegram.svg"
-      />
+      <ContactCategory {...CONTACTS_DATA[0]} />
     </div>
     //   <div
     //     className="p-5 mb-4 bg-light shadow-lg position-relative"

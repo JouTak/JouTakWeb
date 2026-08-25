@@ -1,14 +1,16 @@
 import PropTypes from "prop-types";
 
-import styles from "./ContactButton.module.scss";
+import styles from "./ContactElements.module.scss";
 
 export default function ContactButton({ link, iconPath, label }) {
   return (
     <a className={styles.contactButton} href={link}>
-      <span>
-        <img src={iconPath} alt={[label, "ico"].join("-")} />
-      </span>
-      <span>{label}</span>
+      <div className={styles.contactButtonInner}>
+        <span>
+          <img src={iconPath} alt={[label, "ico"].join("-")} />
+        </span>
+        <span>{label}</span>
+      </div>
     </a>
   );
 }

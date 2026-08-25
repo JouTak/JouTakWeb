@@ -10,27 +10,57 @@ const CONTACTS_DATA = [
       {
         link: "https://t.me/+HHAU5go3GqIzYmI6",
         label: "телеграм-канал",
-        iconPath: "/img/icons/telegram.svg",
+        iconPath: "/img/icons/new-telegram.svg",
       },
       {
-        link: "https://t.me/+HHAU5go3GqIzYmI6",
-        label: "Телеграм-канал",
-        iconPath: "/img/icons/telegram.svg",
+        link: "https://vk.ru/itmocraft",
+        label: "группа вконтакте",
+        iconPath: "/img/icons/new-vk.svg",
       },
     ],
   },
   {
-    title: "Самые свежие новости:",
+    title: "Стать частью комьюнити:",
     contactsData: [
       {
-        link: "https://t.me/+HHAU5go3GqIzYmI6",
-        label: "телеграм-канал",
-        iconPath: "/img/icons/telegram.svg",
+        link: "https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/",
+        label: "как игрок",
+        iconPath: "/img/icons/new-site.svg",
       },
       {
-        link: "https://t.me/+HHAU5go3GqIzYmI6",
-        label: "Телеграм-канал",
-        iconPath: "/img/icons/telegram.svg",
+        link: " https://github.com/JouTak",
+        label: "нечто большее",
+        iconPath: "/img/icons/new-github.svg",
+      },
+    ],
+  },
+  {
+    title: "Игровое сообщество:",
+    contactsData: [
+      {
+        link: "https://discord.gg/hb39z5TfBW",
+        label: "сервер в дискорд",
+        iconPath: "/img/icons/new-discord.svg",
+      },
+      {
+        link: "https://wiki.joutak.ru",
+        label: "наша wiki",
+        iconPath: "/img/icons/new-wiki.svg",
+      },
+    ],
+  },
+  {
+    title: "Интересные видео от нас:",
+    contactsData: [
+      {
+        link: "https://www.tiktok.com/@joutaksmp",
+        label: "аккаунт в тиктоке",
+        iconPath: "/img/icons/new-tiktok.svg",
+      },
+      {
+        link: "https://www.youtube.com/@itmocraft",
+        label: "ютуб-канал",
+        iconPath: "/img/icons/new-youtube.svg",
       },
     ],
   },

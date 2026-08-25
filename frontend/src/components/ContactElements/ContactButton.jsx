@@ -6,7 +6,7 @@ export default function ContactButton({ link, iconPath, label }) {
   return (
     <a className={styles.contactButton} href={link}>
       <span>
-        <img src={iconPath} alt={[label, "ico"].join("-")} />
+        <img src={iconPath} alt={[label, "ico"].join(" ")} />
       </span>
       <span>{label}</span>
     </a>

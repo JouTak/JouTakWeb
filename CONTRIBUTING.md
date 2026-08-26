@@ -1,5 +1,39 @@
 # Contributing
 
+## Developer workflow
+
+Основной локальный сценарий — zero-config development stack:
+
+```bash
+docker compose up --build
+```
+
+Команда на чистом checkout сама поднимает PostgreSQL, backend, frontend,
+maintenance worker и локальный proxy. Не копируйте `.env.example`
+в `.env`: это production-oriented template, а `compose.yaml` уже содержит
+безопасные local defaults.
+
+Оба приложения работают в development-режиме: Django runserver
+перезапускается при изменении Python, Vite обновляет frontend через
+HMR. Для проверки frontend→backend integration открывайте
+`http://localhost`: frontend использует same-origin API/BFF paths, а Vite
+проксирует их в backend без отдельного browser-visible API URL. API также
+доступен напрямую на `http://api.localhost`, admin — на
+`http://admin.localhost/admin/`.
+
+Компоненты можно запускать без Docker:
+
+- frontend: Node.js `24.18.0`, npm `11.16.0`, затем
+  `cd frontend && npm ci && npm run dev`;
+- backend: Python 3.12, `uv sync --python 3.12 --group dev --group test --frozen`,
+  migrations, `sync_feature_registry` и `runserver` с
+  `backend.settings.dev`.
+
+Полные команды и адреса описаны в [README](README.md#локальная-разработка).
+Обычная остановка — `docker compose down`. Команда
+`docker compose down -v` дополнительно удаляет локальную базу и media;
+используйте её только для намеренного reset.
+
 ## Branches
 
 Используйте короткие scoped branches. Рекомендуем для dev наработок использовать префикс - `dev/`, например:
@@ -66,6 +100,9 @@ Docker:
 
 ```bash
 docker compose config >/dev/null
+docker compose up -d --build
+uv run python scripts/smoke_stack.py
+docker compose down
 docker compose -f docker-compose.yml config >/dev/null
 docker compose -f docker-compose.images.yml config >/dev/null
 ```

@@ -84,6 +84,18 @@ def assert_status(
         )
 
 
+def response_header(response: SmokeResponse, name: str) -> str:
+    expected = name.casefold()
+    return next(
+        (
+            value
+            for header, value in response.headers.items()
+            if header.casefold() == expected
+        ),
+        "",
+    )
+
+
 def fetch_step(label: str, path: str, **kwargs) -> SmokeResponse:
     sys.stderr.write(f"Smoke step: {label} -> {kwargs.get('host')}{path}\n")
     return fetch(path, **kwargs)
@@ -94,10 +106,10 @@ def wait_for_health() -> None:
     while time.time() < deadline:
         try:
             response = fetch_step(
-                "health",
+                "health through Vite proxy",
                 "/health/",
-                host="api.localhost",
-                port=8000,
+                host="localhost",
+                port=5173,
                 timeout=2,
                 retries=3,
             )
@@ -113,25 +125,42 @@ def wait_for_health() -> None:
 def run_smoke() -> None:
     wait_for_health()
 
-    frontend = fetch_step(
-        "frontend", "/", host="localhost", port=8080, retries=3
+    proxied_frontend = fetch_step(
+        "frontend through local nginx", "/", host="localhost", retries=3
     )
-    assert_status(frontend, expected=200, label="frontend /")
+    assert_status(
+        proxied_frontend,
+        expected=200,
+        label="proxied frontend /",
+    )
+
+    vite_frontend = fetch_step(
+        "frontend through Vite", "/", host="localhost", port=5173, retries=3
+    )
+    assert_status(vite_frontend, expected=200, label="Vite frontend /")
 
     health = fetch_step(
-        "api health",
+        "API health through Vite proxy",
         "/health/",
-        host="api.localhost",
-        port=8000,
+        host="localhost",
+        port=5173,
         retries=3,
     )
     assert_status(health, expected=200, label="api health")
 
-    bootstrap = fetch_step(
-        "bootstrap",
-        "/bff/bootstrap",
+    nginx_health = fetch_step(
+        "API health through local nginx",
+        "/health/",
         host="api.localhost",
-        port=8000,
+        retries=3,
+    )
+    assert_status(nginx_health, expected=200, label="nginx api health")
+
+    bootstrap = fetch_step(
+        "bootstrap through Vite proxy",
+        "/bff/bootstrap",
+        host="localhost",
+        port=5173,
         retries=3,
     )
     assert_status(bootstrap, expected=200, label="bff bootstrap")
@@ -142,10 +171,10 @@ def run_smoke() -> None:
     assert "content" not in bootstrap_payload
 
     itmocraft_page = fetch_step(
-        "ITMOcraft page document",
+        "ITMOcraft page document through Vite proxy",
         "/bff/pages/itmocraft",
-        host="api.localhost",
-        port=8000,
+        host="localhost",
+        port=5173,
         retries=3,
     )
     assert_status(
@@ -165,42 +194,42 @@ def run_smoke() -> None:
     assert page_payload["layout"]["header_variant"] == "legacy"
     assert page_payload["layout"]["footer_variant"] == "legacy"
     assert page_payload["content"]["template"] == "landing-legacy"
-    assert itmocraft_page.headers["Cache-Control"] == "private, no-store"
-    assert itmocraft_page.headers["Vary"] == (
+    assert response_header(itmocraft_page, "Cache-Control") == (
+        "private, no-store"
+    )
+    assert response_header(itmocraft_page, "Vary") == (
         "Cookie, X-Session-Token, Origin"
     )
 
     admin_login = fetch_step(
-        "admin login",
+        "admin login through local nginx",
         "/admin/login/",
         host="admin.localhost",
-        port=8000,
         retries=3,
     )
     assert_status(admin_login, expected=200, label="admin login")
     assert "JouTak Staff Admin" in admin_login.body
 
     admin_block = fetch_step(
-        "admin bootstrap block",
+        "admin bootstrap block through local nginx",
         "/bff/bootstrap",
         host="admin.localhost",
-        port=8000,
         retries=3,
     )
     assert_status(admin_block, expected=403, label="admin host bff block")
 
     signup = fetch_step(
-        "signup",
+        "signup through Vite proxy",
         "/api/auth/flow/app/v1/auth/signup",
-        host="api.localhost",
-        port=8000,
+        host="localhost",
+        port=5173,
         method="POST",
         headers={
             "X-Client": "app",
             "X-Allauth-Client": "app",
         },
         data={
-            "email": f"smoke-{int(time.time())}@example.com",
+            "email": f"smoke-{time.time_ns()}@example.com",
             "password": "StrongPass123!",
         },
     )
@@ -211,11 +240,63 @@ def run_smoke() -> None:
     if not session_token:
         raise AssertionError("signup did not return session token")
 
+    jwt_pair = fetch_step(
+        "JWT issue through Vite proxy",
+        "/api/auth/jwt/from_session",
+        host="localhost",
+        port=5173,
+        method="POST",
+        headers={"X-Session-Token": session_token},
+        data={},
+    )
+    assert_status(jwt_pair, expected=200, label="JWT from session")
+    jwt_payload = json.loads(jwt_pair.body)
+    if not jwt_payload.get("access"):
+        raise AssertionError("JWT from session did not return access token")
+
+    set_cookie = response_header(jwt_pair, "Set-Cookie")
+    cookie_parts = [part.strip() for part in set_cookie.split(";")]
+    refresh_cookie = cookie_parts[0] if cookie_parts else ""
+    if not refresh_cookie.startswith("joutak_refresh="):
+        raise AssertionError("JWT response did not set joutak_refresh cookie")
+    cookie_attributes = {part.casefold() for part in cookie_parts[1:]}
+    if "secure" in cookie_attributes:
+        raise AssertionError("local refresh cookie must not use Secure")
+    for expected_attribute in (
+        "httponly",
+        "path=/api/auth/refresh",
+        "samesite=lax",
+    ):
+        if expected_attribute not in cookie_attributes:
+            raise AssertionError(
+                "JWT refresh cookie is missing local attribute: "
+                f"{expected_attribute}"
+            )
+    if any(part.startswith("domain=") for part in cookie_attributes):
+        raise AssertionError("local refresh cookie must remain host-only")
+
+    refresh = fetch_step(
+        "JWT refresh through Vite proxy",
+        "/api/auth/refresh",
+        host="localhost",
+        port=5173,
+        method="POST",
+        headers={
+            "Cookie": refresh_cookie,
+            "X-Session-Token": session_token,
+        },
+        data={},
+    )
+    assert_status(refresh, expected=200, label="JWT refresh")
+    refresh_payload = json.loads(refresh.body)
+    if not refresh_payload.get("access"):
+        raise AssertionError("JWT refresh did not return access token")
+
     account_summary = fetch_step(
-        "account summary",
+        "account summary through Vite proxy",
         "/bff/account/summary",
-        host="api.localhost",
-        port=8000,
+        host="localhost",
+        port=5173,
         headers={"X-Session-Token": session_token},
         retries=3,
     )

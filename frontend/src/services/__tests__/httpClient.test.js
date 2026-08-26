@@ -9,6 +9,12 @@ describe("resolveBackendRoot", () => {
     );
   });
 
+  it("supports a same-origin fallback for the Vite development proxy", () => {
+    expect(
+      resolveBackendRoot("__JOUTAK_RUNTIME_API_URL__", "http://localhost:5173"),
+    ).toBe("http://localhost:5173");
+  });
+
   it("falls back to the local backend for localhost without a backend port", () => {
     expect(resolveBackendRoot("http://localhost/")).toBe(
       "http://127.0.0.1:8000",

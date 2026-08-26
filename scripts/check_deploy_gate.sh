@@ -13,17 +13,6 @@ uv run python backend/manage.py check
 DJANGO_SETTINGS_MODULE=backend.settings.dev PYTHONPATH=backend uv run pytest backend -q
 npm --prefix frontend run check
 
-POSTGRES_DB=gate_db \
-POSTGRES_USER=gate_user \
-POSTGRES_PASSWORD=gate_password \
-DJANGO_SECRET_KEY=gate-secret-key-change-me \
-FRONTEND_BASE_URL=https://joutak.ru \
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru \
-DJANGO_ADMIN_HOSTS=admin.localhost,admin.joutak.ru \
-DJANGO_API_HOSTS=api.localhost,api.joutak.ru \
-DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru \
-CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,https://joutak.ru \
-PUBLIC_API_URL=http://api.localhost \
 docker compose -f compose.yaml config >/dev/null
 
 POSTGRES_DB=gate_db \

@@ -154,11 +154,20 @@ class SmokeInfraConfigTests(TestCase):
         ).read_text(encoding="utf-8")
         same_origin_location = (
             "location ~ ^/(?:(?:api|bff|accounts|media|admin)(?:/|$)|"
-            "static/admin(?:/|$)|health/?$)"
+            "health/?$)"
         )
+        admin_static_denial = "location ~ ^/static/admin(?:/|$) {"
 
         self.assertIn("server_name localhost joutak.localhost;", proxy_config)
         self.assertIn(same_origin_location, proxy_config)
+        self.assertIn(admin_static_denial, proxy_config)
+        self.assertLess(
+            proxy_config.index(admin_static_denial),
+            proxy_config.index(same_origin_location),
+        )
+        denial_start = proxy_config.index(admin_static_denial)
+        denial_end = proxy_config.index("}", denial_start)
+        self.assertIn("return 403;", proxy_config[denial_start:denial_end])
         self.assertIn("proxy_pass http://$backend_upstream;", proxy_config)
         self.assertNotIn("proxy_pass http://$backend_upstream/;", proxy_config)
         self.assertNotIn("rewrite ", proxy_config)

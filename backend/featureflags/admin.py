@@ -18,6 +18,7 @@ from simple_history.admin import SimpleHistoryAdmin
 from featureflags.admin_services import (
     add_design_tester,
     create_rollout,
+    is_never_started_draft,
     start_rollout,
     stop_rollout,
 )
@@ -1038,8 +1039,7 @@ def rollout_index_view(request: HttpRequest, *, admin_site) -> HttpResponse:
     disabled_rules = list(rules.filter(enabled=False).order_by("-updated_at"))
     draft_rollouts = []
     for rule in disabled_rules:
-        created = rule.history.order_by("history_date", "history_id").first()
-        if created and not created.enabled:
+        if is_never_started_draft(rule):
             draft_rollouts.append(
                 _present_rollout(
                     rule,

@@ -25,9 +25,6 @@ jobs:
       DJANGO_ADMIN_HOSTS: 127.0.0.1
       DJANGO_API_HOSTS: api.localhost
       DJANGO_CSRF_TRUSTED_ORIGINS: http://127.0.0.1:8001,http://127.0.0.1:8002
-      BEFORE_DATABASE_URL: sqlite:///${{ runner.temp }}/admin-before.sqlite3
-      AFTER_DATABASE_URL: sqlite:///${{ runner.temp }}/admin-after.sqlite3
-      SCREENSHOT_METADATA_DIR: ${{ runner.temp }}/admin-screenshot-metadata
       SCREENSHOT_ARTIFACT_DIR: ${{ github.workspace }}/artifacts/admin-screenshots
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -46,6 +43,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: after
           persist-credentials: false
+
+      - name: Configure ephemeral paths
+        shell: bash
+        run: |
+          echo "BEFORE_DATABASE_URL=sqlite:///$RUNNER_TEMP/admin-before.sqlite3" >> "$GITHUB_ENV"
+          echo "AFTER_DATABASE_URL=sqlite:///$RUNNER_TEMP/admin-after.sqlite3" >> "$GITHUB_ENV"
+          echo "SCREENSHOT_METADATA_DIR=$RUNNER_TEMP/admin-screenshot-metadata" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:

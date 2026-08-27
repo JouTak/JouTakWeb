@@ -52,6 +52,16 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "description": "Switches the /minigames product page.",
         "visual_impact": "Full minigames page replacement.",
     },
+    "site_contact_page_version": {
+        "kind": "variant",
+        "default_env": None,
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
+        "pages": ["minigames"],
+        "sticky": False,
+        "description": "Switches the /contact product page.",
+        "visual_impact": "Full contact page replacement.",
+    },
     "site_header_version": {
         "kind": "variant",
         "default_env": None,

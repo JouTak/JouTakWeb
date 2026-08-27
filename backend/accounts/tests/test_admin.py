@@ -96,10 +96,7 @@ class AccountAdminTests(TestCase):
 
     def test_technical_account_admin_direct_urls_are_not_available(self):
         for model in TECHNICAL_ACCOUNT_MODELS:
-            path = (
-                f"/admin/{model._meta.app_label}/"
-                f"{model._meta.model_name}/"
-            )
+            path = f"/admin/{model._meta.app_label}/{model._meta.model_name}/"
             with self.subTest(path=path):
                 response = self.admin_get(path)
                 self.assertEqual(response.status_code, 404)

@@ -191,9 +191,7 @@ class BffViewTests(APITestCase):
 
         response = self.client.post(
             "/bff/feature-overrides",
-            data=json.dumps(
-                {"overrides": {"site_header_version": "v2"}}
-            ),
+            data=json.dumps({"overrides": {"site_header_version": "v2"}}),
             content_type="application/json",
             HTTP_HOST="api.localhost",
         )

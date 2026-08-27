@@ -1,0 +1,46 @@
+{
+  "baseSha": "2088afd3823fee0d546d35c4750dced7b47e2602",
+  "headSha": "31aa3a57c8c96c2bc7f1a98f7ea773af7b81c04f",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "pages": [
+    {
+      "name": "before-feature-definition-1280",
+      "revision": "before",
+      "route": "/admin/featureflags/featuredefinition/7/change/",
+      "viewportWidth": 1280,
+      "clientWidth": 1280,
+      "scrollWidth": 3199,
+      "horizontalOverflow": true
+    },
+    {
+      "name": "after-feature-definition-1280",
+      "revision": "after",
+      "route": "/admin/featureflags/featuredefinition/7/change/",
+      "viewportWidth": 1280,
+      "clientWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false
+    },
+    {
+      "name": "after-guided-rollout-1280",
+      "revision": "after",
+      "route": "/admin/featureflags/rollouts/new/?feature=7",
+      "viewportWidth": 1280,
+      "clientWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false
+    },
+    {
+      "name": "after-rollout-index-1280",
+      "revision": "after",
+      "route": "/admin/featureflags/rollouts/",
+      "viewportWidth": 1280,
+      "clientWidth": 1280,
+      "scrollWidth": 1280,
+      "horizontalOverflow": false
+    }
+  ]
+}

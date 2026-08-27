@@ -1,0 +1,431 @@
+name: Admin screenshots (temporary)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture admin before and after
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'refactor/admin-rollout-flow'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DJANGO_SETTINGS_MODULE: backend.settings.dev
+      DJANGO_SECRET_KEY: ci-admin-screenshots-ephemeral-not-for-production
+      DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost,api.localhost
+      DJANGO_ADMIN_HOSTS: 127.0.0.1
+      DJANGO_API_HOSTS: api.localhost
+      DJANGO_CSRF_TRUSTED_ORIGINS: http://127.0.0.1:8001,http://127.0.0.1:8002
+      BEFORE_DATABASE_URL: sqlite:///${{ runner.temp }}/admin-before.sqlite3
+      AFTER_DATABASE_URL: sqlite:///${{ runner.temp }}/admin-after.sqlite3
+      SCREENSHOT_METADATA_DIR: ${{ runner.temp }}/admin-screenshot-metadata
+      SCREENSHOT_ARTIFACT_DIR: ${{ github.workspace }}/artifacts/admin-screenshots
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Check out base revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: before
+          persist-credentials: false
+
+      - name: Check out pull request revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: after
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: after/uv.lock
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.18.0"
+          cache: npm
+          cache-dependency-path: after/frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: uv sync --project after --python 3.12 --group test
+
+      - name: Install Playwright
+        working-directory: after/frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Prepare isolated databases and verified admin sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          rm -f "${BEFORE_DATABASE_URL#sqlite:///}"
+          rm -f "${AFTER_DATABASE_URL#sqlite:///}"
+          mkdir -p "$SCREENSHOT_METADATA_DIR"
+
+          DATABASE_URL="$BEFORE_DATABASE_URL" \
+            after/.venv/bin/python before/backend/manage.py migrate --noinput
+          DATABASE_URL="$BEFORE_DATABASE_URL" \
+            after/.venv/bin/python \
+            before/backend/manage.py sync_feature_registry
+
+          DATABASE_URL="$AFTER_DATABASE_URL" \
+            after/.venv/bin/python after/backend/manage.py migrate --noinput
+          DATABASE_URL="$AFTER_DATABASE_URL" \
+            after/.venv/bin/python \
+            after/backend/manage.py sync_feature_registry
+
+          seed_admin() {
+            local checkout="$1"
+            local database_url="$2"
+            local metadata_path="$3"
+
+            DATABASE_URL="$database_url" \
+              PYTHONPATH="$GITHUB_WORKSPACE/$checkout/backend" \
+              SCREENSHOT_METADATA_PATH="$metadata_path" \
+              after/.venv/bin/python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          import django
+
+          django.setup()
+
+          from allauth.mfa.totp.internal.auth import TOTP, generate_totp_secret
+          from django.contrib.auth import get_user_model
+          from django.contrib.sessions.backends.db import SessionStore
+          from featureflags.models import (
+              FeatureDefinition,
+              FeatureGroup,
+              FeatureOverride,
+              FeatureRule,
+          )
+
+          user = get_user_model().objects.create_superuser(
+              username="screenshot-admin",
+              email="screenshot-admin@example.invalid",
+              password=None,
+          )
+          TOTP.activate(user, generate_totp_secret())
+
+          feature = FeatureDefinition.objects.get(
+              key="profile_personalization_ui"
+          )
+          design_group = FeatureGroup.objects.get(
+              slug="website-design-testers"
+          )
+          FeatureRule.objects.create(
+              feature=feature,
+              name="QA rollout",
+              priority=10,
+              rule_type="authenticated",
+              value="true",
+              page="account",
+              enabled=True,
+          )
+          FeatureOverride.objects.create(
+              feature=feature,
+              scope_type="global",
+              scope_value="",
+              value="false",
+              enabled=True,
+              note="Screenshot-only emergency override",
+              created_by=user,
+          )
+
+          session = SessionStore()
+          session["_auth_user_id"] = str(user.pk)
+          session["_auth_user_backend"] = (
+              "django.contrib.auth.backends.ModelBackend"
+          )
+          session["_auth_user_hash"] = user.get_session_auth_hash()
+          session["_admin_mfa_verified"] = True
+          session.save()
+
+          Path(os.environ["SCREENSHOT_METADATA_PATH"]).write_text(
+              json.dumps(
+                  {
+                      "sessionKey": session.session_key,
+                      "featurePk": feature.pk,
+                      "designGroupPk": design_group.pk,
+                  }
+              ),
+              encoding="utf-8",
+          )
+          PY
+          }
+
+          seed_admin \
+            before \
+            "$BEFORE_DATABASE_URL" \
+            "$SCREENSHOT_METADATA_DIR/before.json"
+          seed_admin \
+            after \
+            "$AFTER_DATABASE_URL" \
+            "$SCREENSHOT_METADATA_DIR/after.json"
+
+      - name: Capture 1280px screenshots and verify after pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$SCREENSHOT_ARTIFACT_DIR"
+
+          DATABASE_URL="$BEFORE_DATABASE_URL" \
+            after/.venv/bin/python \
+            before/backend/manage.py runserver 127.0.0.1:8001 --noreload \
+            >"$RUNNER_TEMP/admin-before.log" 2>&1 &
+          before_pid=$!
+
+          DATABASE_URL="$AFTER_DATABASE_URL" \
+            after/.venv/bin/python \
+            after/backend/manage.py runserver 127.0.0.1:8002 --noreload \
+            >"$RUNNER_TEMP/admin-after.log" 2>&1 &
+          after_pid=$!
+
+          cleanup() {
+            kill "$before_pid" "$after_pid" 2>/dev/null || true
+            wait "$before_pid" "$after_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          wait_for_server() {
+            local url="$1"
+            local pid="$2"
+            local log_path="$3"
+            local attempt
+
+            for attempt in {1..60}; do
+              if curl --fail --silent --show-error "$url/admin/login/" \
+                >/dev/null; then
+                return 0
+              fi
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "::error::Django server stopped before becoming ready"
+                tail -n 100 "$log_path"
+                return 1
+              fi
+              sleep 1
+            done
+
+            echo "::error::Timed out waiting for $url"
+            tail -n 100 "$log_path"
+            return 1
+          }
+
+          wait_for_server \
+            http://127.0.0.1:8001 \
+            "$before_pid" \
+            "$RUNNER_TEMP/admin-before.log"
+          wait_for_server \
+            http://127.0.0.1:8002 \
+            "$after_pid" \
+            "$RUNNER_TEMP/admin-after.log"
+
+          cd after/frontend
+          node --input-type=module <<'JS'
+          import fs from "node:fs";
+          import path from "node:path";
+
+          import { chromium } from "playwright";
+
+          const metadataDir = process.env.SCREENSHOT_METADATA_DIR;
+          const artifactDir = process.env.SCREENSHOT_ARTIFACT_DIR;
+          const before = JSON.parse(
+            fs.readFileSync(path.join(metadataDir, "before.json"), "utf8"),
+          );
+          const after = JSON.parse(
+            fs.readFileSync(path.join(metadataDir, "after.json"), "utf8"),
+          );
+          const viewport = { width: 1280, height: 900 };
+          const captures = [
+            {
+              name: "before-feature-definition-1280",
+              revision: "before",
+              baseUrl: "http://127.0.0.1:8001",
+              route: `/admin/featureflags/featuredefinition/${before.featurePk}/change/`,
+              sessionKey: before.sessionKey,
+              requireNoOverflow: false,
+            },
+            {
+              name: "after-feature-definition-1280",
+              revision: "after",
+              baseUrl: "http://127.0.0.1:8002",
+              route: `/admin/featureflags/featuredefinition/${after.featurePk}/change/`,
+              sessionKey: after.sessionKey,
+              requireNoOverflow: true,
+            },
+            {
+              name: "after-guided-rollout-1280",
+              revision: "after",
+              baseUrl: "http://127.0.0.1:8002",
+              route: `/admin/featureflags/rollouts/new/?feature=${after.featurePk}`,
+              sessionKey: after.sessionKey,
+              requireNoOverflow: true,
+            },
+            {
+              name: "after-rollout-index-1280",
+              revision: "after",
+              baseUrl: "http://127.0.0.1:8002",
+              route: "/admin/featureflags/rollouts/",
+              sessionKey: after.sessionKey,
+              requireNoOverflow: true,
+            },
+          ];
+
+          fs.mkdirSync(artifactDir, { recursive: true });
+          const browser = await chromium.launch();
+          const pageMetrics = [];
+          const overflowFailures = [];
+
+          try {
+            for (const capture of captures) {
+              const context = await browser.newContext({
+                viewport,
+                colorScheme: "light",
+              });
+              try {
+                await context.addCookies([
+                  {
+                    name: "sessionid",
+                    value: capture.sessionKey,
+                    url: capture.baseUrl,
+                    httpOnly: true,
+                    sameSite: "Lax",
+                  },
+                ]);
+                const page = await context.newPage();
+                const response = await page.goto(
+                  `${capture.baseUrl}${capture.route}`,
+                  { waitUntil: "networkidle" },
+                );
+                if (!response?.ok()) {
+                  throw new Error(
+                    `${capture.name} returned HTTP ${response?.status() ?? "none"}`,
+                  );
+                }
+                if (new URL(page.url()).pathname.startsWith("/admin/login")) {
+                  throw new Error(`${capture.name} redirected to admin login`);
+                }
+                await page.locator("#content").waitFor({ state: "visible" });
+                if (capture.name === "after-guided-rollout-1280") {
+                  await page.selectOption("#id_audience", "group");
+                  await page.selectOption(
+                    "#id_target_groups",
+                    String(after.designGroupPk),
+                  );
+                  await page.fill(
+                    "#id_reason",
+                    "Проверка нового интерфейса раската",
+                  );
+                  await page.uncheck("#id_enabled");
+                  await Promise.all([
+                    page.waitForLoadState("networkidle"),
+                    page.getByRole("button", { name: "Проверить" }).click(),
+                  ]);
+                  await page.locator("#review-title").waitFor({
+                    state: "visible",
+                  });
+                  const groupPreserved = await page
+                    .locator(
+                      `#id_target_groups option[value="${after.designGroupPk}"]`,
+                    )
+                    .evaluate((option) => option.selected);
+                  if (!groupPreserved) {
+                    throw new Error(
+                      "Guided rollout lost the selected group after review",
+                    );
+                  }
+                }
+                await page.evaluate(async () => {
+                  await document.fonts?.ready;
+                });
+
+                const dimensions = await page.evaluate(() => {
+                  const root = document.documentElement;
+                  const body = document.body;
+                  return {
+                    viewportWidth: window.innerWidth,
+                    clientWidth: root.clientWidth,
+                    scrollWidth: Math.max(
+                      root.scrollWidth,
+                      body?.scrollWidth ?? 0,
+                    ),
+                  };
+                });
+                const horizontalOverflow =
+                  dimensions.scrollWidth > dimensions.clientWidth;
+
+                await page.screenshot({
+                  path: path.join(artifactDir, `${capture.name}.png`),
+                  fullPage: true,
+                });
+                pageMetrics.push({
+                  name: capture.name,
+                  revision: capture.revision,
+                  route: capture.route,
+                  ...dimensions,
+                  horizontalOverflow,
+                });
+                if (capture.requireNoOverflow && horizontalOverflow) {
+                  overflowFailures.push(capture.name);
+                }
+              } finally {
+                await context.close();
+              }
+            }
+          } finally {
+            await browser.close();
+          }
+
+          fs.writeFileSync(
+            path.join(artifactDir, "metrics.json"),
+            `${JSON.stringify(
+              {
+                baseSha: process.env.BASE_SHA,
+                headSha: process.env.HEAD_SHA,
+                viewport,
+                pages: pageMetrics,
+              },
+              null,
+              2,
+            )}\n`,
+            "utf8",
+          );
+
+          if (overflowFailures.length > 0) {
+            throw new Error(
+              `Horizontal overflow detected: ${overflowFailures.join(", ")}`,
+            );
+          }
+          JS
+
+      - name: Upload admin screenshots
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: admin-before-after-${{ github.run_id }}
+          path: |
+            artifacts/admin-screenshots/*.png
+            artifacts/admin-screenshots/metrics.json
+          if-no-files-found: error
+          retention-days: 30

@@ -316,9 +316,7 @@ class UserAdmin(DjangoUserAdmin):
         if not super().has_change_permission(request, obj):
             return False
         return bool(
-            request.user.is_superuser
-            or obj is None
-            or not obj.is_superuser
+            request.user.is_superuser or obj is None or not obj.is_superuser
         )
 
     def has_delete_permission(self, request, obj=None) -> bool:

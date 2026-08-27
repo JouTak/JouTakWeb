@@ -24,7 +24,7 @@ from django.http import (
     JsonResponse,
 )
 from django.shortcuts import render
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.crypto import constant_time_compare
 from django.utils.decorators import method_decorator
 from django.utils.html import format_html
@@ -222,6 +222,8 @@ class JouTakAdminSite(AdminSite):
         return super().login(request, extra_context=extra_context)
 
     def get_urls(self):
+        from featureflags.admin import get_rollout_admin_urls
+
         custom_urls = [
             path(
                 "mfa-verify/",
@@ -248,7 +250,47 @@ class JouTakAdminSite(AdminSite):
                 name="admin_mfa_cancel",
             ),
         ]
-        return custom_urls + super().get_urls()
+        return custom_urls + get_rollout_admin_urls(self) + super().get_urls()
+
+    def get_app_list(self, request, app_label=None):
+        from backend.admin_navigation import build_navigation_app_list
+
+        app_list = super().get_app_list(request, app_label)
+        rollout_console = None
+        can_view_rollouts = request.user.has_perm(
+            "featureflags.view_featuredefinition"
+        ) and (
+            request.user.has_perm("featureflags.view_featurerule")
+            or request.user.has_perm("featureflags.change_featurerule")
+        )
+        if can_view_rollouts:
+            can_add_rollout = request.user.has_perms(
+                (
+                    "featureflags.add_featurerule",
+                    "featureflags.view_featuregroup",
+                )
+            )
+            rollout_console = {
+                "name": "Управление раскатками",
+                "object_name": "GuidedRollout",
+                "perms": {
+                    "add": can_add_rollout,
+                    "change": False,
+                    "delete": False,
+                    "view": True,
+                },
+                "admin_url": reverse("admin:featureflags_rollout_index"),
+                "add_url": (
+                    reverse("admin:featureflags_rollout_add")
+                    if can_add_rollout
+                    else None
+                ),
+                "view_only": True,
+            }
+        return build_navigation_app_list(
+            app_list,
+            rollout_console=rollout_console,
+        )
 
     @staticmethod
     def _clear_pending_mfa(request: HttpRequest) -> None:

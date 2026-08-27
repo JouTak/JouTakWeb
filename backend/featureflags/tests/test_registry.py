@@ -10,6 +10,7 @@ from featureflags.registry import (
     DESIGN_TESTER_GROUP_SLUG,
     FEATURE_REGISTRY,
     GUIDED_ROLLOUT_AUDIENCES,
+    canonical_variant_token,
     get_allowed_audiences,
     get_required_group_slug,
     get_variant_choices,
@@ -49,6 +50,14 @@ class FeatureRegistryPolicyTests(SimpleTestCase):
                 ("false", "Выключено (false)"),
             ),
         )
+
+    def test_boolean_tokens_are_case_insensitive_and_canonical(self) -> None:
+        for value in (True, "True", " TRUE ", "1", "yes", "ON"):
+            with self.subTest(value=value):
+                self.assertEqual(canonical_variant_token(value), "true")
+        for value in (False, "False", " FALSE ", "0", "no", "OFF"):
+            with self.subTest(value=value):
+                self.assertEqual(canonical_variant_token(value), "false")
         self.assertEqual(
             get_variant_choices("site_header_version"),
             (
@@ -69,3 +78,14 @@ class FeatureRegistryPolicyTests(SimpleTestCase):
             self.assertRaises(ImproperlyConfigured),
         ):
             validate_registry()
+
+    def test_registry_validation_requires_operator_presentation(self) -> None:
+        key = "profile_personalization_ui"
+        for field in ("title", "description", "visual_impact"):
+            with self.subTest(field=field):
+                invalid_spec = {**FEATURE_REGISTRY[key], field: ""}
+                with (
+                    patch.dict(FEATURE_REGISTRY, {key: invalid_spec}),
+                    self.assertRaises(ImproperlyConfigured),
+                ):
+                    validate_registry()

@@ -375,6 +375,16 @@ def _safe_default(feature: FeatureDefinition) -> bool | str:
         return False
 
 
+def get_effective_default(feature: FeatureDefinition) -> bool | str:
+    """Return the fallback the runtime uses for this definition's state."""
+    if not feature.active:
+        try:
+            return _coerce_value(feature.kind, get_default_value(feature.key))
+        except (KeyError, ValueError):
+            return False
+    return _safe_default(feature)
+
+
 def _reason_for_match(source: str) -> Reason:
     if source == "rule":
         return Reason.TARGETING_MATCH

@@ -1,9 +1,7 @@
 name: Admin screenshots (temporary)
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
 
 permissions:
   contents: read
@@ -18,7 +16,7 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.head_ref == 'refactor/admin-rollout-flow'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       DJANGO_SETTINGS_MODULE: backend.settings.dev
@@ -56,7 +54,9 @@ jobs:
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          cache-dependency-glob: after/uv.lock
+          cache-dependency-glob: |
+            before/uv.lock
+            after/uv.lock
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -64,8 +64,10 @@ jobs:
           cache: npm
           cache-dependency-path: after/frontend/package-lock.json
 
-      - name: Install backend dependencies
-        run: uv sync --project after --python 3.12 --group test
+      - name: Install isolated backend dependencies
+        run: |
+          uv sync --project before --python 3.12 --group test --frozen
+          uv sync --project after --python 3.12 --group test --frozen
 
       - name: Install Playwright
         working-directory: after/frontend
@@ -83,9 +85,9 @@ jobs:
           mkdir -p "$SCREENSHOT_METADATA_DIR"
 
           DATABASE_URL="$BEFORE_DATABASE_URL" \
-            after/.venv/bin/python before/backend/manage.py migrate --noinput
+            before/.venv/bin/python before/backend/manage.py migrate --noinput
           DATABASE_URL="$BEFORE_DATABASE_URL" \
-            after/.venv/bin/python \
+            before/.venv/bin/python \
             before/backend/manage.py sync_feature_registry
 
           DATABASE_URL="$AFTER_DATABASE_URL" \
@@ -97,12 +99,13 @@ jobs:
           seed_admin() {
             local checkout="$1"
             local database_url="$2"
-            local metadata_path="$3"
+            local interpreter="$3"
+            local metadata_path="$4"
 
             DATABASE_URL="$database_url" \
               PYTHONPATH="$GITHUB_WORKSPACE/$checkout/backend" \
               SCREENSHOT_METADATA_PATH="$metadata_path" \
-              after/.venv/bin/python - <<'PY'
+              "$interpreter" - <<'PY'
           import json
           import os
           from pathlib import Path
@@ -112,6 +115,7 @@ jobs:
           django.setup()
 
           from allauth.mfa.totp.internal.auth import TOTP, generate_totp_secret
+          from django.conf import settings
           from django.contrib.auth import get_user_model
           from django.contrib.sessions.backends.db import SessionStore
           from featureflags.models import (
@@ -166,6 +170,7 @@ jobs:
               json.dumps(
                   {
                       "sessionKey": session.session_key,
+                      "sessionCookieName": settings.SESSION_COOKIE_NAME,
                       "featurePk": feature.pk,
                       "designGroupPk": design_group.pk,
                   }
@@ -178,10 +183,12 @@ jobs:
           seed_admin \
             before \
             "$BEFORE_DATABASE_URL" \
+            before/.venv/bin/python \
             "$SCREENSHOT_METADATA_DIR/before.json"
           seed_admin \
             after \
             "$AFTER_DATABASE_URL" \
+            after/.venv/bin/python \
             "$SCREENSHOT_METADATA_DIR/after.json"
 
       - name: Capture 1280px screenshots and verify after pages
@@ -191,7 +198,7 @@ jobs:
           mkdir -p "$SCREENSHOT_ARTIFACT_DIR"
 
           DATABASE_URL="$BEFORE_DATABASE_URL" \
-            after/.venv/bin/python \
+            before/.venv/bin/python \
             before/backend/manage.py runserver 127.0.0.1:8001 --noreload \
             >"$RUNNER_TEMP/admin-before.log" 2>&1 &
           before_pid=$!
@@ -215,7 +222,8 @@ jobs:
             local attempt
 
             for attempt in {1..60}; do
-              if curl --fail --silent --show-error "$url/admin/login/" \
+              if curl --fail --silent --show-error \
+                --connect-timeout 1 --max-time 2 "$url/admin/login/" \
                 >/dev/null; then
                 return 0
               fi
@@ -264,6 +272,7 @@ jobs:
               baseUrl: "http://127.0.0.1:8001",
               route: `/admin/featureflags/featuredefinition/${before.featurePk}/change/`,
               sessionKey: before.sessionKey,
+              sessionCookieName: before.sessionCookieName,
               requireNoOverflow: false,
             },
             {
@@ -272,6 +281,7 @@ jobs:
               baseUrl: "http://127.0.0.1:8002",
               route: `/admin/featureflags/featuredefinition/${after.featurePk}/change/`,
               sessionKey: after.sessionKey,
+              sessionCookieName: after.sessionCookieName,
               requireNoOverflow: true,
             },
             {
@@ -280,6 +290,7 @@ jobs:
               baseUrl: "http://127.0.0.1:8002",
               route: `/admin/featureflags/rollouts/new/?feature=${after.featurePk}`,
               sessionKey: after.sessionKey,
+              sessionCookieName: after.sessionCookieName,
               requireNoOverflow: true,
             },
             {
@@ -288,6 +299,7 @@ jobs:
               baseUrl: "http://127.0.0.1:8002",
               route: "/admin/featureflags/rollouts/",
               sessionKey: after.sessionKey,
+              sessionCookieName: after.sessionCookieName,
               requireNoOverflow: true,
             },
           ];
@@ -306,7 +318,7 @@ jobs:
               try {
                 await context.addCookies([
                   {
-                    name: "sessionid",
+                    name: capture.sessionCookieName,
                     value: capture.sessionKey,
                     url: capture.baseUrl,
                     httpOnly: true,
@@ -419,8 +431,23 @@ jobs:
           }
           JS
 
+      - name: Validate screenshot artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected=(
+            before-feature-definition-1280.png
+            after-feature-definition-1280.png
+            after-guided-rollout-1280.png
+            after-rollout-index-1280.png
+            metrics.json
+          )
+          for file in "${expected[@]}"; do
+            test -s "$SCREENSHOT_ARTIFACT_DIR/$file"
+          done
+          test "$(find "$SCREENSHOT_ARTIFACT_DIR" -maxdepth 1 -type f | wc -l)" -eq 5
+
       - name: Upload admin screenshots
-        if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: admin-before-after-${{ github.run_id }}

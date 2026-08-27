@@ -297,3 +297,10 @@ jobs:
           grep "  $archive$" "$checksums" | sha256sum --check -
           tar -xzf "$archive" gitleaks
           ./gitleaks git --redact --no-banner
+
+  admin_screenshots:
+    name: Admin before/after screenshots
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'refactor/admin-rollout-flow'
+    uses: ./.github/workflows/admin-screenshots.yml

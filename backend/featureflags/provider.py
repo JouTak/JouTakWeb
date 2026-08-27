@@ -59,7 +59,7 @@ class DjangoAdminFeatureProvider(AbstractProvider):
         return resolve_flag_details(
             flag_key,
             spec.kind,
-            default_value,
+            spec.default_value,
             evaluation_context,
         )
 
@@ -89,7 +89,7 @@ class DjangoAdminFeatureProvider(AbstractProvider):
         return resolve_flag_details(
             flag_key,
             spec.kind,
-            default_value,
+            spec.default_value,
             evaluation_context,
         )
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import uuid4
 
 from allauth.headless.contrib.ninja.security import x_session_token_auth
@@ -26,7 +26,12 @@ from featureflags.models import (
     FeatureRuleType,
 )
 from featureflags.registry import (
+    canonical_variant_token,
     get_default_value,
+    get_required_group_slug,
+    get_rollout_policy,
+    is_audience_allowed,
+    is_staff_preview_allowed,
     is_valid_override_value,
 )
 
@@ -82,6 +87,11 @@ class RequestEvaluationContext:
     anonymous_id: str | None = None
     page: str = ""
     request_overrides: dict[str, str] | None = None
+    _required_group_ids: dict[str, int | None] = field(
+        default_factory=dict,
+        init=False,
+        repr=False,
+    )
 
     @property
     def user_id(self) -> int | None:
@@ -213,7 +223,8 @@ def read_override_cookie(
     return {
         str(key): str(value)
         for key, value in payload["overrides"].items()
-        if is_valid_override_value(str(key), value)
+        if is_staff_preview_allowed(str(key))
+        and is_valid_override_value(str(key), value)
     }
 
 
@@ -229,7 +240,8 @@ def set_override_cookie(
     validated = {
         str(key): str(value)
         for key, value in overrides.items()
-        if is_valid_override_value(str(key), value)
+        if is_staff_preview_allowed(str(key))
+        and is_valid_override_value(str(key), value)
     }
     if len(validated) != len(overrides):
         raise ValueError("Unknown feature flag or invalid preview value")
@@ -346,6 +358,14 @@ def _validated_feature_value(
 
 
 def _safe_default(feature: FeatureDefinition) -> bool | str:
+    # Guarded definitions are code-first and deliberately fail closed. A
+    # stale/manual database edit must not replace their policy safe default.
+    try:
+        policy = get_rollout_policy(feature.key)
+    except KeyError:
+        policy = None
+    if policy and policy.safe_default is not None:
+        return policy.safe_default
     value = _validated_feature_value(feature, feature.default_value)
     if value is not None:
         return value
@@ -390,7 +410,14 @@ def _rule_matches(
     if rule.rule_type == FeatureRuleType.GROUP:
         if user_id is None:
             return False
-        group_ids = [int(gid) for gid in rule.group_ids if gid]
+        try:
+            group_ids = [int(gid) for gid in rule.group_ids if gid]
+        except (TypeError, ValueError):
+            logger.warning(
+                "featureflags.invalid_group_ids",
+                extra={"flag": rule.feature.key, "rule_id": rule.pk},
+            )
+            return False
         if not group_ids:
             return False
         return FeatureGroup.objects.filter(
@@ -435,13 +462,77 @@ def _rule_matches(
     return False
 
 
-def _rule_result(rule: FeatureRule) -> str:
+def _rule_result(rule: FeatureRule) -> bool | str:
     if rule.rule_type in {
         FeatureRuleType.USER_DENYLIST,
         FeatureRuleType.ANONYMOUS_DENYLIST,
     }:
-        return rule.feature.default_value
+        return _safe_default(rule.feature)
     return rule.value
+
+
+def _required_group_id_for_context(
+    feature_key: str,
+    context: RequestEvaluationContext,
+) -> int | None:
+    """Resolve and cache the required rollout group for this actor."""
+    slug = get_required_group_slug(feature_key)
+    if not slug or context.user_id is None:
+        return None
+    if slug not in context._required_group_ids:
+        context._required_group_ids[slug] = (
+            FeatureGroup.objects.filter(
+                slug=slug,
+                members__pk=context.user_id,
+            )
+            .values_list("pk", flat=True)
+            .first()
+        )
+    return context._required_group_ids[slug]
+
+
+def _policy_value_allowed(
+    feature: FeatureDefinition,
+    value: object,
+    context: RequestEvaluationContext,
+    *,
+    source: str,
+    rule: FeatureRule | None = None,
+) -> bool:
+    """Apply registry policy to previews and guarded rollout values.
+
+    A guarded value is only valid through an allowed persistent audience (and
+    its required group, when configured). The only other supported source is
+    an explicit staff preview when the policy allows one.
+    """
+    try:
+        policy = get_rollout_policy(feature.key)
+    except KeyError:
+        return False
+    if source == "request_override":
+        return context.is_staff and policy.allow_staff_preview
+    guarded_value = policy.guarded_value
+    if guarded_value is None or canonical_variant_token(
+        value
+    ) != canonical_variant_token(guarded_value):
+        return True
+    if source == "sticky":
+        return policy.allow_sticky
+    if source != "rule" or rule is None:
+        return False
+    if not is_audience_allowed(feature.key, rule.rule_type):
+        return False
+    if rule.rule_type == FeatureRuleType.EVERYONE:
+        return policy.allow_public
+    required_group_slug = policy.required_group_slug
+    if not required_group_slug:
+        return True
+    if rule.rule_type != FeatureRuleType.GROUP:
+        return False
+    required_group_id = _required_group_id_for_context(feature.key, context)
+    if required_group_id is None:
+        return False
+    return str(required_group_id) in {str(value) for value in rule.group_ids}
 
 
 def _db_override(
@@ -488,11 +579,15 @@ def _definition_for_key(key: str) -> FeatureDefinition | None:
 def get_feature_spec(key: str) -> FeatureSpec | None:
     feature = _definition_for_key(key)
     if feature is not None:
+        try:
+            allow_sticky = get_rollout_policy(feature.key).allow_sticky
+        except KeyError:
+            allow_sticky = True
         return FeatureSpec(
             key=feature.key,
             kind=feature.kind,
             default_value=_safe_default(feature),
-            sticky_assignment=feature.sticky_assignment,
+            sticky_assignment=feature.sticky_assignment and allow_sticky,
         )
 
     default_spec = _get_default_features().get(key)
@@ -525,7 +620,11 @@ def _sticky_assignment(
     context: RequestEvaluationContext,
 ) -> str | None:
     subject = _assignment_subject(context)
-    if not feature.sticky_assignment or subject is None:
+    try:
+        allow_sticky = get_rollout_policy(feature.key).allow_sticky
+    except KeyError:
+        allow_sticky = True
+    if not feature.sticky_assignment or not allow_sticky or subject is None:
         return None
     subject_type, subject_key = subject
     assignment = feature.assignments.filter(
@@ -540,7 +639,11 @@ def _persist_assignment(
     feature: FeatureDefinition, context: RequestEvaluationContext, value: str
 ) -> None:
     subject = _assignment_subject(context)
-    if not feature.sticky_assignment or subject is None:
+    try:
+        allow_sticky = get_rollout_policy(feature.key).allow_sticky
+    except KeyError:
+        allow_sticky = True
+    if not feature.sticky_assignment or not allow_sticky or subject is None:
         return
     subject_type, subject_key = subject
     ExperimentAssignment.objects.update_or_create(
@@ -559,19 +662,34 @@ def _evaluate_definition(
     overrides = context.request_overrides or {}
     if feature.key in overrides:
         value = _validated_feature_value(feature, overrides[feature.key])
-        if value is not None:
+        if value is not None and _policy_value_allowed(
+            feature,
+            value,
+            context,
+            source="request_override",
+        ):
             return value, _reason_for_match("override"), str(value)
 
     db_override = _db_override(feature, context)
     if db_override is not None:
         value = _validated_feature_value(feature, db_override)
-        if value is not None:
+        if value is not None and _policy_value_allowed(
+            feature,
+            value,
+            context,
+            source="db_override",
+        ):
             return value, _reason_for_match("override"), str(value)
 
     sticky_value = _sticky_assignment(feature, context)
     if sticky_value is not None:
         value = _validated_feature_value(feature, sticky_value)
-        if value is not None:
+        if value is not None and _policy_value_allowed(
+            feature,
+            value,
+            context,
+            source="sticky",
+        ):
             return value, Reason.CACHED, str(value)
 
     for rule in feature.rules.all():
@@ -579,6 +697,14 @@ def _evaluate_definition(
             value = _rule_result(rule)
             coerced = _validated_feature_value(feature, value)
             if coerced is None:
+                continue
+            if not _policy_value_allowed(
+                feature,
+                coerced,
+                context,
+                source="rule",
+                rule=rule,
+            ):
                 continue
             _persist_assignment(feature, context, str(coerced))
             return coerced, _reason_for_match("rule"), str(coerced)
@@ -656,10 +782,17 @@ def resolve_flag_details(
 ) -> FlagResolutionDetails[bool | str]:
     feature = definition or _definition_for_key(flag_key)
     if feature is None:
+        registry_spec = _get_default_features().get(flag_key)
+        resolved_default = default_value
+        if registry_spec and registry_spec["kind"] == kind:
+            resolved_default = _coerce_value(
+                registry_spec["kind"],
+                registry_spec["default"],
+            )
         return FlagResolutionDetails(
-            value=default_value,
+            value=resolved_default,
             reason=Reason.DEFAULT,
-            variant=str(default_value),
+            variant=str(resolved_default),
         )
 
     request_context = from_openfeature_context(evaluation_context)
@@ -690,11 +823,12 @@ def evaluate_many(
     keys: list[str] | tuple[str, ...],
 ) -> dict[str, bool | str]:
     """
-    Batch evaluate multiple feature flags in a single DB round-trip.
+    Batch-load definitions, rules, and overrides for several feature flags.
 
     Uses direct evaluation (bypassing OpenFeature SDK round-trip) for
-    performance. The OpenFeature client is still available for external
-    consumers via the provider interface.
+    performance. Targeted group rules can still require membership lookups.
+    The OpenFeature client remains available to trusted internal consumers via
+    the provider interface.
     """
     definitions = _batch_load_definitions(keys)
     defaults = _get_default_features()

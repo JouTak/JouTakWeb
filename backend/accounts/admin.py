@@ -2,36 +2,40 @@ from __future__ import annotations
 
 import csv
 import logging
-from urllib.parse import urlencode
 
 from accounts.services.email_addresses import sync_user_email_address
 from allauth.account.models import EmailAddress
 from allauth.mfa.models import Authenticator
-from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+from allauth.socialaccount.models import (
+    SocialAccount,
+    SocialApp,
+    SocialToken,
+)
 from allauth.usersessions.models import UserSession
+from axes.models import AccessAttempt, AccessFailureLog, AccessLog
 from core.models import UserProfile, UserSessionMeta, UserSessionToken
 from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
-from django.db.models import Count, Exists, OuterRef, Q
+from django.core.exceptions import PermissionDenied
+from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
-from django.urls import reverse
+from django.utils import formats, timezone
 from django.utils.html import format_html
-from django.utils.http import urlencode as django_urlencode
+from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-
-def _mask_secret(value: str | None) -> str:
-    raw = str(value or "").strip()
-    if not raw:
-        return "missing"
-    if len(raw) <= 6:
-        return "configured"
-    return f"{raw[:3]}...{raw[-3:]}"
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
+_PRIVILEGE_FIELDS = (
+    "is_staff",
+    "is_superuser",
+    "groups",
+    "user_permissions",
+)
 
 
 def _safe_unregister(model) -> None:
@@ -41,76 +45,41 @@ def _safe_unregister(model) -> None:
         logger.debug("%s admin was not registered before override", model)
 
 
+def _csv_safe_text(value: object) -> str:
+    """Prevent spreadsheet clients from interpreting exported text as code."""
+    raw = str(value or "")
+    stripped = raw.lstrip(" \t\r\n")
+    if raw.startswith(_CSV_FORMULA_PREFIXES) or stripped.startswith(
+        _CSV_FORMULA_PREFIXES[:4]
+    ):
+        return f"'{raw}"
+    return raw
+
+
+def _admin_datetime(value) -> str:
+    if value is None:
+        return "never"
+    return formats.date_format(
+        timezone.localtime(value),
+        "SHORT_DATETIME_FORMAT",
+    )
+
+
 class UserProfileInline(admin.StackedInline):
+    """The only editable account extension in the canonical user card."""
+
     model = UserProfile
-    extra = 0
+    extra = 1
+    max_num = 1
     can_delete = False
+    show_change_link = False
     fields = (
-        "vk_username",
-        "minecraft_nick",
-        "minecraft_has_license",
-        "is_itmo_student",
-        "itmo_isu",
-        "completed_at",
-        "created_at",
-        "updated_at",
+        ("vk_username", "minecraft_nick"),
+        ("minecraft_has_license", "is_itmo_student"),
+        ("itmo_isu", "completed_at"),
+        ("created_at", "updated_at"),
     )
     readonly_fields = ("created_at", "updated_at")
-    show_change_link = True
-
-
-class EmailAddressInline(admin.TabularInline):
-    model = EmailAddress
-    extra = 0
-    fields = ("email", "verified", "primary")
-    show_change_link = True
-
-
-class SocialAccountInline(admin.TabularInline):
-    model = SocialAccount
-    extra = 0
-    fields = ("provider", "uid", "last_login", "date_joined")
-    readonly_fields = ("provider", "uid", "last_login", "date_joined")
-    can_delete = False
-    show_change_link = True
-
-
-class AuthenticatorInline(admin.TabularInline):
-    model = Authenticator
-    extra = 0
-    fields = ("type", "created_at", "last_used_at")
-    readonly_fields = ("type", "created_at", "last_used_at")
-    can_delete = False
-    show_change_link = True
-
-
-class UserSessionMetaInline(admin.TabularInline):
-    model = UserSessionMeta
-    extra = 0
-    fields = ("session_key", "ip", "last_seen", "revoked_at", "revoked_reason")
-    readonly_fields = (
-        "session_key",
-        "ip",
-        "last_seen",
-        "revoked_at",
-        "revoked_reason",
-    )
-    can_delete = False
-    show_change_link = True
-
-
-class UserSessionTokenInline(admin.TabularInline):
-    model = UserSessionToken
-    extra = 0
-    fields = ("session_key", "refresh_jti", "created_at", "revoked_at")
-    readonly_fields = (
-        "session_key",
-        "refresh_jti",
-        "created_at",
-        "revoked_at",
-    )
-    can_delete = False
-    show_change_link = True
 
 
 class EmailVerifiedFilter(admin.SimpleListFilter):
@@ -143,39 +112,15 @@ class ProfileCompleteFilter(admin.SimpleListFilter):
         return queryset
 
 
-class OAuthPresenceFilter(admin.SimpleListFilter):
-    title = "oauth connected"
-    parameter_name = "oauth_connected"
-
-    def lookups(self, request, model_admin):
-        return (("yes", "Connected"), ("no", "Not connected"))
-
-    def queryset(self, request, queryset):
-        if self.value() == "yes":
-            return queryset.filter(oauth_provider_count__gt=0)
-        if self.value() == "no":
-            return queryset.filter(oauth_provider_count=0)
-        return queryset
-
-
-class ActiveSessionFilter(admin.SimpleListFilter):
-    title = "active sessions"
-    parameter_name = "active_sessions"
-
-    def lookups(self, request, model_admin):
-        return (("yes", "Has active"), ("no", "No active"))
-
-    def queryset(self, request, queryset):
-        if self.value() == "yes":
-            return queryset.filter(active_session_count__gt=0)
-        if self.value() == "no":
-            return queryset.filter(active_session_count=0)
-        return queryset
-
-
+@admin.action(description="Export selected users to CSV")
 def export_users_csv(modeladmin, request, queryset) -> HttpResponse:
-    response = HttpResponse(content_type="text/csv")
+    """Export a minimal account inventory for superusers only."""
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="users.csv"'
+    response["X-Content-Type-Options"] = "nosniff"
     writer = csv.writer(response)
     writer.writerow(
         [
@@ -186,43 +131,51 @@ def export_users_csv(modeladmin, request, queryset) -> HttpResponse:
             "is_staff",
             "email_verified",
             "profile_completed",
-            "vk_username",
-            "minecraft_nick",
-            "is_itmo_student",
-            "itmo_isu",
         ]
     )
     for user in queryset.select_related("extended_profile"):
         profile = getattr(user, "extended_profile", None)
+        email_verified = getattr(user, "primary_email_verified", None)
+        if email_verified is None:
+            email_verified = EmailAddress.objects.filter(
+                user=user,
+                email__iexact=user.email,
+                verified=True,
+            ).exists()
         writer.writerow(
             [
                 user.pk,
-                user.username,
-                user.email,
+                _csv_safe_text(user.username),
+                _csv_safe_text(user.email),
                 user.is_active,
                 user.is_staff,
-                bool(getattr(user, "primary_email_verified", False)),
-                bool(getattr(user, "profile_completed", False)),
-                getattr(profile, "vk_username", ""),
-                getattr(profile, "minecraft_nick", ""),
-                getattr(profile, "is_itmo_student", ""),
-                getattr(profile, "itmo_isu", ""),
+                bool(email_verified),
+                bool(profile and profile.completed_at),
             ]
         )
     return response
 
 
-export_users_csv.short_description = "Export selected users to CSV"
-
-
+# allauth and session rows are implementation details. Registering them as
+# normal ModelAdmin pages exposes secret-bearing fields on direct URLs and
+# creates several competing ways to edit the same account. They are instead
+# represented by safe summaries on the canonical auth.User page below.
 for model in (
     User,
+    UserProfile,
     EmailAddress,
     SocialAccount,
     SocialApp,
     SocialToken,
     Authenticator,
     UserSession,
+    UserSessionMeta,
+    UserSessionToken,
+    OutstandingToken,
+    BlacklistedToken,
+    AccessAttempt,
+    AccessLog,
+    AccessFailureLog,
 ):
     _safe_unregister(model)
 
@@ -230,14 +183,7 @@ for model in (
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     actions = (export_users_csv,)
-    inlines = (
-        UserProfileInline,
-        EmailAddressInline,
-        SocialAccountInline,
-        AuthenticatorInline,
-        UserSessionMetaInline,
-        UserSessionTokenInline,
-    )
+    inlines = (UserProfileInline,)
     list_display = (
         "username",
         "email",
@@ -245,21 +191,13 @@ class UserAdmin(DjangoUserAdmin):
         "is_staff",
         "email_verified",
         "profile_state",
-        "oauth_providers",
-        "active_sessions",
         "last_login",
-        "date_joined",
     )
     list_filter = (
-        "is_staff",
-        "is_superuser",
         "is_active",
+        "is_staff",
         EmailVerifiedFilter,
         ProfileCompleteFilter,
-        OAuthPresenceFilter,
-        ActiveSessionFilter,
-        "extended_profile__is_itmo_student",
-        "extended_profile__minecraft_has_license",
     )
     search_fields = (
         "username",
@@ -267,23 +205,58 @@ class UserAdmin(DjangoUserAdmin):
         "extended_profile__vk_username",
         "extended_profile__minecraft_nick",
         "extended_profile__itmo_isu",
-        "session_meta__session_key",
-        "session_tokens__refresh_jti",
     )
+    ordering = ("-date_joined",)
+    list_per_page = 50
+    list_max_show_all = 200
     readonly_fields = (
         "date_joined",
         "last_login",
-        "backoffice_summary",
-        "linked_operations",
+        "identity_summary",
+        "security_summary",
     )
-    fieldsets = DjangoUserAdmin.fieldsets + (
+    fieldsets = (
         (
-            "Backoffice",
+            "Account",
             {
                 "fields": (
-                    "backoffice_summary",
-                    "linked_operations",
+                    "username",
+                    "password",
+                    ("first_name", "last_name"),
+                    "email",
+                    "is_active",
                 )
+            },
+        ),
+        (
+            "Identity and security",
+            {"fields": ("identity_summary", "security_summary")},
+        ),
+        (
+            "Staff access",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    ("is_staff", "is_superuser"),
+                    "groups",
+                    "user_permissions",
+                ),
+            },
+        ),
+        (
+            "Activity",
+            {
+                "classes": ("collapse",),
+                "fields": ("last_login", "date_joined"),
+            },
+        ),
+    )
+    add_fieldsets = (
+        (
+            "Create account",
+            {
+                "classes": ("wide",),
+                "fields": ("username", "email", "password1", "password2"),
             },
         ),
     )
@@ -295,31 +268,75 @@ class UserAdmin(DjangoUserAdmin):
             email__iexact=OuterRef("email"),
             verified=True,
         )
-        return (
-            queryset.select_related("extended_profile")
-            .annotate(
-                oauth_provider_count=Count("socialaccount", distinct=True),
-                active_session_count=Count(
-                    "session_tokens",
-                    filter=Q(session_tokens__revoked_at__isnull=True),
-                    distinct=True,
-                ),
-                profile_completed=Exists(
-                    UserProfile.objects.filter(
-                        user=OuterRef("pk"),
-                        completed_at__isnull=False,
-                    )
-                ),
-                primary_email_verified=Exists(verified_email),
-            )
-            .distinct()
+        return queryset.select_related("extended_profile").annotate(
+            profile_completed=Exists(
+                UserProfile.objects.filter(
+                    user=OuterRef("pk"),
+                    completed_at__isnull=False,
+                )
+            ),
+            primary_email_verified=Exists(verified_email),
         )
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            readonly.extend(_PRIVILEGE_FIELDS)
+        return tuple(dict.fromkeys(readonly))
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj is None or request.user.is_superuser:
+            return fieldsets
+
+        safe_fieldsets = []
+        for title, options in fieldsets:
+            safe_options = options.copy()
+            safe_fields = []
+            for field in safe_options.get("fields", ()):
+                if field == "password":
+                    continue
+                if isinstance(field, (list, tuple)):
+                    field = tuple(item for item in field if item != "password")
+                    if not field:
+                        continue
+                safe_fields.append(field)
+            safe_options["fields"] = tuple(safe_fields)
+            safe_fieldsets.append((title, safe_options))
+        return tuple(safe_fieldsets)
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not request.user.is_superuser:
+            actions.pop("export_users_csv", None)
+            actions.pop("delete_selected", None)
+        return actions
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        if not super().has_change_permission(request, obj):
+            return False
+        return bool(
+            request.user.is_superuser
+            or obj is None
+            or not obj.is_superuser
+        )
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return bool(
+            request.user.is_superuser
+            and super().has_delete_permission(request, obj)
+        )
+
+    def user_change_password(self, request, id, form_url=""):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        return super().user_change_password(request, id, form_url)
 
     @admin.display(boolean=True, ordering="primary_email_verified")
     def email_verified(self, obj) -> bool:
         return bool(getattr(obj, "primary_email_verified", False))
 
-    @admin.display(description="Profile state", ordering="profile_completed")
+    @admin.display(description="Profile", ordering="profile_completed")
     def profile_state(self, obj) -> str:
         profile = getattr(obj, "extended_profile", None)
         if profile and profile.completed_at:
@@ -328,127 +345,57 @@ class UserAdmin(DjangoUserAdmin):
             return "started"
         return "missing"
 
-    @admin.display(description="OAuth", ordering="oauth_provider_count")
-    def oauth_providers(self, obj) -> str:
+    @admin.display(description="Connected identity")
+    def identity_summary(self, obj) -> str:
+        email_is_verified = EmailAddress.objects.filter(
+            user=obj,
+            email__iexact=obj.email,
+            verified=True,
+        ).exists()
         providers = list(
-            obj.socialaccount_set.order_by("provider").values_list(
-                "provider", flat=True
-            )
-        )
-        return ", ".join(providers) if providers else "none"
-
-    @admin.display(
-        description="Active sessions",
-        ordering="active_session_count",
-    )
-    def active_sessions(self, obj) -> int:
-        return int(getattr(obj, "active_session_count", 0))
-
-    @admin.display(description="Backoffice summary")
-    def backoffice_summary(self, obj) -> str:
-        profile = getattr(obj, "extended_profile", None)
-        if profile is None:
-            return "No profile yet."
-        return (
-            f"VK: {profile.vk_username or '-'} | "
-            f"Minecraft: {profile.minecraft_nick or '-'} | "
-            f"ITMO: {profile.itmo_isu or '-'}"
-        )
-
-    @admin.display(description="Related views")
-    def linked_operations(self, obj) -> str:
-        profile_url = (
-            reverse("admin:core_userprofile_changelist")
-            + "?"
-            + urlencode({"user__id__exact": obj.pk})
-        )
-        sessions_url = (
-            reverse("admin:core_usersessionmeta_changelist")
-            + "?"
-            + urlencode({"user__id__exact": obj.pk})
-        )
-        feature_overrides_url = (
-            reverse("admin:featureflags_featureoverride_changelist")
-            + "?"
-            + django_urlencode({"scope_value": obj.pk})
+            SocialAccount.objects.filter(user=obj)
+            .order_by("provider")
+            .values_list("provider", flat=True)
+            .distinct()
         )
         return format_html(
-            '<a href="{}">Profile</a> | <a href="{}">Sessions</a> | '
-            '<a href="{}">Feature overrides</a>',
-            profile_url,
-            sessions_url,
-            feature_overrides_url,
+            "<strong>Primary email:</strong> {} ({})<br>"
+            "<strong>Connected providers:</strong> {}",
+            obj.email or "missing",
+            "verified" if email_is_verified else "not verified",
+            ", ".join(providers) if providers else "none",
+        )
+
+    @admin.display(description="Security overview")
+    def security_summary(self, obj) -> str:
+        factor_labels = dict(Authenticator.Type.choices)
+        factors = (
+            Authenticator.objects.filter(user=obj)
+            .order_by("type", "created_at")
+            .values_list("type", "created_at", "last_used_at")
+        )
+        factor_summary = "; ".join(
+            (
+                f"{factor_labels.get(factor_type, factor_type)} — "
+                f"created {_admin_datetime(created_at)}, "
+                f"last used {_admin_datetime(last_used_at)}"
+            )
+            for factor_type, created_at, last_used_at in factors
+        )
+        browser_session_count = UserSession.objects.filter(user=obj).count()
+        refresh_session_count = UserSessionToken.objects.filter(
+            user=obj,
+            revoked_at__isnull=True,
+        ).count()
+        return format_html(
+            "<strong>MFA factors:</strong> {}<br>"
+            "<strong>Tracked browser sessions:</strong> {}<br>"
+            "<strong>Active refresh sessions:</strong> {}",
+            factor_summary or "not configured",
+            browser_session_count,
+            refresh_session_count,
         )
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         sync_user_email_address(obj)
-
-
-@admin.register(EmailAddress)
-class EmailAddressAdmin(admin.ModelAdmin):
-    list_display = ("email", "user", "verified", "primary")
-    list_filter = ("verified", "primary")
-    search_fields = ("email", "user__username", "user__email")
-    autocomplete_fields = ("user",)
-
-
-@admin.register(SocialAccount)
-class SocialAccountAdmin(admin.ModelAdmin):
-    list_display = ("user", "provider", "uid", "last_login", "date_joined")
-    list_filter = ("provider",)
-    search_fields = ("uid", "user__username", "user__email")
-    autocomplete_fields = ("user",)
-    readonly_fields = ("last_login", "date_joined", "extra_data")
-
-
-@admin.register(SocialApp)
-class SocialAppAdmin(admin.ModelAdmin):
-    list_display = ("name", "provider", "provider_id", "client_id")
-    search_fields = ("name", "provider", "provider_id", "client_id")
-
-
-@admin.register(SocialToken)
-class SocialTokenAdmin(admin.ModelAdmin):
-    list_display = ("account", "app", "expires_at", "token_state")
-    search_fields = (
-        "account__user__username",
-        "account__user__email",
-        "account__uid",
-    )
-    autocomplete_fields = ("account", "app")
-    readonly_fields = ("masked_token", "masked_token_secret")
-
-    @admin.display(description="Token")
-    def token_state(self, obj) -> str:
-        return "configured" if obj.token else "missing"
-
-    @admin.display(description="Access token")
-    def masked_token(self, obj) -> str:
-        return _mask_secret(obj.token)
-
-    @admin.display(description="Token secret")
-    def masked_token_secret(self, obj) -> str:
-        return _mask_secret(obj.token_secret)
-
-
-@admin.register(Authenticator)
-class AuthenticatorAdmin(admin.ModelAdmin):
-    list_display = ("user", "type", "created_at", "last_used_at")
-    list_filter = ("type", "created_at", "last_used_at")
-    search_fields = ("user__username", "user__email")
-    autocomplete_fields = ("user",)
-    readonly_fields = ("created_at", "last_used_at")
-
-
-@admin.register(UserSession)
-class UserSessionAdmin(admin.ModelAdmin):
-    list_display = ("user", "session_key", "ip", "last_seen_at", "created_at")
-    list_filter = ("created_at", "last_seen_at")
-    search_fields = ("user__username", "user__email", "session_key", "ip")
-    autocomplete_fields = ("user",)
-    readonly_fields = ("created_at", "last_seen_at", "data_state")
-
-    @admin.display(description="Session payload")
-    def data_state(self, obj) -> str:
-        return "present" if obj.data else "empty"

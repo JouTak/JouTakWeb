@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from urllib.parse import urlencode
 from uuid import uuid4
 
 from django.conf import settings
@@ -15,6 +16,20 @@ from backend.admin_site import admin_mfa_is_enabled, is_admin_mfa_verified
 ADMIN_ALLOWED_PREFIXES = ("/admin/", "/static/", "/media/")
 API_BLOCKED_PREFIXES = ("/admin/", "/static/admin/")
 REQUEST_ID_HEADER = "X-Request-ID"
+ADMIN_MFA_PUBLIC_PATHS = frozenset(
+    {
+        "/admin/login",
+        "/admin/login/",
+        "/admin/mfa-verify",
+        "/admin/mfa-verify/",
+        "/admin/mfa-verify/cancel",
+        "/admin/mfa-verify/cancel/",
+        "/admin/mfa-verify/webauthn-options",
+        "/admin/mfa-verify/webauthn-options/",
+        "/admin/mfa-verify/webauthn-complete",
+        "/admin/mfa-verify/webauthn-complete/",
+    }
+)
 
 
 def _normalized_host(host: str | None) -> str:
@@ -41,12 +56,8 @@ def is_admin_path(path: str) -> bool:
 
 
 def is_admin_mfa_path(path: str) -> bool:
-    """Paths that require completed MFA (excludes login and MFA verify)."""
-    return (
-        path.startswith("/admin/")
-        and not path.startswith("/admin/login/")
-        and not path.startswith("/admin/mfa-verify/")
-    )
+    """Paths that require completed MFA (excludes authentication flows)."""
+    return path.startswith("/admin/") and path not in ADMIN_MFA_PUBLIC_PATHS
 
 
 class RequestContextMiddleware:
@@ -80,8 +91,10 @@ class HostRoutingMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         host = request.get_host()
         path = request.path
+        admin_host = is_admin_host(host)
+        api_host = is_api_host(host)
 
-        if is_admin_host(host):
+        if admin_host:
             if path == "/":
                 return redirect("/admin/")
             if not is_admin_path(path):
@@ -89,9 +102,13 @@ class HostRoutingMiddleware:
                     "Admin host exposes only admin assets."
                 )
 
-        if is_api_host(host) and any(
-            path == prefix[:-1] or path.startswith(prefix)
-            for prefix in API_BLOCKED_PREFIXES
+        if (
+            api_host
+            and not admin_host
+            and any(
+                path == prefix[:-1] or path.startswith(prefix)
+                for prefix in API_BLOCKED_PREFIXES
+            )
         ):
             return HttpResponseForbidden(
                 "Admin surface is not available on this host."
@@ -99,7 +116,7 @@ class HostRoutingMiddleware:
 
         # Block admin paths on unknown hosts (neither admin nor API).
         # This prevents accidental exposure if ALLOWED_HOSTS is too broad.
-        if not is_admin_host(host) and not is_api_host(host):
+        if not admin_host and not api_host:
             if path.startswith("/admin/"):
                 return HttpResponseForbidden(
                     "Admin surface is not available on this host."
@@ -125,12 +142,17 @@ class AdminMFAEnforcementMiddleware:
             return self.get_response(request)
 
         user = getattr(request, "user", None)
-        if user and user.is_authenticated and user.is_staff:
-            if admin_mfa_is_enabled(user) and not is_admin_mfa_verified(
-                request
-            ):
-                # Redirect to login so MFA flow can be triggered,
-                # instead of a dead-end 403.
-                return redirect("/admin/login/?next=" + request.path)
+        if user and user.is_authenticated:
+            has_admin_access = bool(
+                user.is_active
+                and user.is_staff
+                and admin_mfa_is_enabled(user)
+                and is_admin_mfa_verified(request)
+            )
+            if not has_admin_access:
+                # Login and challenge URLs are excluded above, so the user
+                # can enroll/re-authenticate without entering a redirect loop.
+                query = urlencode({"next": request.get_full_path()})
+                return redirect(f"/admin/login/?{query}")
 
         return self.get_response(request)

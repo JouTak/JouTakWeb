@@ -209,9 +209,9 @@ class AccountAdminTests(TestCase):
 
         readonly = model_admin.get_readonly_fields(request, operator)
 
-        self.assertTrue(
-            {"is_staff", "is_superuser", "groups", "user_permissions"}
-            <= set(readonly)
+        self.assertLessEqual(
+            {"is_staff", "is_superuser", "groups", "user_permissions"},
+            set(readonly),
         )
         self.assertFalse(
             model_admin.has_change_permission(request, self.superuser)

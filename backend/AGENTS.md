@@ -65,6 +65,7 @@ uv run pytest backend -q
 ## Зависимости и окружение
 
 - Backend dependencies меняй через `uv`.
-- Коммить `uv.lock` и regenerated files в `backend/requirements/`, когда меняются backend dependencies.
+- Коммить `pyproject.toml` и `uv.lock`, когда меняются backend dependencies.
 - `.env`, `.env.development`, `.env.production` и secret variants должны оставаться локальными.
-- `stack.yml` ожидает production secrets через Docker secrets и локальный `.env.production`; этот файл не коммитится.
+- `docker-compose.stack.yml` ожидает production secrets через Docker secrets и
+  локальный `.env.production`; этот файл не коммитится.

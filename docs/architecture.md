@@ -48,11 +48,11 @@ reset остаются на allauth headless endpoints.
 - `frontend`: Vite dev server в `compose.yaml`, nginx-served build в
   production manifests.
 - `proxy`: локальный nginx для frontend, API и admin host routing.
-- `traefik`: production Swarm ingress в `stack.yml`.
+- `traefik`: production Swarm ingress в `docker-compose.stack.yml`.
 
 Локальная разработка использует `compose.yaml` и запускается командой
 `docker compose up --build`. Image-based deployment использует
-`docker-compose.images.yml` или `stack.yml`.
+`docker-compose.images.yml` или `docker-compose.stack.yml`.
 
 ## CI Jobs
 

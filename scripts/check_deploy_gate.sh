@@ -55,7 +55,7 @@ DJANGO_API_HOSTS=api.localhost,api.joutak.ru \
 DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru \
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,https://joutak.ru \
 PUBLIC_API_URL=https://api.joutak.ru \
-docker compose -f stack.yml config >/dev/null
+docker compose -f docker-compose.stack.yml config >/dev/null
 
 if [[ "${run_smoke}" == "1" ]]; then
   docker compose down -v || true

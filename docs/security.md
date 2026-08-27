@@ -42,8 +42,8 @@ normalized output все еще должен помещаться в configured 
 
 ## Deployment
 
-`stack.yml` читает `.env.production` и Docker secrets. Этот env file должен
-оставаться локальным или управляться deployment tooling. Traefik - intended
+`docker-compose.stack.yml` читает `.env.production` и Docker secrets. Этот env
+file должен оставаться локальным или управляться deployment tooling. Traefik - intended
 public ingress для Swarm; backend и frontend service ports не должны быть
 напрямую exposed в production, если deployment явно этого не требует.
 

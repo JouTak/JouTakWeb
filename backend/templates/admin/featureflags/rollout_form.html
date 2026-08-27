@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}{{ block.super }}{{ media }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{{ rollout_index_url }}">Раскаты</a>
+  &rsaquo; Новый раскат
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="rollout-admin">
+  <div class="module rollout-intro">
+    <h2>Безопасный раскат без ручного редактирования SQL-полей</h2>
+    <p>Выберите объявленный в коде флаг, допустимое состояние и аудиторию. Приоритет, технические ID и поля истории заполняются сервером.</p>
+  </div>
+
+  {% if form.registry_empty %}
+  <div class="errornote">
+    Доступных функций пока нет. Разработчик должен объявить флаг и допустимые состояния в реестре кода, подключить потребителя, затем развернуть приложение и выполнить sync_feature_registry.
+  </div>
+  {% endif %}
+
+  <section class="module rollout-feature-context" aria-live="polite">
+    <h2 id="rollout-feature-title">Выберите функцию</h2>
+    <p><code id="rollout-feature-key"></code></p>
+    <p id="rollout-feature-description"></p>
+    <p><strong>Что изменится:</strong> <span id="rollout-feature-impact"></span></p>
+    <p><strong>Что увидят остальные:</strong> <span id="rollout-feature-default"></span></p>
+  </section>
+
+  <form method="post" novalidate data-rollout-form>
+    {% csrf_token %}
+    {% if review_token %}<input type="hidden" name="review_token" value="{{ review_token }}">{% endif %}
+    {% if form.non_field_errors %}<div class="errornote">{{ form.non_field_errors }}</div>{% endif %}
+
+    <fieldset class="module aligned rollout-fields">
+      {% for field in form %}
+      {% if field.name != "confirm_rollout" or review or field.errors %}
+      <div class="form-row field-{{ field.name }}{% if field.errors %} errors{% endif %}" data-field="{{ field.name }}"{% if field.name == "page" and form.page_is_fixed %} hidden{% endif %}>
+        {{ field.errors }}
+        <div class="flex-container">
+          {{ field.label_tag }}
+          <div class="rollout-control">{{ field }}{% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </fieldset>
+
+    {% if review %}
+    <section class="module rollout-review" aria-labelledby="review-title">
+      <h2 id="review-title">Проверьте итог перед сохранением</h2>
+      <dl>
+        <div><dt>Функция</dt><dd><strong>{{ review_summary.feature_title }}</strong><br><code>{{ review_summary.feature_key }}</code></dd></div>
+        <div><dt>Описание</dt><dd>{{ review_summary.description }}</dd></div>
+        <div><dt>Что изменится</dt><dd>{{ review_summary.visual_impact }}</dd></div>
+        <div><dt>Состояние</dt><dd>{{ review_summary.value }}</dd></div>
+        <div><dt>Страница</dt><dd>{{ review_summary.page }}</dd></div>
+        <div><dt>Аудитория</dt><dd>{{ review_summary.audience }}</dd></div>
+        <div><dt>Кто получит</dt><dd>{{ review_summary.target }}</dd></div>
+        <div><dt>По умолчанию</dt><dd>{{ review_summary.default }}</dd></div>
+        <div><dt>Что увидят остальные</dt><dd>{{ review_summary.others }}</dd></div>
+        <div><dt>Закрепление</dt><dd>{{ review_summary.sticky }}</dd></div>
+        <div><dt>Режим</dt><dd>{{ review_summary.mode }}</dd></div>
+      </dl>
+      {% for warning in review_summary.precedence_warnings %}<p class="errornote">{{ warning }}</p>{% endfor %}
+      <p class="help">Вернитесь к полям выше, если нужно что-то исправить.</p>
+    </section>
+    {% endif %}
+
+    <div class="submit-row">
+      <a class="button cancel-link" href="{{ rollout_index_url }}">Отмена</a>
+      <button type="submit" name="_review" class="button"{% if form.registry_empty %} disabled{% endif %}>Проверить</button>
+      {% if review %}<button type="submit" name="_create" class="default">Создать раскат</button>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

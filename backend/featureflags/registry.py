@@ -78,91 +78,101 @@ PERSONALIZATION_FLAG_KEYS = (
 
 FEATURE_REGISTRY: dict[str, dict] = {
     "site_itmocraft_page_version": {
+        "title": "Страница ITMOcraft",
         "kind": "variant",
         "default_env": None,
         "default_fallback": DEFAULT_VARIANT,
         "variants": VERSIONS_VARIANTS,
         "pages": ["itmocraft"],
         "sticky": False,
-        "description": "Switches the canonical / ITMOcraft page.",
-        "visual_impact": "Full ITMOcraft page replacement.",
+        "description": "Переключает основную страницу ITMOcraft.",
+        "visual_impact": "Полностью заменяет содержимое страницы ITMOcraft.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
     "site_joutak_page_version": {
+        "title": "Страница JouTak",
         "kind": "variant",
         "default_env": None,
         "default_fallback": DEFAULT_VARIANT,
         "variants": VERSIONS_VARIANTS,
         "pages": ["joutak"],
         "sticky": False,
-        "description": "Switches the /joutak product page.",
-        "visual_impact": "Full JouTak page replacement.",
+        "description": "Переключает страницу продукта JouTak.",
+        "visual_impact": "Полностью заменяет содержимое страницы JouTak.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
     "site_minigames_page_version": {
+        "title": "Страница мини-игр",
         "kind": "variant",
         "default_env": None,
         "default_fallback": DEFAULT_VARIANT,
         "variants": VERSIONS_VARIANTS,
         "pages": ["minigames"],
         "sticky": False,
-        "description": "Switches the /minigames product page.",
-        "visual_impact": "Full minigames page replacement.",
+        "description": "Переключает страницу мини-игр.",
+        "visual_impact": "Полностью заменяет содержимое страницы мини-игр.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
     "site_header_version": {
+        "title": "Шапка сайта",
         "kind": "variant",
         "default_env": None,
         "default_fallback": DEFAULT_VARIANT,
         "variants": VERSIONS_VARIANTS,
         "pages": ["*"],
         "sticky": False,
-        "description": "Switches the shared site header.",
-        "visual_impact": "Replaces the header on product pages.",
+        "description": "Переключает общую шапку сайта.",
+        "visual_impact": "Заменяет шапку на продуктовых страницах.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
     "site_footer_version": {
+        "title": "Подвал сайта",
         "kind": "variant",
         "default_env": None,
         "default_fallback": DEFAULT_VARIANT,
         "variants": VERSIONS_VARIANTS,
         "pages": ["*"],
         "sticky": False,
-        "description": "Switches the shared site footer.",
-        "visual_impact": "Replaces the footer on product pages.",
+        "description": "Переключает общий подвал сайта.",
+        "visual_impact": "Заменяет подвал на продуктовых страницах.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
     "profile_personalization_ui": {
+        "title": "Персонализация профиля",
         "kind": "boolean",
         "default_env": "FF_PROFILE_PERSONALIZATION_UI",
         "default_fallback": True,
         "variants": (True, False),
         "pages": ["account"],
         "sticky": False,
-        "description": "Shows profile personalization UI.",
-        "visual_impact": "Shows or hides personalization prompts.",
+        "description": "Показывает интерфейс персонализации профиля.",
+        "visual_impact": "Показывает или скрывает подсказки персонализации.",
         "rollout_policy": BOOLEAN_ROLLOUT_POLICY,
     },
     "profile_personalization_interstitial": {
+        "title": "Экран персонализации после входа",
         "kind": "boolean",
         "default_env": "FF_PROFILE_PERSONALIZATION_INTERSTITIAL",
         "default_fallback": True,
         "variants": (True, False),
         "pages": ["account"],
         "sticky": False,
-        "description": "Shows the post-auth profile interstitial.",
-        "visual_impact": "Shows a full-screen profile prompt.",
+        "description": "Показывает экран персонализации после входа.",
+        "visual_impact": (
+            "Показывает полноэкранное предложение заполнить профиль."
+        ),
         "rollout_policy": BOOLEAN_ROLLOUT_POLICY,
     },
     "profile_personalization_enforce": {
+        "title": "Обязательное заполнение профиля",
         "kind": "boolean",
         "default_env": "FF_PROFILE_PERSONALIZATION_ENFORCE",
         "default_fallback": False,
         "variants": (True, False),
         "pages": ["*"],
         "sticky": False,
-        "description": "Enforces profile completion for protected actions.",
-        "visual_impact": "May reject actions for incomplete profiles.",
+        "description": "Требует заполнить профиль для защищённых действий.",
+        "visual_impact": "Может блокировать действия до заполнения профиля.",
         "rollout_policy": BOOLEAN_ROLLOUT_POLICY,
     },
 }
@@ -211,11 +221,25 @@ def get_valid_variants(key: str) -> tuple[object, ...] | None:
     return tuple(spec["variants"])
 
 
+def get_feature_title(key: str) -> str:
+    spec = FEATURE_REGISTRY.get(key)
+    if spec is None:
+        raise KeyError(f"Unknown feature flag: {key}")
+    return str(spec.get("title") or key)
+
+
 def canonical_variant_token(value: object) -> str:
     if value is True:
         return "true"
     if value is False:
         return "false"
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return "true"
+        if normalized in {"false", "0", "no", "off"}:
+            return "false"
+        return value.strip()
     return str(value)
 
 
@@ -318,6 +342,13 @@ def validate_registry() -> None:
         default = get_default_value(key)
         if spec.get("kind") not in {"boolean", "variant"}:
             raise ImproperlyConfigured(f"{key}: unsupported feature kind")
+        if not str(spec.get("title") or "").strip():
+            raise ImproperlyConfigured(f"{key}: operator title is required")
+        for metadata_field in ("description", "visual_impact"):
+            if not str(spec.get(metadata_field) or "").strip():
+                raise ImproperlyConfigured(
+                    f"{key}: operator {metadata_field} is required"
+                )
         if not variants or default not in variants:
             raise ImproperlyConfigured(
                 f"{key}: default {default!r} is not a valid variant"

@@ -269,6 +269,49 @@ class RegistryAwareAdminFormTests(TestCase):
             FeatureRule.objects.filter(feature=self.feature).count(), 1
         )
 
+    def test_stopped_rollout_is_not_reused_or_restartable_as_draft(
+        self,
+    ) -> None:
+        data = self.guided_data()
+        data.pop("enabled")
+        form = GuidedRolloutForm(
+            data=data,
+            request_user=self.operator,
+            require_confirmation=True,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        original = create_rollout(
+            cleaned_data=form.cleaned_data,
+            user=self.operator,
+        )
+        start_rollout(
+            rule_id=original.pk,
+            user=self.operator,
+            reason="QA approved the first rollout",
+        )
+        stop_rollout(
+            rule_id=original.pk,
+            user=self.operator,
+            reason="First rollout completed",
+        )
+
+        replacement = create_rollout(
+            cleaned_data=form.cleaned_data,
+            user=self.operator,
+        )
+
+        self.assertNotEqual(replacement.pk, original.pk)
+        self.assertTrue(replacement._rollout_was_created)
+        with self.assertRaisesMessage(
+            ValidationError,
+            "только раскат, созданный как черновик",
+        ):
+            start_rollout(
+                rule_id=original.pk,
+                user=self.operator,
+                reason="Do not restart completed rollout",
+            )
+
     def test_create_and_stop_keep_actor_reason_history(self) -> None:
         form = GuidedRolloutForm(
             data=self.guided_data(),
@@ -742,6 +785,42 @@ class RolloutAdminIntegrationTests(TestCase):
         self.assertEqual(
             LogEntry.objects.filter(object_id=str(rule.pk)).count(), 1
         )
+
+    def test_stopped_rollout_is_not_listed_as_draft(self) -> None:
+        review_data = self.rollout_data("_review", confirm=True)
+        review_data.pop("enabled")
+        form = GuidedRolloutForm(
+            data=review_data,
+            request_user=self.operator,
+            require_confirmation=True,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        rule = create_rollout(
+            cleaned_data=form.cleaned_data,
+            user=self.operator,
+        )
+        start_rollout(
+            rule_id=rule.pk,
+            user=self.operator,
+            reason="QA approved this rollout",
+        )
+        stop_rollout(
+            rule_id=rule.pk,
+            user=self.operator,
+            reason="Rollout completed",
+        )
+
+        response = self.client.get(
+            "/admin/featureflags/rollouts/",
+            HTTP_HOST="admin.localhost",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        draft_ids = {
+            rollout["rule"].pk
+            for rollout in response.context["draft_rollouts"]
+        }
+        self.assertNotIn(rule.pk, draft_ids)
 
     def test_group_review_preserves_target_and_shows_member_count(
         self,

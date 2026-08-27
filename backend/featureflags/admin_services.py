@@ -40,10 +40,13 @@ def _audit(instance, *, user, reason: str) -> None:
     instance._change_reason = reason.strip()[:100]
 
 
-def _is_original_draft(rule: FeatureRule) -> bool:
-    """Distinguish a saved draft from a rollout that was later stopped."""
-    created = rule.history.order_by("history_date", "history_id").first()
-    return bool(created and not created.enabled)
+def is_never_started_draft(rule: FeatureRule) -> bool:
+    """Return true only for rules created disabled and never activated."""
+    history = rule.history.all()
+    created = history.order_by("history_date", "history_id").first()
+    if not created or created.enabled:
+        return False
+    return not history.filter(enabled=True).exists()
 
 
 def _validated_group_ids(raw_group_ids: object) -> list[int]:
@@ -199,7 +202,7 @@ def create_rollout(*, cleaned_data: dict, user) -> FeatureRule:
             enabled=False,
         )
         for existing in matching_drafts:
-            if _is_original_draft(existing):
+            if is_never_started_draft(existing):
                 existing._rollout_was_created = False
                 return existing
 
@@ -255,7 +258,7 @@ def start_rollout(*, rule_id: int, user, reason: str) -> FeatureRule:
         raise ValidationError("Раскат уже запущен.")
     if not feature.active or feature.key not in FEATURE_REGISTRY:
         raise ValidationError("Флаг больше не доступен для раската.")
-    if not _is_original_draft(rule):
+    if not is_never_started_draft(rule):
         raise ValidationError(
             "Запустить можно только раскат, созданный как черновик."
         )

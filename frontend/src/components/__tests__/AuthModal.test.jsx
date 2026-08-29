@@ -65,6 +65,7 @@ vi.mock("../../services/api", () => ({
   doSignupAndLogin: vi.fn(),
   authenticateMfaCode: vi.fn(),
   authenticateWithWebAuthnCredential: vi.fn(),
+  announceAuthenticatedSession: vi.fn(),
   finalizeSessionAuthentication: vi.fn(),
   getMfaConfig: vi.fn().mockResolvedValue({
     supported_types: ["totp", "webauthn", "recovery_codes"],
@@ -75,8 +76,13 @@ vi.mock("../../services/api", () => ({
   requestPasswordReset: vi.fn(),
 }));
 
-const { authenticateMfaCode, doLogin, finalizeSessionAuthentication, me } =
-  await import("../../services/api");
+const {
+  announceAuthenticatedSession,
+  authenticateMfaCode,
+  doLogin,
+  finalizeSessionAuthentication,
+  me,
+} = await import("../../services/api");
 
 describe("AuthModal MFA flow", () => {
   beforeEach(() => {
@@ -128,6 +134,8 @@ describe("AuthModal MFA flow", () => {
       expect(authenticateMfaCode).toHaveBeenCalledWith("314159");
     });
     expect(finalizeSessionAuthentication).toHaveBeenCalled();
+    expect(me).toHaveBeenCalled();
+    expect(announceAuthenticatedSession).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/account/security", {
       replace: true,
     });

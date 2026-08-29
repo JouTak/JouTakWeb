@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import GallerySection from "./GallerySection.jsx";
+
+afterEach(cleanup);
 
 describe("GallerySection", () => {
   it("cycles through gallery images", async () => {
@@ -50,5 +52,37 @@ describe("GallerySection", () => {
       screen.getByRole("img", { name: /second screenshot 1/i }),
     ).toHaveAttribute("src", "/second-one.jpg");
     expect(screen.getByText("1/2")).toBeInTheDocument();
+  });
+
+  it("renders missing design media as a deliberate placeholder", () => {
+    render(
+      <GallerySection
+        galleryItems={[
+          {
+            label: "JouTak SMP",
+            image: "/gallery-frame.jpg",
+            photos: [
+              {
+                kind: "design_placeholder",
+                id: "joutak-photo-1",
+                broken: true,
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Скриншот готовится");
+    expect(
+      document.querySelector('[data-design-placeholder="joutak-photo-1"]'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: /JouTak SMP screenshot/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /previous photo/i }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /next photo/i })).toBeDisabled();
   });
 });

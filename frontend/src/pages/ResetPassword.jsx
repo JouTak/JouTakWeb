@@ -3,21 +3,18 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
+  PageActions,
+  PageNotice,
+  PagePanel,
+  PageShell,
+} from "../components/ui/PageShell.jsx";
+import {
   inspectPasswordResetKey,
   requestPasswordReset,
   resetPasswordByKey,
 } from "../services/api";
 import { extractErrorMessage } from "../services/errors";
-
-const cardStyle = {
-  maxWidth: 760,
-  margin: "0 auto",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 20,
-  display: "grid",
-  gap: 12,
-};
+import styles from "./SystemPages.module.css";
 
 function emailOk(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
@@ -150,62 +147,74 @@ export default function ResetPassword() {
   }
 
   return (
-    <section style={cardStyle}>
-      <h2 style={{ margin: 0 }}>
-        {key ? "Задайте новый пароль" : "Сброс пароля"}
-      </h2>
-
-      {loading ? (
-        <Loader size="m" />
-      ) : key ? (
-        <>
-          {!keyReady && error ? (
+    <PageShell
+      narrow
+      eyebrow="Безопасность аккаунта"
+      title={key ? "Новый пароль" : "Сброс пароля"}
+      description={
+        key
+          ? "Проверяем ссылку и безопасно обновляем данные для входа."
+          : "Отправим одноразовую ссылку на email, связанный с аккаунтом."
+      }
+    >
+      <PagePanel className={styles.stack} aria-busy={loading}>
+        {loading ? (
+          <div className={styles.loading} aria-live="polite">
+            <Loader size="l" />
+            <span>Проверяем ссылку сброса…</span>
+          </div>
+        ) : key ? (
+          !keyReady && error ? (
             <>
-              <p style={{ margin: 0, opacity: 0.9 }}>{error}</p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <PageNotice tone="danger">{error}</PageNotice>
+              <PageActions>
                 <Button
                   view="action"
+                  size="l"
                   onClick={() => navigate("/reset-password")}
                 >
                   Запросить новое письмо
                 </Button>
                 <Button
                   view="outlined"
+                  size="l"
                   type="button"
                   onClick={() => navigate("/login")}
                 >
                   Ко входу
                 </Button>
-              </div>
+              </PageActions>
             </>
           ) : (
             <>
               {accountEmail && (
-                <p style={{ margin: 0, opacity: 0.9 }}>
+                <div className={styles.identity}>
                   Аккаунт: <b>{accountEmail}</b>
-                </p>
+                </div>
               )}
               {success ? (
                 <>
-                  <p style={{ margin: 0, opacity: 0.9 }}>{success}</p>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Button view="action" onClick={() => navigate("/login")}>
+                  <PageNotice tone="success">{success}</PageNotice>
+                  <PageActions>
+                    <Button
+                      view="action"
+                      size="l"
+                      onClick={() => navigate("/login")}
+                    >
                       Войти
                     </Button>
                     <Button
                       view="outlined"
+                      size="l"
                       type="button"
-                      onClick={() => navigate("/joutak")}
+                      onClick={() => navigate("/")}
                     >
                       На главную
                     </Button>
-                  </div>
+                  </PageActions>
                 </>
               ) : (
-                <form
-                  onSubmit={onResetPassword}
-                  style={{ display: "grid", gap: 12 }}
-                >
+                <form onSubmit={onResetPassword} className={styles.form}>
                   <TextInput
                     size="l"
                     type="password"
@@ -224,78 +233,83 @@ export default function ResetPassword() {
                     autoComplete="new-password"
                     disabled={busy}
                   />
-                  {error && (
-                    <p style={{ margin: 0, color: "#ff8e8e" }}>{error}</p>
-                  )}
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Button view="action" type="submit" loading={busy}>
+                  {error && <PageNotice tone="danger">{error}</PageNotice>}
+                  <PageActions>
+                    <Button view="action" size="l" type="submit" loading={busy}>
                       Сохранить пароль
                     </Button>
                     <Button
                       view="outlined"
+                      size="l"
                       type="button"
-                      onClick={() => navigate("/joutak")}
+                      disabled={busy}
+                      onClick={() => navigate("/")}
                     >
                       Отмена
                     </Button>
-                  </div>
+                  </PageActions>
                 </form>
               )}
             </>
-          )}
-        </>
-      ) : (
-        <>
-          <p style={{ margin: 0, opacity: 0.9 }}>
-            Укажите email, и мы отправим письмо со ссылкой для сброса пароля.
-          </p>
-          {success ? (
-            <>
-              <p style={{ margin: 0, opacity: 0.9 }}>{success}</p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Button view="action" onClick={() => navigate("/login")}>
-                  Вернуться ко входу
-                </Button>
-                <Button
-                  view="outlined"
-                  type="button"
-                  onClick={() => setSuccess("")}
-                >
-                  Отправить ещё раз
-                </Button>
-              </div>
-            </>
-          ) : (
-            <form
-              onSubmit={onRequestReset}
-              style={{ display: "grid", gap: 12 }}
-            >
-              <TextInput
-                size="l"
-                type="email"
-                label="Email"
-                value={email}
-                onUpdate={setEmail}
-                autoComplete="email"
-                disabled={busy}
-              />
-              {error && <p style={{ margin: 0, color: "#ff8e8e" }}>{error}</p>}
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Button view="action" type="submit" loading={busy}>
-                  Отправить письмо
-                </Button>
-                <Button
-                  view="outlined"
-                  type="button"
-                  onClick={() => navigate("/login")}
-                >
-                  Назад ко входу
-                </Button>
-              </div>
-            </form>
-          )}
-        </>
-      )}
-    </section>
+          )
+        ) : (
+          <>
+            <p className={styles.message}>
+              Укажи email — ответ будет одинаковым независимо от того, есть ли
+              такой аккаунт. Это защищает данные пользователей.
+            </p>
+            {success ? (
+              <>
+                <PageNotice tone="success">{success}</PageNotice>
+                <PageActions>
+                  <Button
+                    view="action"
+                    size="l"
+                    onClick={() => navigate("/login")}
+                  >
+                    Вернуться ко входу
+                  </Button>
+                  <Button
+                    view="outlined"
+                    size="l"
+                    type="button"
+                    onClick={() => setSuccess("")}
+                  >
+                    Отправить ещё раз
+                  </Button>
+                </PageActions>
+              </>
+            ) : (
+              <form onSubmit={onRequestReset} className={styles.form}>
+                <TextInput
+                  size="l"
+                  type="email"
+                  label="Email"
+                  value={email}
+                  onUpdate={setEmail}
+                  autoComplete="email"
+                  disabled={busy}
+                />
+                {error && <PageNotice tone="danger">{error}</PageNotice>}
+                <PageActions>
+                  <Button view="action" size="l" type="submit" loading={busy}>
+                    Отправить письмо
+                  </Button>
+                  <Button
+                    view="outlined"
+                    size="l"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => navigate("/login")}
+                  >
+                    Назад ко входу
+                  </Button>
+                </PageActions>
+              </form>
+            )}
+          </>
+        )}
+      </PagePanel>
+    </PageShell>
   );
 }

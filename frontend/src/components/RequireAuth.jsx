@@ -1,9 +1,9 @@
-import { Loader } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { hasStoredAuth, me, readStoredTokens } from "../services/api";
+import { LoadingPage } from "./ui/PageShell.jsx";
 
 export default function RequireAuth({ children }) {
   const location = useLocation();
@@ -36,17 +36,7 @@ export default function RequireAuth({ children }) {
   }
 
   if (status === "checking") {
-    return (
-      <section
-        style={{
-          display: "grid",
-          placeItems: "center",
-          minHeight: 200,
-        }}
-      >
-        <Loader size="m" />
-      </section>
-    );
+    return <LoadingPage description="Проверяем защищённую сессию аккаунта" />;
   }
 
   const next = location.pathname;

@@ -27,6 +27,39 @@
   box-sizing: border-box;
 }
 
+.design-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  color: #e8edf5;
+  text-align: center;
+  background:
+    linear-gradient(rgb(17 23 34 / 78%), rgb(17 23 34 / 88%)),
+    repeating-linear-gradient(
+      -45deg,
+      #273247 0,
+      #273247 12px,
+      #202a3c 12px,
+      #202a3c 24px
+    );
+}
+
+.design-placeholder span {
+  font-family: MinecraftTenFont, sans-serif;
+  font-size: 30px;
+  color: var(--site-accent);
+}
+
+.design-placeholder small {
+  max-width: 420px;
+  font-family: MinecraftSeven, sans-serif;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
 .gallery-pagination {
   display: flex;
   align-items: center;
@@ -42,6 +75,11 @@
   appearance: none;
   cursor: pointer;
   line-height: 0;
+}
+
+.pagination-button:disabled {
+  cursor: default;
+  opacity: 0.42;
 }
 
 .pagination-arrow {
@@ -80,7 +118,7 @@
   font-size: 40px;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1440px) {
   .gallery {
     width: 100%;
   }
@@ -91,12 +129,18 @@
 
   .gallery-button {
     position: static;
+    margin: 0 10px 14px 0;
     padding: 10px 16px;
     font-size: 24px;
+    color: var(--site-text);
+    background: color-mix(in srgb, var(--site-background) 78%, white 22%);
+    border: 2px solid color-mix(in srgb, var(--site-accent) 70%, transparent);
   }
 
   .chosen-button {
     font-size: 28px;
+    color: var(--site-accent);
+    border-color: var(--site-accent);
   }
 
   .photo-viewer {

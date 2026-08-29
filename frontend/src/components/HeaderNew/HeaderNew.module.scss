@@ -161,6 +161,16 @@
   font-size: 16px;
 }
 
+.server-option:disabled,
+.nav-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.server-option:disabled:hover {
+  font-size: inherit;
+}
+
 @media (max-width: 900px) {
   .header {
     aspect-ratio: auto;

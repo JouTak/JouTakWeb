@@ -6,9 +6,10 @@ import FooterNew from "./Footer/Footer";
 import HeaderNew from "./HeaderNew/HeaderNew";
 import SimpleFooter from "./SimpleFooter/SimpleFooter";
 import SimpleHeader from "./SimpleHeader/SimpleHeader";
+import { LoadingPage } from "./ui/PageShell.jsx";
 
 function LoadingFallback() {
-  return <div className="py-5 text-center text-secondary">Загрузка...</div>;
+  return <LoadingPage description="Загружаем оформление сайта" />;
 }
 
 const Layout = ({ children }) => {

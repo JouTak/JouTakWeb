@@ -9,6 +9,12 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import {
+  PageActions,
+  PageNotice,
+  PagePanel,
+  PageShell,
+} from "../components/ui/PageShell.jsx";
 import { me, updateProfile } from "../services/api";
 import {
   boolToSelect,
@@ -16,37 +22,11 @@ import {
   selectToBool,
 } from "../utils/profileForm";
 import { isLegacyPersonalization } from "../utils/profileState";
-
-const shellStyle = {
-  maxWidth: 960,
-  margin: "0 auto",
-  display: "grid",
-  gap: 16,
-};
-
-const panelStyle = {
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  padding: 20,
-  display: "grid",
-  gap: 16,
-  background: "rgba(255,255,255,0.02)",
-};
-
-const stepButtonStyle = {
-  border: "1px solid rgba(255,255,255,0.14)",
-  borderRadius: 8,
-  padding: 12,
-  display: "grid",
-  gap: 4,
-  textAlign: "left",
-  background: "rgba(255,255,255,0.04)",
-  color: "inherit",
-};
+import styles from "./AccountOnboarding.module.css";
 
 function SelectField({ label, value, onChange, children }) {
   return (
-    <label style={{ display: "grid", gap: 6 }}>
+    <label className={styles.selectField}>
       <span>{label}</span>
       <select
         className="form-select"
@@ -70,17 +50,10 @@ SelectField.propTypes = {
 function MissingFields({ fields }) {
   if (!fields.length) return null;
   return (
-    <div
-      style={{
-        border: "1px solid rgba(255,85,85,0.45)",
-        borderRadius: 10,
-        padding: 12,
-        background: "rgba(255,85,85,0.1)",
-      }}
-    >
+    <PageNotice tone="danger">
       <b>Осталось заполнить:</b>{" "}
       {fields.map((field) => PROFILE_FIELD_LABELS[field] || field).join(", ")}
-    </div>
+    </PageNotice>
   );
 }
 
@@ -297,38 +270,65 @@ export default function AccountOnboarding() {
 
   if (loading) {
     return (
-      <section style={shellStyle}>
-        <div style={panelStyle}>
-          <Loader size="m" />
-        </div>
-      </section>
+      <PageShell
+        narrow
+        eyebrow="Аккаунт"
+        title="Настраиваем профиль"
+        description="Загружаем сохранённые данные и определяем оставшиеся шаги."
+      >
+        <PagePanel className={styles.loading} aria-live="polite">
+          <Loader size="l" />
+          <span>Подготавливаем профиль…</span>
+        </PagePanel>
+      </PageShell>
     );
   }
 
   if (profileComplete) {
     return (
-      <section style={shellStyle}>
-        <div style={panelStyle}>
+      <PageShell
+        narrow
+        eyebrow="Аккаунт"
+        title="Профиль готов"
+        description="Персонализация завершена — теперь доступны настройки безопасности и персональные функции."
+      >
+        <PagePanel className={styles.panelStack}>
           <Label size="m" theme="success">
             Профиль персонализирован
           </Label>
-          <h2 style={{ margin: 0 }}>Регистрация завершена</h2>
-          <p style={{ margin: 0, opacity: 0.85 }}>
+          <h2>Регистрация завершена</h2>
+          <p className={styles.muted}>
             Теперь доступны профиль, привязки аккаунтов и персональные функции.
           </p>
-          <div>
-            <Button view="action" onClick={() => navigate("/account/security")}>
+          <PageActions>
+            <Button
+              view="action"
+              size="l"
+              onClick={() => navigate("/account/security")}
+            >
               Перейти в аккаунт
             </Button>
-          </div>
-        </div>
-      </section>
+            <Button view="outlined" size="l" onClick={() => navigate("/")}>
+              На главную
+            </Button>
+          </PageActions>
+        </PagePanel>
+      </PageShell>
     );
   }
 
   return (
-    <section style={shellStyle}>
-      <div style={panelStyle}>
+    <PageShell
+      eyebrow={isMigrationFlow ? "Обновление аккаунта" : "Новый аккаунт"}
+      title={
+        isRegistrationCompletion
+          ? "Заверши регистрацию"
+          : "Персонализируй профиль"
+      }
+      description="Два коротких шага связывают веб-аккаунт с игровым профилем и открывают персональные функции."
+      contentClassName={styles.shell}
+    >
+      <PagePanel className={styles.panelStack}>
         <div
           style={{
             display: "flex",
@@ -341,12 +341,12 @@ export default function AccountOnboarding() {
             <Label size="m" theme={isMigrationFlow ? "warning" : "info"}>
               {isMigrationFlow ? "Требуется обновление" : "Аккаунт создан"}
             </Label>
-            <h2 style={{ margin: 0 }}>
+            <h2 className={styles.sectionTitle}>
               {isRegistrationCompletion
                 ? "Завершите регистрацию"
                 : "Персонализируйте профиль"}
             </h2>
-            <p style={{ margin: 0, opacity: 0.85 }}>
+            <p className={styles.muted}>
               {isMigrationFlow
                 ? "Мы обновили требования к данным профиля. Заполните 2 коротких шага, чтобы открыть полный доступ к аккаунту."
                 : "Чтобы открыть профиль и адаптировать сервисы под вас, заполните 2 коротких шага. Публичные разделы доступны и без этого."}
@@ -357,43 +357,26 @@ export default function AccountOnboarding() {
           </Label>
         </div>
 
-        <div
-          style={{
-            border: "1px solid rgba(255, 163, 0, 0.45)",
-            borderRadius: 10,
-            padding: 12,
-            background: "rgba(255, 163, 0, 0.12)",
-          }}
-        >
+        <PageNotice tone="warning">
           <b>До завершения персонализации</b>
           <div style={{ marginTop: 6, opacity: 0.9 }}>
             Можно пользоваться публичными страницами. Профиль, привязки
             аккаунтов и персональные действия откроются после заполнения.
           </div>
-        </div>
+        </PageNotice>
 
         <MissingFields fields={missingFields} />
 
-        <div style={{ opacity: 0.85 }}>
+        <div className={styles.progress}>
           Прогресс: <b>{stepStatus.done}</b> из <b>{stepStatus.total}</b> шагов
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 10,
-          }}
-        >
+        <div className={styles.steps}>
           <button
             type="button"
-            style={{
-              ...stepButtonStyle,
-              borderColor:
-                activeStep === 1
-                  ? "rgba(255, 190, 92, 0.8)"
-                  : "rgba(255,255,255,0.14)",
-            }}
+            className={styles.stepButton}
+            data-active={activeStep === 1}
+            aria-current={activeStep === 1 ? "step" : undefined}
             onClick={() => setActiveStep(1)}
           >
             <b>1. Игровой профиль</b>
@@ -403,13 +386,9 @@ export default function AccountOnboarding() {
           </button>
           <button
             type="button"
-            style={{
-              ...stepButtonStyle,
-              borderColor:
-                activeStep === 2
-                  ? "rgba(255, 190, 92, 0.8)"
-                  : "rgba(255,255,255,0.14)",
-            }}
+            className={styles.stepButton}
+            data-active={activeStep === 2}
+            aria-current={activeStep === 2 ? "step" : undefined}
             onClick={() => setActiveStep(2)}
           >
             <b>2. Связь и статус</b>
@@ -418,14 +397,15 @@ export default function AccountOnboarding() {
             </span>
           </button>
         </div>
-      </div>
+      </PagePanel>
 
-      <form
+      <PagePanel
+        as="form"
+        className={styles.panelStack}
         onSubmit={(event) => {
           event.preventDefault();
           saveStep(activeStep);
         }}
-        style={panelStyle}
       >
         {activeStep === 1 ? (
           <>
@@ -497,14 +477,7 @@ export default function AccountOnboarding() {
           </>
         )}
 
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className={styles.formFooter}>
           <Button view="outlined" onClick={onSkip} type="button">
             Перейти на сайт
           </Button>
@@ -524,7 +497,7 @@ export default function AccountOnboarding() {
             </Button>
           </div>
         </div>
-      </form>
-    </section>
+      </PagePanel>
+    </PageShell>
   );
 }

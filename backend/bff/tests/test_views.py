@@ -110,6 +110,45 @@ class BffViewTests(APITestCase):
         self.assertEqual(document.layout.header_variant, "v2")
         self.assertEqual(document.layout.footer_variant, "v2")
 
+    def test_v2_documents_preserve_primary_legacy_user_actions(self):
+        user = self.create_legacy_user(email=self.unique_email("actions"))
+        self.group.members.add(user)
+        self.client.force_login(user)
+
+        expected = {
+            "/bff/pages/itmocraft": {
+                "https://forms.yandex.ru/u/67773408068ff0452320c8b4/",
+            },
+            "/bff/pages/joutak": {
+                "https://forms.yandex.ru/u/6501f64f43f74f18a8da28de/",
+                "/joutak/pay",
+                "mc.joutak.ru",
+            },
+            "/bff/pages/minigames": {
+                "https://vk.me/join/WDyZMd4pF8Xhu/egqaDnrHmbajAmm0cZ2og=",
+                (
+                    "https://docs.google.com/forms/d/e/"
+                    "1FAIpQLSfX7C2f1WII6Ak_me3onbRAcb71MSEap51MS-"
+                    "Hic4XYg915MA/viewform"
+                ),
+                (
+                    "https://docs.google.com/document/d/"
+                    "1TasKKNFDkostGTnX0SsSpCzvgKw7tITA/edit?tab=t.0"
+                ),
+                "https://vk.com/kb_esports",
+                "craft.itmo.ru",
+            },
+        }
+
+        for endpoint, expected_values in expected.items():
+            with self.subTest(endpoint=endpoint):
+                document = PageDocument.model_validate(
+                    self.get_page(endpoint).json()
+                )
+                payload = document.content.model_dump_json()
+                for value in expected_values:
+                    self.assertIn(value, payload)
+
     def test_itmocraft_alias_keeps_legacy_body_but_independent_layout(self):
         user = self.create_legacy_user(email=self.unique_email("alias"))
         self.group.members.add(user)

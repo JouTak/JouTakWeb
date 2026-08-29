@@ -22,6 +22,30 @@ ITMOCRAFT_CONTENT = {
                 "title": "Больше, чем просто сервер!",
             },
             {
+                "type": "actions",
+                "eyebrow": "Команда ITMOcraft",
+                "title": "Стать частью сообщества",
+                "description": (
+                    "Оргсостав ITMOcraft разрабатывает плагины, строит "
+                    "ивенты и создаёт медиа. Если хочешь участвовать — "
+                    "оставь заявку в команду организаторов."
+                ),
+                "items": [
+                    {
+                        "id": "organizer-application",
+                        "label": "Подать заявку в команду",
+                        "emphasis": "primary",
+                        "action": {
+                            "kind": "external",
+                            "href": (
+                                "https://forms.yandex.ru/u/"
+                                "67773408068ff0452320c8b4/"
+                            ),
+                        },
+                    }
+                ],
+            },
+            {
                 "type": "events",
                 "title": "События",
                 "items": [
@@ -42,8 +66,9 @@ ITMOCRAFT_CONTENT = {
                         "action": {
                             "kind": "design_placeholder",
                             "id": "bunker-details",
-                            "behavior": "hash",
+                            "behavior": "no_op",
                         },
+                        "action_label": "Регистрация скоро",
                     }
                 ],
             },

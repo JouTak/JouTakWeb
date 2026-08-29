@@ -22,6 +22,46 @@ JOUTAK_CONTENT = {
                 "title": "Отсюда всё начиналось!",
             },
             {
+                "type": "actions",
+                "eyebrow": "JouTak SMP",
+                "title": "Подключиться к серверу",
+                "description": (
+                    "JouTak — приватный мир без вайпов, сохранивший память "
+                    "сообщества. Подай заявку, подключайся по адресу сервера "
+                    "и используй оплату только для взноса за доступ."
+                ),
+                "facts": [
+                    {
+                        "id": "server-address",
+                        "label": "Адрес сервера",
+                        "value": "mc.joutak.ru",
+                    }
+                ],
+                "items": [
+                    {
+                        "id": "private-server-application",
+                        "label": "Зарегистрироваться",
+                        "emphasis": "primary",
+                        "action": {
+                            "kind": "external",
+                            "href": (
+                                "https://forms.yandex.ru/u/"
+                                "6501f64f43f74f18a8da28de/"
+                            ),
+                        },
+                    },
+                    {
+                        "id": "access-payment",
+                        "label": "Оплатить доступ",
+                        "emphasis": "secondary",
+                        "action": {
+                            "kind": "internal",
+                            "path": "/joutak/pay",
+                        },
+                    },
+                ],
+            },
+            {
                 "type": "gallery",
                 "title": "Галерея",
                 "items": [

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
+  announceAuthenticatedSession,
   authenticateMfaCode,
   authenticateWithWebAuthnCredential,
   doLogin,
@@ -19,17 +20,7 @@ import { markPendingMfaSession } from "../services/auth/tokenStore";
 import { extractErrorMessage } from "../services/errors";
 import { markPostSignupPersonalizationSession } from "../utils/personalizationNotice";
 import { needsPersonalization } from "../utils/profileState";
-
-const fieldBlockStyle = {
-  display: "grid",
-  gap: 6,
-};
-
-const fieldLabelStyle = {
-  fontSize: 13,
-  lineHeight: 1.25,
-  opacity: 0.85,
-};
+import styles from "./AuthModal.module.css";
 
 function isSafeInternalPath(path) {
   return (
@@ -77,6 +68,13 @@ export default function AuthModal({
     if (isMfa) return "Подтверждение входа";
     if (isLogin) return "Вход";
     return "Регистрация";
+  }, [isLogin, isMfa, isResetPassword]);
+
+  const subtitle = useMemo(() => {
+    if (isResetPassword) return "Отправим одноразовую ссылку на ваш email.";
+    if (isMfa) return "Завершаем защищённый вход в аккаунт.";
+    if (isLogin) return "Продолжайте с того места, где остановились.";
+    return "Один аккаунт для проектов и событий ITMOcraft.";
   }, [isLogin, isMfa, isResetPassword]);
 
   const safeSuccessRedirectTo = useMemo(() => {
@@ -179,6 +177,7 @@ export default function AuthModal({
   async function completeAuthenticatedFlow(successMessage) {
     await finalizeSessionAuthentication();
     const profile = await me();
+    announceAuthenticatedSession();
     toaster.add({
       title: "Готово!",
       content: successMessage,
@@ -343,6 +342,7 @@ export default function AuthModal({
         theme: "success",
       });
       const profile = await me();
+      announceAuthenticatedSession();
       if (needsPersonalization(profile)) {
         markPostSignupPersonalizationSession();
         close({ notifyParent: !safeSuccessRedirectTo });
@@ -374,15 +374,22 @@ export default function AuthModal({
       disableBodyScrollLock
       style={{ "--g-modal-width": "520px" }}
     >
-      <div style={{ padding: 24, display: "grid", gap: 16 }}>
-        <h3 id="auth-modal-title" style={{ margin: 0 }}>
-          {title}
-        </h3>
+      <div className={styles.shell}>
+        <div className={styles.header}>
+          <img src="/img/logo-mini.svg" alt="" />
+          <div>
+            <span className={styles.kicker}>Аккаунт ITMOcraft</span>
+            <h3 id="auth-modal-title" className={styles.title}>
+              {title}
+            </h3>
+            <p className={styles.subtitle}>{subtitle}</p>
+          </div>
+        </div>
 
         {isLogin ? (
-          <form onSubmit={onLoginSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Email или старый логин</span>
+          <form onSubmit={onLoginSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <span className={styles.label}>Email или старый логин</span>
               <TextInput
                 size="l"
                 value={login}
@@ -394,8 +401,8 @@ export default function AuthModal({
                 aria-label="Email или старый логин"
               />
             </div>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Пароль</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Пароль</span>
               <TextInput
                 size="l"
                 type="password"
@@ -454,28 +461,22 @@ export default function AuthModal({
               Забыли пароль?
             </Button>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>
             </div>
           </form>
         ) : isMfa ? (
-          <form onSubmit={onMfaSubmit} style={{ display: "grid", gap: 12 }}>
-            <p style={{ margin: 0, opacity: 0.9 }}>
+          <form onSubmit={onMfaSubmit} className={styles.form}>
+            <p className={styles.copy}>
               Пароль принят. Подтвердите вход кодом из
               приложения-аутентификатора, recovery code
               {mfaTypes.includes("webauthn") ? " или passkey" : ""}.
             </p>
 
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Код подтверждения</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Код подтверждения</span>
               <TextInput
                 size="l"
                 value={mfaCode}
@@ -488,9 +489,7 @@ export default function AuthModal({
               />
             </div>
 
-            {mfaError ? (
-              <p style={{ margin: 0, color: "#ff8e8e" }}>{mfaError}</p>
-            ) : null}
+            {mfaError ? <p className={styles.error}>{mfaError}</p> : null}
 
             <Button
               view="action"
@@ -530,27 +529,21 @@ export default function AuthModal({
               Назад ко входу
             </Button>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>
             </div>
           </form>
         ) : isResetPassword ? (
-          <div style={{ display: "grid", gap: 12 }}>
-            <p style={{ margin: 0, opacity: 0.9 }}>
+          <div className={styles.form}>
+            <p className={styles.copy}>
               Укажите email, и мы отправим письмо со ссылкой для сброса пароля.
             </p>
 
             {resetSuccess ? (
               <>
-                <p style={{ margin: 0, opacity: 0.9 }}>{resetSuccess}</p>
+                <p className={styles.success}>{resetSuccess}</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Button view="action" onClick={() => setMode("login")}>
                     Вернуться ко входу
@@ -568,12 +561,9 @@ export default function AuthModal({
                 </div>
               </>
             ) : (
-              <form
-                onSubmit={onResetRequestSubmit}
-                style={{ display: "grid", gap: 12 }}
-              >
-                <div style={fieldBlockStyle}>
-                  <span style={fieldLabelStyle}>Email</span>
+              <form onSubmit={onResetRequestSubmit} className={styles.form}>
+                <div className={styles.field}>
+                  <span className={styles.label}>Email</span>
                   <TextInput
                     size="l"
                     type="email"
@@ -586,7 +576,7 @@ export default function AuthModal({
                   />
                 </div>
                 {resetError ? (
-                  <p style={{ margin: 0, color: "#ff8e8e" }}>{resetError}</p>
+                  <p className={styles.error}>{resetError}</p>
                 ) : null}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Button view="action" type="submit" loading={busy}>
@@ -606,22 +596,16 @@ export default function AuthModal({
               </form>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Email</span>
+          <form onSubmit={onSignupSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <span className={styles.label}>Email</span>
               <TextInput
                 size="l"
                 type="email"
@@ -634,8 +618,8 @@ export default function AuthModal({
                 aria-label="Email"
               />
             </div>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Пароль</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Пароль</span>
               <TextInput
                 size="l"
                 type="password"
@@ -647,8 +631,8 @@ export default function AuthModal({
                 aria-label="Пароль"
               />
             </div>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Повторите пароль</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Повторите пароль</span>
               <TextInput
                 size="l"
                 type="password"
@@ -677,13 +661,7 @@ export default function AuthModal({
             >
               У меня уже есть аккаунт
             </Button>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>

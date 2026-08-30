@@ -125,16 +125,6 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "Полностью заменяет содержимое страницы контактов.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
-    "site_contact_page_version": {
-        "kind": "variant",
-        "default_env": None,
-        "default_fallback": DEFAULT_VARIANT,
-        "variants": VERSIONS_VARIANTS,
-        "pages": ["contact"],
-        "sticky": False,
-        "description": "Switches the /contact product page.",
-        "visual_impact": "Full contact page replacement.",
-    },
     "site_header_version": {
         "title": "Шапка сайта",
         "kind": "variant",

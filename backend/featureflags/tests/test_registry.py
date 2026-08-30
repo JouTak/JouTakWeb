@@ -1,14 +1,28 @@
+from __future__ import annotations
+
+from unittest.mock import patch
+
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
 from featureflags.registry import (
     DESIGN_FLAG_KEYS,
+    DESIGN_ROLLOUT_POLICY,
+    DESIGN_TESTER_GROUP_SLUG,
     FEATURE_REGISTRY,
+    GUIDED_ROLLOUT_AUDIENCES,
+    canonical_variant_token,
+    get_allowed_audiences,
     get_default_value,
     get_flags_for_page,
+    get_required_group_slug,
+    get_variant_choices,
+    is_audience_allowed,
+    validate_registry,
 )
 
 
-class FeatureRegistryTests(SimpleTestCase):
+class FeatureRegistryPolicyTests(SimpleTestCase):
     def test_contact_page_flag_is_closed_non_sticky_design_variant(self):
         key = "site_contact_page_version"
 
@@ -21,4 +35,75 @@ class FeatureRegistryTests(SimpleTestCase):
         self.assertEqual(spec["variants"], ("legacy", "v2"))
         self.assertEqual(spec["pages"], ["contact"])
         self.assertFalse(spec["sticky"])
+        self.assertIs(spec["rollout_policy"], DESIGN_ROLLOUT_POLICY)
         self.assertIn(key, get_flags_for_page("contact"))
+
+    def test_design_flags_only_allow_the_canonical_group(self) -> None:
+        key = "site_itmocraft_page_version"
+
+        self.assertEqual(get_allowed_audiences(key), ("group",))
+        self.assertEqual(
+            get_required_group_slug(key),
+            DESIGN_TESTER_GROUP_SLUG,
+        )
+        self.assertFalse(is_audience_allowed(key, "everyone"))
+
+    def test_regular_flags_expose_guided_audiences(self) -> None:
+        key = "profile_personalization_ui"
+
+        self.assertEqual(
+            get_allowed_audiences(key),
+            GUIDED_ROLLOUT_AUDIENCES,
+        )
+        self.assertIsNone(get_required_group_slug(key))
+
+    def test_unknown_flag_never_allows_an_audience(self) -> None:
+        self.assertFalse(is_audience_allowed("unknown", "everyone"))
+
+    def test_variant_labels_come_from_policy_metadata(self) -> None:
+        self.assertEqual(
+            get_variant_choices("profile_personalization_ui"),
+            (
+                ("true", "Включено (true)"),
+                ("false", "Выключено (false)"),
+            ),
+        )
+
+    def test_boolean_tokens_are_case_insensitive_and_canonical(self) -> None:
+        for value in (True, "True", " TRUE ", "1", "yes", "ON"):
+            with self.subTest(value=value):
+                self.assertEqual(canonical_variant_token(value), "true")
+        for value in (False, "False", " FALSE ", "0", "no", "OFF"):
+            with self.subTest(value=value):
+                self.assertEqual(canonical_variant_token(value), "false")
+        self.assertEqual(
+            get_variant_choices("site_header_version"),
+            (
+                ("legacy", "Текущая версия (legacy)"),
+                ("v2", "Новая версия (v2)"),
+            ),
+        )
+
+    def test_registry_validation_rejects_guarded_key_snapshot_drift(self):
+        key = "profile_personalization_ui"
+        drifted_spec = {
+            **FEATURE_REGISTRY[key],
+            "rollout_policy": DESIGN_ROLLOUT_POLICY,
+        }
+
+        with (
+            patch.dict(FEATURE_REGISTRY, {key: drifted_spec}),
+            self.assertRaises(ImproperlyConfigured),
+        ):
+            validate_registry()
+
+    def test_registry_validation_requires_operator_presentation(self) -> None:
+        key = "profile_personalization_ui"
+        for field in ("title", "description", "visual_impact"):
+            with self.subTest(field=field):
+                invalid_spec = {**FEATURE_REGISTRY[key], field: ""}
+                with (
+                    patch.dict(FEATURE_REGISTRY, {key: invalid_spec}),
+                    self.assertRaises(ImproperlyConfigured),
+                ):
+                    validate_registry()

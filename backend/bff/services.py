@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from accounts.services.auth import AuthService
 from django.http import HttpRequest
-from featureflags.models import FeatureGroup
-from featureflags.registry import get_flags_for_page
+from featureflags.registry import (
+    PERSONALIZATION_FLAG_KEYS,
+    get_flags_for_page,
+)
 from featureflags.services import RequestEvaluationContext, evaluate_many
 
 from bff.content import PRODUCT_CONTENT
@@ -38,13 +40,21 @@ PRODUCTS = {
 }
 
 
-def viewer_summary(request: HttpRequest, user: object | None) -> Viewer:
+def viewer_summary(
+    request: HttpRequest,
+    user: object | None,
+    *,
+    feature_decisions: dict[str, bool | str] | None = None,
+) -> Viewer:
     if not user or not getattr(user, "is_authenticated", False):
         return Viewer(
             is_authenticated=False,
             profile_state="guest",
         )
-    profile = AuthService.profile(user)
+    profile = AuthService.profile(
+        user,
+        feature_decisions=feature_decisions,
+    )
     return Viewer(
         is_authenticated=True,
         username=profile.username,
@@ -55,17 +65,18 @@ def viewer_summary(request: HttpRequest, user: object | None) -> Viewer:
     )
 
 
-def _is_design_tester(context: RequestEvaluationContext) -> bool:
-    if context.user_id is None:
-        return False
-    return FeatureGroup.objects.filter(
-        slug="website-design-testers",
-        members__pk=context.user_id,
-    ).exists()
-
-
 def _safe_variant(value: object) -> str:
     return str(value) if value in {"legacy", "v2"} else "legacy"
+
+
+def _evaluate_with_viewer_features(
+    context: RequestEvaluationContext,
+    keys: list[str] | tuple[str, ...],
+) -> dict[str, bool | str]:
+    """Evaluate payload and viewer flags in one consistent DB snapshot."""
+    viewer_keys = PERSONALIZATION_FLAG_KEYS if context.user_id else ()
+    all_keys = list(dict.fromkeys((*keys, *viewer_keys)))
+    return evaluate_many(context, all_keys)
 
 
 def build_page_document(
@@ -77,7 +88,7 @@ def build_page_document(
     fixed_legacy: bool = False,
 ) -> PageDocument:
     product = PRODUCTS[product_id]
-    decisions = evaluate_many(
+    decisions = _evaluate_with_viewer_features(
         context,
         [
             product["page_flag"],
@@ -88,18 +99,14 @@ def build_page_document(
     staff_preview = bool(
         context.is_staff
         and context.request_overrides
-        and any(value == "v2" for value in context.request_overrides.values())
+        and context.request_overrides.get(product["page_flag"]) == "v2"
     )
-    can_see_v2 = _is_design_tester(context) or staff_preview
 
     page_variant = _safe_variant(decisions[product["page_flag"]])
-    if fixed_legacy or not can_see_v2:
+    if fixed_legacy:
         page_variant = "legacy"
     header_variant = _safe_variant(decisions["site_header_version"])
     footer_variant = _safe_variant(decisions["site_footer_version"])
-    if not can_see_v2:
-        header_variant = "legacy"
-        footer_variant = "legacy"
 
     if fixed_legacy:
         source = "fixed_legacy"
@@ -124,7 +131,11 @@ def build_page_document(
             footer_variant=footer_variant,
             default_project=product["default_project"],
         ),
-        viewer=viewer_summary(request, context.user),
+        viewer=viewer_summary(
+            request,
+            context.user,
+            feature_decisions=decisions,
+        ),
         content=PRODUCT_CONTENT[product_id][page_variant],
     )
 
@@ -134,11 +145,14 @@ def build_bootstrap_payload(
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
     keys = get_flags_for_page("bootstrap")
+    decisions = _evaluate_with_viewer_features(context, keys)
     return {
-        "viewer": viewer_summary(request, context.user).model_dump(
-            mode="json"
-        ),
-        "features": evaluate_many(context, keys),
+        "viewer": viewer_summary(
+            request,
+            context.user,
+            feature_decisions=decisions,
+        ).model_dump(mode="json"),
+        "features": {key: decisions[key] for key in keys},
         "experiments": {
             "anonymous_id_present": bool(context.anonymous_id),
         },
@@ -150,9 +164,12 @@ def build_account_summary_payload(
     context: RequestEvaluationContext,
 ) -> dict[str, object]:
     keys = get_flags_for_page(context.page)
+    decisions = _evaluate_with_viewer_features(context, keys)
     return {
-        "viewer": viewer_summary(request, context.user).model_dump(
-            mode="json"
-        ),
-        "features": evaluate_many(context, keys),
+        "viewer": viewer_summary(
+            request,
+            context.user,
+            feature_decisions=decisions,
+        ).model_dump(mode="json"),
+        "features": {key: decisions[key] for key in keys},
     }

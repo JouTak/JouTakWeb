@@ -9,6 +9,24 @@
     Подтвердите вход как <strong>{{ username }}</strong>
   </p>
 
+  {% if passkey_cross_host_blocked %}
+  <div
+    id="passkey-host-mismatch"
+    class="errornote"
+    style="margin-bottom: 20px"
+  >
+    <strong>Passkey основного сайта пока недоступен в админке.</strong>
+    <p style="margin: 8px 0 0">
+      Админка работает на отдельном защищённом домене. Добавьте
+      приложение-аутентификатор и сохраните резервные коды, затем войдите
+      снова.
+    </p>
+    <p style="margin: 8px 0 0">
+      <a href="{{ mfa_setup_url }}">Открыть настройки безопасности</a>
+    </p>
+  </div>
+  {% endif %}
+
   {% if has_passkeys %}
   <div
     id="passkey-section"
@@ -74,6 +92,7 @@
     </p>
   </div>
 
+  {% if has_code_factors %}
   <div
     style="
       text-align: center;
@@ -85,7 +104,9 @@
     — или введите код из приложения —
   </div>
   {% endif %}
+  {% endif %}
 
+  {% if has_code_factors %}
   <form method="post" action="">
     {% csrf_token %} {% if error %}
     <p class="errornote" style="margin-bottom: 12px">{{ error }}</p>
@@ -117,14 +138,26 @@
 
     <div class="submit-row" style="margin-top: 16px">
       <input type="submit" value="Подтвердить" />
-      <a
-        href="/admin/login/"
+      <button
+        type="submit"
+        formnovalidate
+        formaction="/admin/mfa-verify/cancel/"
         style="margin-left: 12px; color: var(--link-fg, #447e9b)"
       >
         Отмена
-      </a>
+      </button>
     </div>
   </form>
+  {% else %}
+  <form method="post" action="/admin/mfa-verify/cancel/">
+    {% csrf_token %}
+    <div class="submit-row" style="margin-top: 16px">
+      <button type="submit" style="color: var(--link-fg, #447e9b)">
+        Вернуться ко входу
+      </button>
+    </div>
+  </form>
+  {% endif %}
 </div>
 
 {% if has_passkeys %}
@@ -168,7 +201,7 @@
     try {
       // 1. Get challenge from server
       const optResp = await fetch("/admin/mfa-verify/webauthn-options/", {
-        method: "GET",
+        method: "POST",
         headers: { "X-CSRFToken": getCookie("csrftoken") },
         credentials: "same-origin",
       });

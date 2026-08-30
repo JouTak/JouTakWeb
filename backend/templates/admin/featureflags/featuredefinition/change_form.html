@@ -1,0 +1,17 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'featureflags/admin_rollout.css' %}">{% endblock %}
+
+{% block object-tools-items %}
+  {% if original and original.active %}
+    {% if is_design_flag and can_add_tester %}
+      {% url 'admin:featureflags_design_tester_add' as tester_url %}
+      {% if tester_url %}<li><a href="{{ tester_url }}">Добавить дизайн-тестера</a></li>{% endif %}
+    {% elif can_add_rollout %}
+      {% url 'admin:featureflags_rollout_add' as rollout_url %}
+      {% if rollout_url %}<li><a href="{{ rollout_url }}?feature={{ original.pk }}" class="addlink">Новый раскат</a></li>{% endif %}
+    {% endif %}
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

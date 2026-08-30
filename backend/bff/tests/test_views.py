@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
+from accounts.services.auth import AuthService
 from accounts.tests.base import APITestCase
 from django.test.utils import override_settings
 from featureflags.models import (
     FeatureDefinition,
     FeatureGroup,
+    FeatureKind,
     FeatureRule,
     FeatureRuleType,
 )
+from featureflags.services import evaluate_many
 
 from bff.schemas import PageDocument
 
@@ -267,6 +271,129 @@ class BffViewTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.cookies["joutak_ff_override"]["max-age"], 0)
+
+    def test_staff_preview_for_one_key_does_not_unlock_another(self):
+        staff = self.create_legacy_user(email=self.unique_email("staff-key"))
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        self.client.force_login(staff)
+        page_feature = FeatureDefinition.objects.get(
+            key="site_itmocraft_page_version"
+        )
+        page_feature.rules.all().delete()
+        FeatureRule.objects.create(
+            feature=page_feature,
+            name="unsafe-everyone-v2",
+            priority=10,
+            rule_type=FeatureRuleType.EVERYONE,
+            value="v2",
+            page="itmocraft",
+        )
+
+        response = self.client.post(
+            "/bff/feature-overrides",
+            data=json.dumps({"overrides": {"site_header_version": "v2"}}),
+            content_type="application/json",
+            HTTP_HOST="api.localhost",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        document = PageDocument.model_validate(self.get_page().json())
+        self.assertEqual(document.effective_page_variant, "legacy")
+        self.assertEqual(document.variant_source, "default")
+        self.assertEqual(document.layout.header_variant, "v2")
+
+    def test_page_preview_does_not_unlock_header_or_footer(self):
+        staff = self.create_legacy_user(
+            email=self.unique_email("staff-layout-key")
+        )
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        self.client.force_login(staff)
+        for key in ("site_header_version", "site_footer_version"):
+            feature = FeatureDefinition.objects.get(key=key)
+            feature.rules.all().delete()
+            FeatureRule.objects.create(
+                feature=feature,
+                name="unsafe-everyone-v2",
+                priority=10,
+                rule_type=FeatureRuleType.EVERYONE,
+                value="v2",
+            )
+
+        response = self.client.post(
+            "/bff/feature-overrides",
+            data=json.dumps(
+                {
+                    "overrides": {
+                        "site_itmocraft_page_version": "v2",
+                    }
+                }
+            ),
+            content_type="application/json",
+            HTTP_HOST="api.localhost",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        document = PageDocument.model_validate(self.get_page().json())
+        self.assertEqual(document.effective_page_variant, "v2")
+        self.assertEqual(document.variant_source, "staff_preview")
+        self.assertEqual(document.layout.header_variant, "legacy")
+        self.assertEqual(document.layout.footer_variant, "legacy")
+
+    def test_account_summary_reuses_one_feature_snapshot_for_viewer(self):
+        user = self.create_legacy_user(email=self.unique_email("snapshot"))
+        self.client.force_login(user)
+        feature, _ = FeatureDefinition.objects.get_or_create(
+            key="profile_personalization_ui",
+            defaults={
+                "kind": FeatureKind.BOOLEAN,
+                "default_value": "true",
+            },
+        )
+        feature.kind = FeatureKind.BOOLEAN
+        feature.default_value = "true"
+        feature.active = True
+        feature.save(update_fields=["kind", "default_value", "active"])
+        feature.rules.all().delete()
+        FeatureRule.objects.create(
+            feature=feature,
+            name="everyone-off",
+            priority=10,
+            rule_type=FeatureRuleType.EVERYONE,
+            value="false",
+        )
+
+        with (
+            patch(
+                "bff.services.evaluate_many",
+                wraps=evaluate_many,
+            ) as bff_evaluate,
+            patch(
+                "accounts.services.account_status.evaluate_many",
+                wraps=evaluate_many,
+            ) as account_evaluate,
+            patch(
+                "bff.services.AuthService.profile",
+                wraps=AuthService.profile,
+            ) as profile,
+        ):
+            response = self.client.get(
+                "/bff/account/summary",
+                HTTP_HOST="api.localhost",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            response.json()["features"]["profile_personalization_ui"]
+        )
+        self.assertEqual(bff_evaluate.call_count, 1)
+        self.assertEqual(account_evaluate.call_count, 0)
+        self.assertFalse(
+            profile.call_args.kwargs["feature_decisions"][
+                "profile_personalization_ui"
+            ]
+        )
 
     def test_account_summary_requires_authentication(self):
         response = self.client.get(

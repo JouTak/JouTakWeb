@@ -30,6 +30,11 @@ PRODUCTS = {
         "page_flag": "site_minigames_page_version",
         "default_project": "mini_games",
     },
+    "contact": {
+        "canonical_path": "/contact",
+        "page_flag": "site_contact_page_version",
+        "default_project": "jou_tak",
+    },
 }
 
 

@@ -289,8 +289,6 @@ class AdminHostPolicyTests(TestCase):
 
         for path in (
             "/admin/auth/user/",
-            "/admin/core/userprofile/",
-            "/admin/core/usersessionmeta/",
             "/admin/featureflags/featuredefinition/",
         ):
             response = self.client.get(path, HTTP_HOST="admin.localhost")

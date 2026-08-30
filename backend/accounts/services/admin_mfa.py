@@ -274,29 +274,32 @@ def get_pending_admin_login(
 
 def is_admin_mfa_verified(request: HttpRequest) -> bool:
     user = getattr(request, "user", None)
+    session = getattr(request, "session", None)
+    if session is None:
+        return False
     if not (
         user
         and getattr(user, "is_authenticated", False)
         and getattr(user, "is_active", False)
         and getattr(user, "is_staff", False)
     ):
-        request.session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
+        session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
         return False
 
-    state = request.session.get(SESSION_KEY_ADMIN_MFA_ASSURANCE)
+    state = session.get(SESSION_KEY_ADMIN_MFA_ASSURANCE)
     ttl = _positive_setting("ADMIN_MFA_ASSURANCE_TTL_SECONDS", 28800)
     if not isinstance(state, dict) or state.get("version") != 1:
-        request.session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
+        session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
         return False
     assured_user_pk = state.get("user_pk")
     if not isinstance(assured_user_pk, str) or assured_user_pk != str(user.pk):
-        request.session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
+        session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
         return False
     if state.get("method") not in ADMIN_MFA_METHODS:
-        request.session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
+        session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
         return False
     if not _valid_timestamp(state.get("verified_at"), ttl=ttl):
-        request.session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
+        session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
         return False
     return True
 

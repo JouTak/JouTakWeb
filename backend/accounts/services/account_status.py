@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 from accounts.api.errors import raise_structured_error
 from accounts.services.personalization import personalization_complete
 from allauth.account.models import EmailAddress
 from core.models import UserProfile
 from django.contrib.auth import get_user_model
-from featureflags.registry import get_default_value
+from featureflags.registry import PERSONALIZATION_FLAG_KEYS
+from featureflags.services import RequestEvaluationContext, evaluate_many
 
 User = get_user_model()
 PROFILE_PERSONALIZATION_REQUIRED = "PROFILE_PERSONALIZATION_REQUIRED"
@@ -19,6 +20,12 @@ PERSONALIZATION_CONTEXT_LEGACY_REQUIRED = "legacy_required"
 PERSONALIZATION_PROMPT_NONE = "none"
 PERSONALIZATION_PROMPT_REGISTRATION_SETUP = "registration_setup"
 PERSONALIZATION_PROMPT_MIGRATION_NOTICE = "migration_notice"
+
+
+def _feature_enabled(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass(slots=True)
@@ -33,10 +40,48 @@ class AccountStatusService:
         return personalization_complete(profile)
 
     @staticmethod
+    def personalization_features(
+        user: User,
+        decisions: Mapping[str, bool | str] | None = None,
+    ) -> dict[str, bool | str]:
+        """Resolve personalization flags with the normal DB-aware engine.
+
+        BFF callers pass the decisions they already evaluated for the request,
+        which keeps the viewer and the top-level ``features`` object on the
+        exact same snapshot. Other account flows evaluate the missing values
+        with the authenticated user as targeting context.
+        """
+        resolved = {
+            key: value
+            for key, value in (decisions or {}).items()
+            if key in PERSONALIZATION_FLAG_KEYS
+        }
+        missing = [
+            key for key in PERSONALIZATION_FLAG_KEYS if key not in resolved
+        ]
+        if missing:
+            resolved.update(
+                evaluate_many(
+                    RequestEvaluationContext(user=user, page="account"),
+                    missing,
+                )
+            )
+        return resolved
+
+    @staticmethod
     def get_status(
-        user: User, profile: UserProfile | None = None
+        user: User,
+        profile: UserProfile | None = None,
+        *,
+        feature_decisions: Mapping[str, bool | str] | None = None,
     ) -> dict[str, Any]:
         p = profile or UserProfile.objects.get_or_create(user=user)[0]
+        personalization_features = (
+            AccountStatusService.personalization_features(
+                user,
+                feature_decisions,
+            )
+        )
         email_verified = AccountStatusService.is_email_verified(user)
         complete, missing = AccountStatusService.profile_complete(p)
         profile_state = "personalized" if complete else "basic"
@@ -70,14 +115,16 @@ class AccountStatusService:
                 "advanced" if profile_state == "personalized" else "basic"
             ),
             "blocking_reasons": blocking_reasons,
-            "personalization_ui_enabled": bool(
-                get_default_value("profile_personalization_ui")
+            "personalization_ui_enabled": _feature_enabled(
+                personalization_features["profile_personalization_ui"]
             ),
-            "personalization_interstitial_enabled": bool(
-                get_default_value("profile_personalization_interstitial")
+            "personalization_interstitial_enabled": _feature_enabled(
+                personalization_features[
+                    "profile_personalization_interstitial"
+                ]
             ),
-            "personalization_enforce_enabled": bool(
-                get_default_value("profile_personalization_enforce")
+            "personalization_enforce_enabled": _feature_enabled(
+                personalization_features["profile_personalization_enforce"]
             ),
             "personalization_context": personalization_context,
             "personalization_prompt_variant": personalization_prompt_variant,

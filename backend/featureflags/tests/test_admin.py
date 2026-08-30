@@ -52,9 +52,10 @@ class FeatureFlagsAdminTests(TestCase):
                 "priority": 10,
                 "rule_type": FeatureRuleType.USER_ALLOWLIST,
                 "value": "true",
-                "page": "",
+                "page": "account",
                 "percentage": "",
                 "enabled": "on",
+                "audit_reason": "Create user rollout",
                 "target_users": [str(self.user_one.pk), str(self.user_two.pk)],
                 "anonymous_ids": "",
                 "target_groups": [],
@@ -77,9 +78,10 @@ class FeatureFlagsAdminTests(TestCase):
                 "priority": 20,
                 "rule_type": FeatureRuleType.GROUP,
                 "value": "true",
-                "page": "",
+                "page": "account",
                 "percentage": "",
                 "enabled": "on",
+                "audit_reason": "Create group rollout",
                 "target_users": [],
                 "anonymous_ids": "",
                 "target_groups": [str(self.group.pk)],
@@ -109,7 +111,7 @@ class FeatureFlagsAdminTests(TestCase):
                 "anonymous_scope": "",
                 "value": "true",
                 "enabled": "on",
-                "note": "",
+                "note": "Emergency support case",
             }
         )
 
@@ -137,7 +139,7 @@ class FeatureFlagsAdminTests(TestCase):
                 "anonymous_scope": "anon-123",
                 "value": "true",
                 "enabled": "on",
-                "note": "",
+                "note": "Emergency support case",
             }
         )
 

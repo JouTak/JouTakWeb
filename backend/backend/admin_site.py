@@ -11,7 +11,6 @@ from accounts.services.admin_mfa import (
     AdminMFARateLimitError,
     AdminMFAVerificationError,
     abort_pending_admin_login,
-    admin_request_has_mfa_assurance,
     admin_user_has_primary_mfa,
     admin_user_has_webauthn,
     begin_admin_webauthn,
@@ -37,7 +36,7 @@ from django.http import (
     JsonResponse,
 )
 from django.shortcuts import render
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
@@ -118,7 +117,15 @@ class JouTakAdminSite(AdminSite):
     login_form = AdminMFAAuthenticationForm
 
     def has_permission(self, request) -> bool:
-        return admin_request_has_mfa_assurance(request)
+        user = getattr(request, "user", None)
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.is_staff
+            and admin_mfa_is_enabled(user)
+            and is_admin_mfa_verified(request)
+        )
 
     def login(self, request: HttpRequest, extra_context=None) -> HttpResponse:
         """Run the password stage without creating an authenticated session."""
@@ -185,6 +192,8 @@ class JouTakAdminSite(AdminSite):
         return super().login(request, extra_context=extra_context)
 
     def get_urls(self):
+        from featureflags.admin import get_rollout_admin_urls
+
         custom_urls = [
             path(
                 "mfa-verify/",
@@ -202,7 +211,47 @@ class JouTakAdminSite(AdminSite):
                 name="admin_mfa_webauthn_complete",
             ),
         ]
-        return custom_urls + super().get_urls()
+        return custom_urls + get_rollout_admin_urls(self) + super().get_urls()
+
+    def get_app_list(self, request, app_label=None):
+        from backend.admin_navigation import build_navigation_app_list
+
+        app_list = super().get_app_list(request, app_label)
+        rollout_console = None
+        can_view_rollouts = request.user.has_perm(
+            "featureflags.view_featuredefinition"
+        ) and (
+            request.user.has_perm("featureflags.view_featurerule")
+            or request.user.has_perm("featureflags.change_featurerule")
+        )
+        if can_view_rollouts:
+            can_add_rollout = request.user.has_perms(
+                (
+                    "featureflags.add_featurerule",
+                    "featureflags.view_featuregroup",
+                )
+            )
+            rollout_console = {
+                "name": "Управление раскатками",
+                "object_name": "GuidedRollout",
+                "perms": {
+                    "add": can_add_rollout,
+                    "change": False,
+                    "delete": False,
+                    "view": True,
+                },
+                "admin_url": reverse("admin:featureflags_rollout_index"),
+                "add_url": (
+                    reverse("admin:featureflags_rollout_add")
+                    if can_add_rollout
+                    else None
+                ),
+                "view_only": True,
+            }
+        return build_navigation_app_list(
+            app_list,
+            rollout_console=rollout_console,
+        )
 
     def mfa_verify_view(self, request: HttpRequest) -> HttpResponse:
         """MFA verification page: TOTP, recovery code, or Passkey."""

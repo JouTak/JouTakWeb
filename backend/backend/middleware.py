@@ -5,7 +5,9 @@ from urllib.parse import urlencode, urlsplit
 from uuid import uuid4
 
 from accounts.services.admin_mfa import (
-    admin_request_has_mfa_assurance,
+    SESSION_KEY_ADMIN_MFA_ASSURANCE,
+    admin_user_has_primary_mfa,
+    is_admin_mfa_verified,
     safe_admin_next,
 )
 from django.conf import settings
@@ -24,6 +26,10 @@ REQUEST_ID_HEADER = "X-Request-ID"
 SAFE_HTTP_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
 
 logger = logging.getLogger(__name__)
+
+# Compatibility seam for tests and callers predating the structured assurance
+# state. Both aliases still resolve to the hardened implementation by default.
+admin_mfa_is_enabled = admin_user_has_primary_mfa
 
 
 def _normalized_host(host: str | None) -> str:
@@ -266,11 +272,17 @@ class AdminMFAEnforcementMiddleware:
             return self.get_response(request)
 
         user = getattr(request, "user", None)
+        if not (
+            user and user.is_authenticated and user.is_active and user.is_staff
+        ):
+            request.session.pop(SESSION_KEY_ADMIN_MFA_ASSURANCE, None)
         if (
             user
             and user.is_authenticated
             and user.is_staff
-            and not admin_request_has_mfa_assurance(request)
+            and not (
+                admin_mfa_is_enabled(user) and is_admin_mfa_verified(request)
+            )
         ):
             next_url = safe_admin_next(request, request.get_full_path())
             # Fail closed for stale/force-created staff sessions and remove

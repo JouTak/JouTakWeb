@@ -18,14 +18,13 @@ JouTakWeb - web-приложение для серверов комьюнити 
 backend/                  Django project, apps, tests, Dockerfile
 backend/accounts/         Auth, account, OAuth and session APIs
 backend/core/             Shared backend models and infrastructure
-backend/requirements/     Generated uv exports for container installs
 frontend/                 Vite React application
 frontend/src/services/    Frontend HTTP, auth/session and API clients
 docs/                     Contributor, architecture and security docs
 .github/workflows/        CI and release workflows
 compose.yaml              Default local Compose entry point
 docker-compose*.yml       Image-based Compose entry points and overrides
-stack.yml                 Docker Swarm production stack template
+docker-compose.stack.yml  Docker Swarm production stack template
 ```
 
 ## Локальная разработка
@@ -121,7 +120,7 @@ development settings используют SQLite, поэтому PostgreSQL дл
 запуска не нужен.
 
 ```bash
-uv sync --python 3.12 --group dev --group test --frozen
+uv sync --locked --python 3.12 --group dev --group test
 uv run python backend/manage.py migrate --settings backend.settings.dev
 uv run python backend/manage.py sync_feature_registry --settings backend.settings.dev
 uv run python backend/manage.py runserver 127.0.0.1:8000 --settings backend.settings.dev
@@ -171,7 +170,8 @@ uv run pytest backend -q
   не переопределяют безопасные defaults из `compose.yaml`.
 - `.env`, `.env.development`, `.env.production` и secret variants остаются
   локальными.
-- `stack.yml` ожидает production secrets через Docker secrets и локальный
+- `docker-compose.stack.yml` ожидает production secrets через Docker secrets и
+  локальный
   `.env.production`; этот файл нельзя коммитить.
 - Optional `*_FILE` variables имеют приоритет там, где поддерживаются.
 
@@ -185,16 +185,14 @@ npm --prefix frontend install <package>
 npm --prefix frontend uninstall <package>
 ```
 
-Backend dependencies меняются через uv. Generated requirements руками не
-редактируем:
+Backend dependencies меняются через uv. Коммитьте `pyproject.toml` и
+`uv.lock`; Docker и CI устанавливают их напрямую через locked `uv sync`:
 
 ```bash
 uv add <package>
 uv add --group dev <package>
 uv add --group test <package>
-uv export --frozen --no-dev --no-hashes -o backend/requirements/prod.txt
-uv export --frozen --group dev --group test --no-hashes -o backend/requirements/dev.txt
-uv export --frozen --no-default-groups --group test --no-hashes -o backend/requirements/test.txt
+uv lock --check
 ```
 
 ## CI

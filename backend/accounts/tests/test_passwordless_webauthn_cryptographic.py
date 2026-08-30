@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 
 from accounts.tests.base import APITestCase
@@ -13,7 +12,7 @@ from django.contrib.auth import SESSION_KEY, get_user_model
 from django.core.cache import caches
 from django.test import override_settings
 from fido2.cose import ES256
-from fido2.utils import websafe_encode
+from fido2.utils import sha256, websafe_encode
 from fido2.webauthn import (
     Aaguid,
     AttestationObject,
@@ -65,7 +64,7 @@ def _registered_passkey(
         ES256.from_cryptography_key(private_key.public_key()),
     )
     auth_data = AuthenticatorData.create(
-        hashlib.sha256(RP_ID.encode("ascii")).digest(),
+        sha256(RP_ID.encode("ascii")),
         AuthenticatorData.FLAG.UP
         | AuthenticatorData.FLAG.UV
         | AuthenticatorData.FLAG.AT,
@@ -115,12 +114,12 @@ def _signed_assertion(
     if user_verified:
         flags |= AuthenticatorData.FLAG.UV
     authenticator_data = AuthenticatorData.create(
-        hashlib.sha256(RP_ID.encode("ascii")).digest(),
+        sha256(RP_ID.encode("ascii")),
         flags,
         1,
     )
     signature = private_key.sign(
-        bytes(authenticator_data) + hashlib.sha256(client_data).digest(),
+        bytes(authenticator_data) + sha256(client_data),
         ec.ECDSA(hashes.SHA256()),
     )
     encoded_id = websafe_encode(credential_id)

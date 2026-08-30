@@ -241,7 +241,7 @@ class SmokeInfraConfigTests(TestCase):
         for manifest in (
             "docker-compose.yml",
             "docker-compose.images.yml",
-            "stack.yml",
+            "docker-compose.stack.yml",
         ):
             compose = self._load_yaml(manifest)
             backend_env = compose["x-backend-environment"]
@@ -273,7 +273,7 @@ class SmokeInfraConfigTests(TestCase):
     def test_swarm_manifest_uses_the_traefik_v3_swarm_provider(
         self,
     ) -> None:
-        stack = self._load_yaml("stack.yml")
+        stack = self._load_yaml("docker-compose.stack.yml")
         traefik = stack["services"]["traefik"]
         command = set(traefik["command"])
 
@@ -302,7 +302,7 @@ class SmokeInfraConfigTests(TestCase):
     def test_swarm_routes_same_origin_backend_paths_before_the_spa(
         self,
     ) -> None:
-        stack = self._load_yaml("stack.yml")
+        stack = self._load_yaml("docker-compose.stack.yml")
         backend_labels = self._labels(stack["services"]["backend"])
         frontend_labels = self._labels(stack["services"]["frontend"])
         root_rule = backend_labels[
@@ -345,7 +345,7 @@ class SmokeInfraConfigTests(TestCase):
     def test_swarm_defines_the_https_redirect_middleware_it_uses(
         self,
     ) -> None:
-        stack = self._load_yaml("stack.yml")
+        stack = self._load_yaml("docker-compose.stack.yml")
         backend_labels = self._labels(stack["services"]["backend"])
 
         self.assertEqual(

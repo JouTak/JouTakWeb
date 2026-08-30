@@ -71,7 +71,7 @@ WEBAUTHN_ACCOUNT_ORIGINS=https://joutak.ru \
 WEBAUTHN_ADMIN_ORIGINS=https://admin.joutak.ru \
 WEBAUTHN_ALLOWED_ORIGINS=https://joutak.ru,https://admin.joutak.ru \
 TRAEFIK_ACME_EMAIL=ops@example.com \
-docker compose -f stack.yml config >/dev/null
+docker compose -f docker-compose.stack.yml config >/dev/null
 
 if [[ "${run_smoke}" == "1" ]]; then
   docker compose down -v || true

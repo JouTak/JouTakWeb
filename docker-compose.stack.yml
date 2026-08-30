@@ -1,3 +1,5 @@
+# Docker Swarm production stack. The Compose-compatible name keeps image
+# references visible to Dependabot's docker-compose updater.
 x-backend-environment: &backend-environment
   DJANGO_SETTINGS_MODULE: backend.settings.prod
   USE_X_FORWARDED_PROTO: "true"

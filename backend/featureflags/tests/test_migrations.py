@@ -225,3 +225,156 @@ class ContactPageRolloutMigrationTests(TransactionTestCase):
                 history_change_reason="Add contact page design rollout",
             ).exists()
         )
+
+    def test_reverse_restores_reused_contact_definition_and_rule(self):
+        old_apps = self._migrate(self.migrate_from)
+        FeatureDefinition = old_apps.get_model(
+            "featureflags", "FeatureDefinition"
+        )
+        FeatureOverride = old_apps.get_model("featureflags", "FeatureOverride")
+        FeatureRule = old_apps.get_model("featureflags", "FeatureRule")
+        ExperimentAssignment = old_apps.get_model(
+            "featureflags", "ExperimentAssignment"
+        )
+
+        definition = FeatureDefinition.objects.create(
+            key="site_contact_page_version",
+            description="Existing contact rollout",
+            kind="boolean",
+            default_value="false",
+            active=False,
+            sticky_assignment=True,
+        )
+        definition_pk = definition.pk
+        reused_rule = FeatureRule.objects.create(
+            feature=definition,
+            name="Website design testers",
+            priority=90,
+            rule_type="authenticated",
+            value="legacy",
+            page="contact",
+            actor_ids=["existing-actor"],
+            group_ids=[],
+            percentage=25,
+            enabled=False,
+        )
+        reused_rule_pk = reused_rule.pk
+        unrelated_contact_rule = FeatureRule.objects.create(
+            feature=definition,
+            name="Existing contact rule",
+            priority=20,
+            rule_type="everyone",
+            value="legacy",
+            page="contact",
+        )
+        unrelated_contact_rule_pk = unrelated_contact_rule.pk
+        override = FeatureOverride.objects.create(
+            feature=definition,
+            scope_type="global",
+            value="legacy",
+        )
+        override_pk = override.pk
+        assignment = ExperimentAssignment.objects.create(
+            feature=definition,
+            subject_type="anonymous",
+            subject_key="existing-contact-subject",
+            page="contact",
+            value="legacy",
+        )
+        assignment_pk = assignment.pk
+
+        migrated_apps = self._migrate(self.migrate_to)
+        migrated_definition_model = migrated_apps.get_model(
+            "featureflags", "FeatureDefinition"
+        )
+        migrated = migrated_definition_model.objects.get(pk=definition_pk)
+        self.assertEqual(migrated.kind, "variant")
+        self.assertEqual(migrated.default_value, "legacy")
+        self.assertTrue(migrated.active)
+        self.assertFalse(migrated.sticky_assignment)
+
+        restored_apps = self._migrate(self.migrate_from)
+        restored_definition_model = restored_apps.get_model(
+            "featureflags", "FeatureDefinition"
+        )
+        restored_override_model = restored_apps.get_model(
+            "featureflags", "FeatureOverride"
+        )
+        restored_rule_model = restored_apps.get_model(
+            "featureflags", "FeatureRule"
+        )
+        restored_assignment_model = restored_apps.get_model(
+            "featureflags", "ExperimentAssignment"
+        )
+
+        restored = restored_definition_model.objects.get(pk=definition_pk)
+        self.assertEqual(restored.description, "Existing contact rollout")
+        self.assertEqual(restored.kind, "boolean")
+        self.assertEqual(restored.default_value, "false")
+        self.assertFalse(restored.active)
+        self.assertTrue(restored.sticky_assignment)
+
+        restored_rule = restored_rule_model.objects.get(pk=reused_rule_pk)
+        self.assertEqual(restored_rule.priority, 90)
+        self.assertEqual(restored_rule.rule_type, "authenticated")
+        self.assertEqual(restored_rule.value, "legacy")
+        self.assertEqual(restored_rule.actor_ids, ["existing-actor"])
+        self.assertEqual(restored_rule.group_ids, [])
+        self.assertEqual(restored_rule.percentage, 25)
+        self.assertFalse(restored_rule.enabled)
+        self.assertTrue(
+            restored_rule_model.objects.filter(
+                pk=unrelated_contact_rule_pk
+            ).exists()
+        )
+        self.assertTrue(
+            restored_override_model.objects.filter(pk=override_pk).exists()
+        )
+        self.assertTrue(
+            restored_assignment_model.objects.filter(pk=assignment_pk).exists()
+        )
+
+    def test_reverse_removes_rule_created_for_reused_definition(self):
+        old_apps = self._migrate(self.migrate_from)
+        FeatureDefinition = old_apps.get_model(
+            "featureflags", "FeatureDefinition"
+        )
+
+        definition = FeatureDefinition.objects.create(
+            key="site_contact_page_version",
+            description="Existing contact definition",
+            kind="variant",
+            default_value="v2",
+            active=False,
+            sticky_assignment=True,
+        )
+        definition_pk = definition.pk
+
+        migrated_apps = self._migrate(self.migrate_to)
+        migrated_definition_model = migrated_apps.get_model(
+            "featureflags", "FeatureDefinition"
+        )
+        migrated = migrated_definition_model.objects.get(pk=definition_pk)
+        self.assertTrue(
+            migrated.rules.filter(
+                name="Website design testers",
+                page="contact",
+            ).exists()
+        )
+
+        restored_apps = self._migrate(self.migrate_from)
+        restored_definition_model = restored_apps.get_model(
+            "featureflags", "FeatureDefinition"
+        )
+        restored = restored_definition_model.objects.get(pk=definition_pk)
+
+        self.assertEqual(restored.description, "Existing contact definition")
+        self.assertEqual(restored.default_value, "v2")
+        self.assertFalse(restored.active)
+        self.assertTrue(restored.sticky_assignment)
+        self.assertFalse(
+            restored.rules.filter(
+                name="Website design testers",
+                page="contact",
+            ).exists()
+        )

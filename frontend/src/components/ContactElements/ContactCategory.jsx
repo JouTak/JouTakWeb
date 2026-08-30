@@ -2,10 +2,9 @@ import ContactButton from "./ContactButton";
 import styles from "./ContactElements.module.scss";
 
 export default function ContactCategory({ title, contactsData }) {
-  console.log(styles);
   return (
     <div className={styles.contactCategory}>
-      <h6>{title}</h6>
+      <h2 className={styles.contactCategoryTitle}>{title}</h2>
       <div className={styles.contactCategoryContent}>
         {contactsData?.map((contactInfo, index) => (
           <ContactButton key={index} {...contactInfo} />

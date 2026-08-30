@@ -10,9 +10,10 @@
     width: 100%;
   }
 
-  h6 {
-    font-size: 14px;
+  &-title {
     margin: 20px;
+    font-size: 14px;
+    font-weight: 400;
   }
 
   &-content {

@@ -44,6 +44,27 @@ class FeatureFlagServiceTests(TestCase):
         feature.assignments.all().delete()
         return feature
 
+    def contact_feature(self) -> FeatureDefinition:
+        feature = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+        feature.kind = FeatureKind.VARIANT
+        feature.default_value = "legacy"
+        feature.active = True
+        feature.sticky_assignment = False
+        feature.save(
+            update_fields=[
+                "kind",
+                "default_value",
+                "active",
+                "sticky_assignment",
+            ]
+        )
+        feature.rules.all().delete()
+        feature.overrides.all().delete()
+        feature.assignments.all().delete()
+        return feature
+
     def boolean_feature(self) -> FeatureDefinition:
         feature = FeatureDefinition.objects.get_or_create(
             key="profile_personalization_ui",
@@ -535,6 +556,52 @@ class FeatureFlagServiceTests(TestCase):
         )
 
         self.assertEqual(decisions["site_itmocraft_page_version"], "legacy")
+
+    def test_contact_v2_rejects_override_and_disallowed_manual_rules(self):
+        feature = self.contact_feature()
+        user = User.objects.create_user(
+            username="contact-policy-bypass",
+            email="contact-policy-bypass@example.com",
+            password="StrongPass123!",
+        )
+        wrong_group = FeatureGroup.objects.create(
+            name="Wrong contact rollout group",
+            slug="wrong-contact-rollout-group",
+        )
+        wrong_group.members.add(user)
+        FeatureOverride.objects.create(
+            feature=feature,
+            scope_type=FeatureOverrideScope.GLOBAL,
+            value="v2",
+        )
+        FeatureRule.objects.create(
+            feature=feature,
+            name="crafted-authenticated-v2",
+            priority=10,
+            rule_type=FeatureRuleType.AUTHENTICATED,
+            value="v2",
+            page="contact",
+        )
+        FeatureRule.objects.create(
+            feature=feature,
+            name="crafted-wrong-group-v2",
+            priority=20,
+            rule_type=FeatureRuleType.GROUP,
+            value="v2",
+            page="contact",
+            group_ids=[wrong_group.pk],
+        )
+
+        decisions = evaluate_many(
+            RequestEvaluationContext(
+                user=user,
+                anonymous_id="contact-policy-bypass",
+                page="contact",
+            ),
+            ["site_contact_page_version"],
+        )
+
+        self.assertEqual(decisions["site_contact_page_version"], "legacy")
 
     def test_group_rule_does_not_match_anonymous(self):
         """Anonymous users never match group rules."""

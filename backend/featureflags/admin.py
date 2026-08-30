@@ -49,6 +49,7 @@ from featureflags.registry import (
     get_rollout_policy,
     is_audience_allowed,
     is_design_flag,
+    is_public_rollout_allowed,
     is_valid_override_value,
 )
 from featureflags.services import get_effective_default
@@ -454,6 +455,9 @@ class FeatureDefinitionAdmin(SimpleHistoryAdmin):
         can_access_rollouts = _has_rollout_console_access(request.user)
         context = {
             "is_design_flag": bool(obj and is_design_flag(obj.key)),
+            "allows_public_rollout": bool(
+                obj and is_public_rollout_allowed(obj.key)
+            ),
             "can_add_rollout": can_access_rollouts
             and request.user.has_perms(
                 (
@@ -653,6 +657,15 @@ class FeatureDefinitionAdmin(SimpleHistoryAdmin):
         if is_design_flag(obj.key):
             tester_url = _safe_admin_reverse("featureflags_design_tester_add")
             if tester_url:
+                if is_public_rollout_allowed(obj.key):
+                    return format_html(
+                        '<a class="button" href="{}">Добавить тестера</a> '
+                        '<a class="button" href="{}?feature={}">'
+                        "Новый раскат</a>",
+                        tester_url,
+                        url,
+                        obj.pk,
+                    )
                 return format_html(
                     '<a class="button" href="{}">Добавить тестера</a>',
                     tester_url,

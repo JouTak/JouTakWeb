@@ -7,7 +7,7 @@ import { defineConfig, loadEnv } from "vite";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const backendProxyTarget =
-    env.DEV_BACKEND_PROXY_TARGET?.trim() || "http://127.0.0.1:8000";
+    env.DEV_BACKEND_PROXY_TARGET?.trim() || "http://127.0.0.1:8080";
   const usePolling =
     String(process.env.CHOKIDAR_USEPOLLING || env.CHOKIDAR_USEPOLLING)
       .trim()

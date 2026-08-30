@@ -130,7 +130,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "default_env": None,
         "default_fallback": DEFAULT_VARIANT,
         "variants": VERSIONS_VARIANTS,
-        "pages": ["minigames"],
+        "pages": ["contact"],
         "sticky": False,
         "description": "Switches the /contact product page.",
         "visual_impact": "Full contact page replacement.",

@@ -10,6 +10,14 @@ from django.conf import settings
 
 
 class EncryptedMFAAdapter(DefaultMFAAdapter):
+    def get_public_key_credential_rp_entity(self) -> dict[str, str]:
+        """Return the canonical RP independently of the request host."""
+
+        return {
+            "id": settings.WEBAUTHN_RP_ID,
+            "name": settings.WEBAUTHN_RP_NAME,
+        }
+
     @cached_property
     def _fernet(self) -> MultiFernet:
         instances = [Fernet(self._derive_key(raw)) for raw in self._raw_keys()]

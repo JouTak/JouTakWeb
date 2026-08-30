@@ -18,17 +18,21 @@ x-backend-environment: &backend-environment
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
   OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
   OTEL_METRICS_EXPORT_INTERVAL_MS: ${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
+  CACHE_MAX_ENTRIES: ${CACHE_MAX_ENTRIES:-100000}
 
 services:
   traefik:
     image: traefik:v3.1@sha256:74d72c7a1345984f186bddbabcc462b2128d0d8054177dc84afaeac4db1f0f56
     command:
       - --api.dashboard=false
-      - --providers.docker=true
-      - --providers.docker.swarmMode=true
-      - --providers.docker.exposedbydefault=false
+      - --providers.swarm=true
+      - --providers.swarm.exposedbydefault=false
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL:?TRAEFIK_ACME_EMAIL is required}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
       - --log.level=INFO
     ports:
       - "80:80"
@@ -38,6 +42,11 @@ services:
       - letsencrypt:/letsencrypt
     networks:
       - joutak_net
+    deploy:
+      placement:
+        # The Swarm control-plane API exposed by docker.sock is available on
+        # manager nodes. Traefik cannot discover service labels from a worker.
+        constraints: [node.role == manager]
 
   db:
     image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
@@ -76,20 +85,58 @@ services:
     deploy:
       labels:
         - traefik.enable=true
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true
         - traefik.http.routers.backend.rule=Host(`api.joutak.ru`)
         - traefik.http.routers.backend.entrypoints=web
         - traefik.http.routers.backend.middlewares=redirect-to-https
+        - traefik.http.routers.backend.service=backend
         - traefik.http.routers.backend-sec.rule=Host(`api.joutak.ru`)
         - traefik.http.routers.backend-sec.entrypoints=websecure
         - traefik.http.routers.backend-sec.tls=true
         - traefik.http.routers.backend-sec.tls.certresolver=le
+        - traefik.http.routers.backend-sec.service=backend
         - traefik.http.routers.backend-admin.rule=Host(`admin.joutak.ru`)
         - traefik.http.routers.backend-admin.entrypoints=web
         - traefik.http.routers.backend-admin.middlewares=redirect-to-https
+        - traefik.http.routers.backend-admin.service=backend
         - traefik.http.routers.backend-admin-sec.rule=Host(`admin.joutak.ru`)
         - traefik.http.routers.backend-admin-sec.entrypoints=websecure
         - traefik.http.routers.backend-admin-sec.tls=true
         - traefik.http.routers.backend-admin-sec.tls.certresolver=le
+        - traefik.http.routers.backend-admin-sec.service=backend
+        # Same-origin browser traffic must reach Django without stripping its
+        # URL prefix. /admin and /static/admin deliberately enter Django too:
+        # HostRoutingMiddleware returns the policy denial instead of the SPA.
+        # /media follows the public routing contract. The rollout runbook notes
+        # that production file serving still needs a verified media upstream.
+        - >-
+          traefik.http.routers.backend-root.rule=Host(`joutak.ru`) &&
+          (Path(`/api`) || PathPrefix(`/api/`) ||
+          Path(`/bff`) || PathPrefix(`/bff/`) ||
+          Path(`/accounts`) || PathPrefix(`/accounts/`) ||
+          Path(`/media`) || PathPrefix(`/media/`) ||
+          Path(`/health`) || Path(`/health/`) ||
+          Path(`/admin`) || PathPrefix(`/admin/`) ||
+          Path(`/static/admin`) || PathPrefix(`/static/admin/`))
+        - traefik.http.routers.backend-root.entrypoints=web
+        - traefik.http.routers.backend-root.middlewares=redirect-to-https
+        - traefik.http.routers.backend-root.priority=200
+        - traefik.http.routers.backend-root.service=backend
+        - >-
+          traefik.http.routers.backend-root-sec.rule=Host(`joutak.ru`) &&
+          (Path(`/api`) || PathPrefix(`/api/`) ||
+          Path(`/bff`) || PathPrefix(`/bff/`) ||
+          Path(`/accounts`) || PathPrefix(`/accounts/`) ||
+          Path(`/media`) || PathPrefix(`/media/`) ||
+          Path(`/health`) || Path(`/health/`) ||
+          Path(`/admin`) || PathPrefix(`/admin/`) ||
+          Path(`/static/admin`) || PathPrefix(`/static/admin/`))
+        - traefik.http.routers.backend-root-sec.entrypoints=websecure
+        - traefik.http.routers.backend-root-sec.tls=true
+        - traefik.http.routers.backend-root-sec.tls.certresolver=le
+        - traefik.http.routers.backend-root-sec.priority=200
+        - traefik.http.routers.backend-root-sec.service=backend
         - traefik.http.services.backend.loadbalancer.server.port=8000
 
   backend-maintenance:
@@ -125,10 +172,14 @@ services:
         - traefik.http.routers.frontend.rule=Host(`joutak.ru`)
         - traefik.http.routers.frontend.entrypoints=web
         - traefik.http.routers.frontend.middlewares=redirect-to-https
+        - traefik.http.routers.frontend.priority=10
+        - traefik.http.routers.frontend.service=frontend
         - traefik.http.routers.frontend-sec.rule=Host(`joutak.ru`)
         - traefik.http.routers.frontend-sec.entrypoints=websecure
         - traefik.http.routers.frontend-sec.tls=true
         - traefik.http.routers.frontend-sec.tls.certresolver=le
+        - traefik.http.routers.frontend-sec.priority=10
+        - traefik.http.routers.frontend-sec.service=frontend
         - traefik.http.services.frontend.loadbalancer.server.port=8080
 
 secrets:

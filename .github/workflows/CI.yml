@@ -192,18 +192,21 @@ jobs:
       DATABASE_URL: sqlite:///./testdb.sqlite3
       FRONTEND_BASE_URL: https://joutak.ru
       DB_SSL_REQUIRED: "false"
-      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.joutak.ru,admin.joutak.ru,api.localhost,admin.localhost
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,joutak.ru,api.joutak.ru,admin.joutak.ru,api.localhost,admin.localhost
       DJANGO_ADMIN_HOSTS: admin.joutak.ru,admin.localhost
-      DJANGO_API_HOSTS: api.joutak.ru,api.localhost
-      DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru
+      DJANGO_API_HOSTS: joutak.ru,api.joutak.ru,api.localhost
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://joutak.ru
       CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1,https://joutak.ru
+      WEBAUTHN_RP_ID: joutak.ru
+      WEBAUTHN_RP_NAME: JouTak
+      WEBAUTHN_ALLOWED_ORIGINS: https://joutak.ru,https://admin.joutak.ru
+      WEBAUTHN_ACCOUNT_ORIGINS: https://joutak.ru
+      WEBAUTHN_ADMIN_ORIGINS: https://admin.joutak.ru
       USE_X_FORWARDED_PROTO: "false"
       SECURE_SSL_REDIRECT: "false"
       SECURE_HSTS_SECONDS: "0"
-      SESSION_COOKIE_SECURE: "false"
-      CSRF_COOKIE_SECURE: "false"
-      SESSION_COOKIE_SAMESITE: None
-      CSRF_COOKIE_SAMESITE: None
+      SESSION_COOKIE_SAMESITE: Lax
+      CSRF_COOKIE_SAMESITE: Lax
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -233,12 +236,18 @@ jobs:
           POSTGRES_PASSWORD: ci_password
           DJANGO_SECRET_KEY: ci-secret-key-please-change
           FRONTEND_BASE_URL: https://joutak.ru
-          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,joutak.ru,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru
           DJANGO_ADMIN_HOSTS: admin.localhost,admin.joutak.ru
-          DJANGO_API_HOSTS: api.localhost,api.joutak.ru
-          DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru
+          DJANGO_API_HOSTS: joutak.ru,api.localhost,api.joutak.ru
+          DJANGO_CSRF_TRUSTED_ORIGINS: https://joutak.ru
           CORS_ALLOWED_ORIGINS: http://localhost,http://127.0.0.1
-          PUBLIC_API_URL: http://api.localhost
+          PUBLIC_API_URL: https://joutak.ru/api
+          WEBAUTHN_RP_ID: joutak.ru
+          WEBAUTHN_RP_NAME: JouTak
+          WEBAUTHN_ALLOWED_ORIGINS: https://joutak.ru,https://admin.joutak.ru
+          WEBAUTHN_ACCOUNT_ORIGINS: https://joutak.ru
+          WEBAUTHN_ADMIN_ORIGINS: https://admin.joutak.ru
+          TRAEFIK_ACME_EMAIL: ci@example.com
         run: |
           docker compose -f docker-compose.yml config >/dev/null
           docker compose -f docker-compose.images.yml config >/dev/null

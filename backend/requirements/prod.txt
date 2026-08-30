@@ -202,7 +202,7 @@ tzdata==2025.2 ; sys_platform == 'win32'
     #   psycopg
 urllib3==2.7.0
     # via requests
-whitenoise==6.9.0
+whitenoise==6.12.0
     # via backend
 wrapt==2.1.2
     # via opentelemetry-instrumentation

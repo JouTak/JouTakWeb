@@ -20,12 +20,21 @@ x-backend-environment: &backend-environment
 
   DJANGO_ALLOWED_HOSTS: ${DEV_DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,joutak.localhost,api.localhost,admin.localhost}
   DJANGO_ADMIN_HOSTS: ${DEV_DJANGO_ADMIN_HOSTS:-admin.localhost}
-  DJANGO_API_HOSTS: ${DEV_DJANGO_API_HOSTS:-api.localhost}
+  DJANGO_API_HOSTS: ${DEV_DJANGO_API_HOSTS:-joutak.localhost,api.localhost}
   DJANGO_CSRF_TRUSTED_ORIGINS: ${DEV_DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1,http://127.0.0.1:5173,http://joutak.localhost,http://api.localhost,http://api.localhost:8000,http://admin.localhost,http://admin.localhost:8000}
   CORS_ALLOW_ALL_ORIGINS: ${DEV_CORS_ALLOW_ALL_ORIGINS:-true}
   FRONTEND_BASE_URL: ${DEV_FRONTEND_BASE_URL:-http://localhost:5173}
   DJANGO_SITE_DOMAIN: ${DEV_DJANGO_SITE_DOMAIN:-localhost}
   DJANGO_SITE_NAME: ${DEV_DJANGO_SITE_NAME:-JouTak Development}
+
+  # Keep the development WebAuthn trust boundary explicit. If DEV_HTTP_PORT
+  # is changed, add that exact browser origin to the corresponding account or
+  # admin list and to the union; never derive/trust arbitrary ports.
+  WEBAUTHN_RP_ID: ${DEV_WEBAUTHN_RP_ID:-localhost}
+  WEBAUTHN_RP_NAME: ${DEV_WEBAUTHN_RP_NAME:-JouTak Development}
+  WEBAUTHN_ACCOUNT_ORIGINS: ${DEV_WEBAUTHN_ACCOUNT_ORIGINS:-http://localhost,http://localhost:5173,http://joutak.localhost}
+  WEBAUTHN_ADMIN_ORIGINS: ${DEV_WEBAUTHN_ADMIN_ORIGINS:-http://admin.localhost,http://admin.localhost:8000}
+  WEBAUTHN_ALLOWED_ORIGINS: ${DEV_WEBAUTHN_ALLOWED_ORIGINS:-http://localhost,http://localhost:5173,http://joutak.localhost,http://admin.localhost,http://admin.localhost:8000}
 
   ACCOUNT_TRUST_PROXY_HEADERS: "false"
   MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN: "true"

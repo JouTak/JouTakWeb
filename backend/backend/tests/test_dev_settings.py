@@ -51,6 +51,25 @@ class DevSettingsTests(TestCase):
         self.assertFalse(dev.SESSION_COOKIE_SECURE)
         self.assertFalse(dev.CSRF_COOKIE_SECURE)
         self.assertFalse(dev.JWT_REFRESH_COOKIE_SECURE)
+        self.assertEqual(dev.WEBAUTHN_RP_ID, "localhost")
+        self.assertIn("http://localhost:5173", dev.WEBAUTHN_ACCOUNT_ORIGINS)
+        self.assertIn("http://admin.localhost", dev.WEBAUTHN_ADMIN_ORIGINS)
+        self.assertTrue(dev.MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN)
+        self.assertEqual(dev.RATELIMIT_USE_CACHE, "ratelimit")
+        self.assertEqual(
+            dev.WEBAUTHN_REPLAY_CACHE_ALIAS,
+            "webauthn_replay",
+        )
+        self.assertEqual(
+            set(dev.CACHES),
+            {"default", "ratelimit", "webauthn_replay"},
+        )
+        self.assertTrue(
+            all(
+                cache_config["BACKEND"].endswith("LocMemCache")
+                for cache_config in dev.CACHES.values()
+            )
+        )
 
     def test_hosts_and_origins_can_be_overridden(self) -> None:
         env = {

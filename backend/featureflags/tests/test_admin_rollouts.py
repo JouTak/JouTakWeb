@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from unittest.mock import patch
 
 from django.contrib import admin
@@ -653,6 +654,7 @@ class RolloutAdminPermissionTests(TestCase):
     ),
     DJANGO_ADMIN_HOSTS=("admin.localhost",),
     DJANGO_API_HOSTS=("api.localhost",),
+    WEBAUTHN_ADMIN_ORIGINS=("http://admin.localhost",),
 )
 class RolloutAdminIntegrationTests(TestCase):
     def setUp(self) -> None:
@@ -664,14 +666,9 @@ class RolloutAdminIntegrationTests(TestCase):
             "backend.middleware.admin_mfa_is_enabled",
             return_value=True,
         )
-        self.middleware_verified = patch(
-            "backend.middleware.is_admin_mfa_verified",
-            return_value=True,
-        )
         for patcher in (
             self.admin_mfa,
             self.middleware_mfa,
-            self.middleware_verified,
         ):
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -695,8 +692,14 @@ class RolloutAdminIntegrationTests(TestCase):
             default_value="true",
         )
         self.client.force_login(self.operator)
+        self.client.defaults["HTTP_ORIGIN"] = "http://admin.localhost"
         session = self.client.session
-        session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
+        session[SESSION_KEY_ADMIN_MFA_VERIFIED] = {
+            "version": 1,
+            "user_pk": str(self.operator.pk),
+            "verified_at": time.time(),
+            "method": "totp",
+        }
         session.save()
 
     def rollout_data(self, action: str, *, confirm: bool = False) -> dict:

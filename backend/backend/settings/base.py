@@ -7,6 +7,10 @@ from decouple import Csv, config
 from django.core.exceptions import ImproperlyConfigured
 
 from backend.settings.env import apply_env_file_overrides
+from backend.settings.webauthn import (
+    parse_webauthn_origins,
+    validate_webauthn_configuration,
+)
 
 warnings.filterwarnings(
     "ignore",
@@ -49,7 +53,7 @@ DJANGO_ADMIN_HOSTS = config(
 )
 DJANGO_API_HOSTS = config(
     "DJANGO_API_HOSTS",
-    default="api.joutak.ru,api.localhost",
+    default="joutak.ru,api.joutak.ru,api.localhost",
     cast=Csv(),
 )
 CSRF_TRUSTED_ORIGINS = config(
@@ -91,14 +95,16 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "backend.middleware.RequestContextMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "backend.middleware.HostRoutingMiddleware",
+    "backend.middleware.AdminSameOriginMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "backend.middleware.RequestContextMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "backend.middleware.HostRoutingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "accounts.middleware.WebAuthnOriginValidationMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "axes.middleware.AxesMiddleware",
     "backend.middleware.AdminMFAEnforcementMiddleware",
@@ -277,6 +283,47 @@ MFA_PASSKEY_LOGIN_ENABLED = config(
     "MFA_PASSKEY_LOGIN_ENABLED", cast=bool, default=True
 )
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = DEBUG
+(
+    WEBAUTHN_RP_ID,
+    WEBAUTHN_RP_NAME,
+    WEBAUTHN_ACCOUNT_ORIGINS,
+    WEBAUTHN_ADMIN_ORIGINS,
+    WEBAUTHN_ALLOWED_ORIGINS,
+) = validate_webauthn_configuration(
+    rp_id=config("WEBAUTHN_RP_ID", default="localhost"),
+    rp_name=config("WEBAUTHN_RP_NAME", default="JouTak"),
+    account_origins=config(
+        "WEBAUTHN_ACCOUNT_ORIGINS",
+        default="http://localhost:5173,http://joutak.localhost",
+        cast=parse_webauthn_origins,
+    ),
+    admin_origins=config(
+        "WEBAUTHN_ADMIN_ORIGINS",
+        default="http://admin.localhost,http://admin.localhost:8000",
+        cast=parse_webauthn_origins,
+    ),
+    allowed_origins=config(
+        "WEBAUTHN_ALLOWED_ORIGINS",
+        default=(
+            "http://localhost:5173,http://joutak.localhost,"
+            "http://admin.localhost,http://admin.localhost:8000"
+        ),
+        cast=parse_webauthn_origins,
+    ),
+    require_https=False,
+    allow_ports=True,
+)
+WEBAUTHN_CHALLENGE_TTL_SECONDS = config(
+    "WEBAUTHN_CHALLENGE_TTL_SECONDS", cast=int, default=300
+)
+ADMIN_MFA_PENDING_TTL_SECONDS = config(
+    "ADMIN_MFA_PENDING_TTL_SECONDS", cast=int, default=300
+)
+ADMIN_MFA_ASSURANCE_TTL_SECONDS = config(
+    "ADMIN_MFA_ASSURANCE_TTL_SECONDS", cast=int, default=28800
+)
+ADMIN_MFA_COMPLETION_RATE = config("ADMIN_MFA_COMPLETION_RATE", default="5/m")
+ADMIN_MFA_OPTIONS_RATE = config("ADMIN_MFA_OPTIONS_RATE", default="20/m")
 MFA_ENCRYPTION_KEYS = tuple(
     value.strip()
     for value in config(
@@ -333,18 +380,37 @@ FEATURE_FLAG_OVERRIDE_COOKIE_MAX_AGE = config(
 )
 
 # ─── Caching ────────────────────────────────────────────────────────────────
-# DatabaseCache is used as the shared backend for django-ratelimit counters.
-# It works across Gunicorn workers without requiring Redis.
+# DatabaseCache works across Gunicorn workers without requiring Redis. Rate
+# counters/epochs and WebAuthn replay claims use separate fail-closed tables:
+# capacity exhaustion may deny a new ceremony, but must never evict live
+# security state and silently mint fresh attempts or permit a replay.
+CACHE_MAX_ENTRIES = config("CACHE_MAX_ENTRIES", cast=int, default=100000)
+if CACHE_MAX_ENTRIES < 10000:
+    raise ImproperlyConfigured(
+        "CACHE_MAX_ENTRIES must be at least 10000 for shared security state."
+    )
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "BACKEND": "backend.cache_backends.FailClosedDatabaseCache",
         "LOCATION": "joutak_cache_table",
-    }
+        "OPTIONS": {"MAX_ENTRIES": CACHE_MAX_ENTRIES},
+    },
+    "ratelimit": {
+        "BACKEND": "backend.cache_backends.FailClosedDatabaseCache",
+        "LOCATION": "joutak_ratelimit_cache_table",
+        "OPTIONS": {"MAX_ENTRIES": CACHE_MAX_ENTRIES},
+    },
+    "webauthn_replay": {
+        "BACKEND": "backend.cache_backends.FailClosedDatabaseCache",
+        "LOCATION": "joutak_webauthn_replay_cache_table",
+        "OPTIONS": {"MAX_ENTRIES": CACHE_MAX_ENTRIES},
+    },
 }
 
 # ─── Rate limiting (django-ratelimit) ──────────────────────────────────────
-RATELIMIT_USE_CACHE = "default"
+RATELIMIT_USE_CACHE = "ratelimit"
 RATELIMIT_FAIL_OPEN = config("RATELIMIT_FAIL_OPEN", cast=bool, default=False)
+WEBAUTHN_REPLAY_CACHE_ALIAS = "webauthn_replay"
 
 LANGUAGE_CODE = "ru-RU"
 TIME_ZONE = config("DJANGO_TIME_ZONE", default="UTC")
@@ -380,6 +446,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_URLS_REGEX = r"^/(?:api|bff)(?:/|$)"
 CORS_ALLOW_HEADERS = [
     *default_headers,
     "x-session-token",

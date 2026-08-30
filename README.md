@@ -149,6 +149,22 @@ uv run pytest backend -q
 - При смене опубликованных портов согласуйте `DEV_FRONTEND_BASE_URL` и
   `DEV_DJANGO_CSRF_TRUSTED_ORIGINS` с адресом, через который открываете
   frontend.
+- `DEV_HTTP_PORT` не расширяет WebAuthn trust boundary автоматически. Для
+  нестандартного proxy-порта явно перечислите browser origins в
+  `DEV_WEBAUTHN_ACCOUNT_ORIGINS`, `DEV_WEBAUTHN_ADMIN_ORIGINS` и их точное
+  объединение в `DEV_WEBAUTHN_ALLOWED_ORIGINS`. Например, для порта `8080`:
+
+  ```bash
+  DEV_HTTP_PORT=8080 \
+  DEV_WEBAUTHN_ACCOUNT_ORIGINS=http://localhost,http://localhost:5173,http://localhost:8080,http://joutak.localhost,http://joutak.localhost:8080 \
+  DEV_WEBAUTHN_ADMIN_ORIGINS=http://admin.localhost,http://admin.localhost:8000,http://admin.localhost:8080 \
+  DEV_WEBAUTHN_ALLOWED_ORIGINS=http://localhost,http://localhost:5173,http://localhost:8080,http://joutak.localhost,http://joutak.localhost:8080,http://admin.localhost,http://admin.localhost:8000,http://admin.localhost:8080 \
+  docker compose up --build
+  ```
+
+  Proxy сохраняет browser `host:port`; непрописанный origin fail-closed и не
+  получает доступ к admin/WebAuthn flow.
+
 - `.env.example` — очищенный production-oriented template. Не копируйте его
   в `.env` для обычного локального запуска. Production-переменные намеренно
   не переопределяют безопасные defaults из `compose.yaml`.

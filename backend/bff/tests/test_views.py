@@ -17,6 +17,7 @@ DESIGN_FLAGS = {
     "site_itmocraft_page_version": "itmocraft",
     "site_joutak_page_version": "joutak",
     "site_minigames_page_version": "minigames",
+    "site_contact_page_version": "contact",
     "site_header_version": "",
     "site_footer_version": "",
 }
@@ -68,6 +69,9 @@ class BffViewTests(APITestCase):
     def get_page(self, endpoint="/bff/pages/itmocraft"):
         return self.client.get(endpoint, HTTP_HOST="api.localhost")
 
+    def get_contact(self):
+        return self.get_page("/bff/pages/contact")
+
     def test_bootstrap_is_non_product_and_sets_anonymous_cookie(self):
         response = self.client.get("/bff/bootstrap", HTTP_HOST="api.localhost")
 
@@ -109,6 +113,103 @@ class BffViewTests(APITestCase):
         self.assertEqual(document.variant_source, "feature_flag")
         self.assertEqual(document.layout.header_variant, "v2")
         self.assertEqual(document.layout.footer_variant, "v2")
+
+    def test_anonymous_contact_response_is_legacy_and_valid(self):
+        response = self.get_contact()
+        document = PageDocument.model_validate(response.json())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(document.product.id, "contact")
+        self.assertEqual(document.product.canonical_path, "/contact")
+        self.assertEqual(document.product.requested_path, "/contact")
+        self.assertFalse(document.product.is_legacy_alias)
+        self.assertEqual(document.effective_page_variant, "legacy")
+        self.assertEqual(document.variant_source, "default")
+        self.assertEqual(document.layout.header_variant, "legacy")
+        self.assertEqual(document.layout.footer_variant, "legacy")
+        self.assertEqual(document.layout.default_project, "jou_tak")
+        self.assertEqual(document.content.template, "landing-legacy")
+        self.assertEqual(document.content.sections, [])
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertEqual(
+            response["Vary"],
+            "Cookie, X-Session-Token, Origin",
+        )
+        self.assertIn("joutak_ffid", response.cookies)
+
+    def test_authenticated_non_tester_receives_legacy_contact(self):
+        user = self.create_legacy_user(email=self.unique_email("ordinary"))
+        self.client.force_login(user)
+
+        document = PageDocument.model_validate(self.get_contact().json())
+
+        self.assertEqual(document.effective_page_variant, "legacy")
+        self.assertEqual(document.variant_source, "default")
+
+    def test_design_tester_receives_v2_contact(self):
+        user = self.create_legacy_user(
+            email=self.unique_email("contact-tester")
+        )
+        self.group.members.add(user)
+        self.client.force_login(user)
+
+        document = PageDocument.model_validate(self.get_contact().json())
+
+        self.assertEqual(document.effective_page_variant, "v2")
+        self.assertEqual(document.variant_source, "feature_flag")
+        self.assertEqual(document.layout.header_variant, "v2")
+        self.assertEqual(document.layout.footer_variant, "v2")
+        self.assertEqual(document.content.template, "landing-v2")
+
+    def test_staff_preview_can_select_v2_contact(self):
+        staff = self.create_legacy_user(
+            email=self.unique_email("contact-staff")
+        )
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        self.client.force_login(staff)
+
+        preview_response = self.client.post(
+            "/bff/feature-overrides",
+            data=json.dumps(
+                {
+                    "overrides": {
+                        "site_contact_page_version": "v2",
+                    }
+                }
+            ),
+            content_type="application/json",
+            HTTP_HOST="api.localhost",
+        )
+        document = PageDocument.model_validate(self.get_contact().json())
+
+        self.assertEqual(preview_response.status_code, 200)
+        self.assertEqual(document.effective_page_variant, "v2")
+        self.assertEqual(document.variant_source, "staff_preview")
+
+    def test_invalid_or_unavailable_contact_flag_fails_closed(self):
+        feature = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+
+        FeatureDefinition.objects.filter(pk=feature.pk).update(
+            default_value="invalid"
+        )
+        invalid_document = PageDocument.model_validate(
+            self.get_contact().json()
+        )
+
+        FeatureDefinition.objects.filter(pk=feature.pk).update(
+            default_value="legacy",
+            active=False,
+        )
+        unavailable_document = PageDocument.model_validate(
+            self.get_contact().json()
+        )
+
+        for document in (invalid_document, unavailable_document):
+            self.assertEqual(document.effective_page_variant, "legacy")
+            self.assertEqual(document.variant_source, "default")
 
     def test_itmocraft_alias_keeps_legacy_body_but_independent_layout(self):
         user = self.create_legacy_user(email=self.unique_email("alias"))

@@ -17,6 +17,7 @@ DESIGN_FLAG_KEYS = (
     "site_itmocraft_page_version",
     "site_joutak_page_version",
     "site_minigames_page_version",
+    "site_contact_page_version",
     "site_header_version",
     "site_footer_version",
 )
@@ -51,6 +52,16 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "sticky": False,
         "description": "Switches the /minigames product page.",
         "visual_impact": "Full minigames page replacement.",
+    },
+    "site_contact_page_version": {
+        "kind": "variant",
+        "default_env": None,
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
+        "pages": ["contact"],
+        "sticky": False,
+        "description": "Switches the /contact page.",
+        "visual_impact": "Full contact page replacement.",
     },
     "site_header_version": {
         "kind": "variant",

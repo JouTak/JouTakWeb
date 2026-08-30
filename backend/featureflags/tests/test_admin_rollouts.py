@@ -1059,6 +1059,56 @@ class RolloutAdminIntegrationTests(TestCase):
         self.assertNotContains(response, "tabular inline-related")
         self.assertContains(response, "Что увидит пользователь")
 
+    def test_public_contact_definition_exposes_both_admin_actions(
+        self,
+    ) -> None:
+        grant(
+            self.operator,
+            "featureflags.change_featuregroup",
+            "auth.view_user",
+        )
+        contact = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+        header = FeatureDefinition.objects.get(key="site_header_version")
+
+        response = self.client.get(
+            f"/admin/featureflags/featuredefinition/{contact.pk}/change/",
+            HTTP_HOST="admin.localhost",
+        )
+        header_response = self.client.get(
+            f"/admin/featureflags/featuredefinition/{header.pk}/change/",
+            HTTP_HOST="admin.localhost",
+        )
+        actions = str(
+            admin.site._registry[FeatureDefinition].rollout_actions(contact)
+        )
+        header_actions = str(
+            admin.site._registry[FeatureDefinition].rollout_actions(header)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Добавить дизайн-тестера")
+        self.assertContains(
+            response,
+            "/admin/featureflags/design-testers/add/",
+        )
+        self.assertContains(
+            response,
+            f"/admin/featureflags/rollouts/new/?feature={contact.pk}",
+        )
+        self.assertEqual(header_response.status_code, 200)
+        self.assertContains(header_response, "Добавить дизайн-тестера")
+        self.assertNotContains(
+            header_response,
+            f"/admin/featureflags/rollouts/new/?feature={header.pk}",
+        )
+        self.assertIn("Добавить тестера", actions)
+        self.assertIn("Новый раскат", actions)
+        self.assertIn(f"?feature={contact.pk}", actions)
+        self.assertIn("Добавить тестера", header_actions)
+        self.assertNotIn("Новый раскат", header_actions)
+
     def test_guided_single_registry_page_is_hidden_and_submitted(self) -> None:
         response = self.client.get(
             f"/admin/featureflags/rollouts/new/?feature={self.feature.pk}",

@@ -6,12 +6,15 @@ from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
 from featureflags.registry import (
+    DESIGN_FLAG_KEYS,
     DESIGN_ROLLOUT_POLICY,
     DESIGN_TESTER_GROUP_SLUG,
     FEATURE_REGISTRY,
     GUIDED_ROLLOUT_AUDIENCES,
     canonical_variant_token,
     get_allowed_audiences,
+    get_default_value,
+    get_flags_for_page,
     get_required_group_slug,
     get_variant_choices,
     is_audience_allowed,
@@ -20,6 +23,21 @@ from featureflags.registry import (
 
 
 class FeatureRegistryPolicyTests(SimpleTestCase):
+    def test_contact_page_flag_is_closed_non_sticky_design_variant(self):
+        key = "site_contact_page_version"
+
+        self.assertIn(key, DESIGN_FLAG_KEYS)
+        spec = FEATURE_REGISTRY[key]
+        self.assertEqual(spec["kind"], "variant")
+        self.assertIsNone(spec["default_env"])
+        self.assertEqual(spec["default_fallback"], "legacy")
+        self.assertEqual(get_default_value(key), "legacy")
+        self.assertEqual(spec["variants"], ("legacy", "v2"))
+        self.assertEqual(spec["pages"], ["contact"])
+        self.assertFalse(spec["sticky"])
+        self.assertIs(spec["rollout_policy"], DESIGN_ROLLOUT_POLICY)
+        self.assertIn(key, get_flags_for_page("contact"))
+
     def test_design_flags_only_allow_the_canonical_group(self) -> None:
         key = "site_itmocraft_page_version"
 

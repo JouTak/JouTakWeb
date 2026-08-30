@@ -113,6 +113,18 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "Полностью заменяет содержимое страницы мини-игр.",
         "rollout_policy": DESIGN_ROLLOUT_POLICY,
     },
+    "site_contact_page_version": {
+        "title": "Страница контактов",
+        "kind": "variant",
+        "default_env": None,
+        "default_fallback": DEFAULT_VARIANT,
+        "variants": VERSIONS_VARIANTS,
+        "pages": ["contact"],
+        "sticky": False,
+        "description": "Переключает страницу контактов.",
+        "visual_impact": "Полностью заменяет содержимое страницы контактов.",
+        "rollout_policy": DESIGN_ROLLOUT_POLICY,
+    },
     "site_header_version": {
         "title": "Шапка сайта",
         "kind": "variant",

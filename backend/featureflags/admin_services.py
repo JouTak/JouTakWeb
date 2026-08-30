@@ -134,12 +134,8 @@ def create_rollout(*, cleaned_data: dict, user) -> FeatureRule:
     groups = list(cleaned_data.get("target_groups") or [])
     users = list(cleaned_data.get("target_users") or [])
     required_slug = get_required_group_slug(feature.key)
-    if required_slug:
-        if (
-            rule_type != FeatureRuleType.GROUP
-            or not groups
-            or any(group.slug != required_slug for group in groups)
-        ):
+    if required_slug and rule_type == FeatureRuleType.GROUP:
+        if not groups or any(group.slug != required_slug for group in groups):
             raise ValidationError(
                 f"Политика реестра требует группу {required_slug}."
             )
@@ -318,7 +314,7 @@ def start_rollout(*, rule_id: int, user, reason: str) -> FeatureRule:
     if rule.page not in {token for token, _label in page_choices(feature.key)}:
         raise ValidationError("Страница больше не разрешена реестром.")
     required_slug = get_required_group_slug(feature.key)
-    if required_slug:
+    if required_slug and rule.rule_type == FeatureRuleType.GROUP:
         if selected_group_slugs != {required_slug}:
             raise ValidationError(
                 f"Политика реестра требует группу {required_slug}."

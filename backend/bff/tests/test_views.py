@@ -150,6 +150,36 @@ class BffViewTests(APITestCase):
         self.assertEqual(document.effective_page_variant, "legacy")
         self.assertEqual(document.variant_source, "default")
 
+    def test_public_rule_serves_v2_contact_to_all_visitors(self):
+        feature = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+        feature.rules.all().delete()
+        FeatureRule.objects.create(
+            feature=feature,
+            name="Public contact page",
+            priority=10,
+            rule_type=FeatureRuleType.EVERYONE,
+            value="v2",
+            page="contact",
+        )
+
+        anonymous_document = PageDocument.model_validate(
+            self.get_contact().json()
+        )
+        user = self.create_legacy_user(
+            email=self.unique_email("public-contact")
+        )
+        self.client.force_login(user)
+        authenticated_document = PageDocument.model_validate(
+            self.get_contact().json()
+        )
+
+        for document in (anonymous_document, authenticated_document):
+            self.assertEqual(document.effective_page_variant, "v2")
+            self.assertEqual(document.variant_source, "feature_flag")
+            self.assertEqual(document.content.template, "landing-v2")
+
     def test_design_tester_receives_v2_contact(self):
         user = self.create_legacy_user(
             email=self.unique_email("contact-tester")

@@ -475,16 +475,82 @@ class RegistryAwareAdminFormTests(TestCase):
             form.fields["feature"].label_from_instance(self.feature),
         )
 
-    def test_advanced_design_metadata_only_offers_group_rule(self) -> None:
+    def test_guided_contact_rollout_offers_and_accepts_everyone(self) -> None:
+        grant(
+            self.operator,
+            "featureflags.change_featuredefinition",
+        )
+        contact = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+        contact.rules.all().delete()
+        form = GuidedRolloutForm(
+            initial={"feature": contact},
+            request_user=self.operator,
+        )
+        metadata = json.loads(
+            form.fields["feature"].widget.attrs["data-registry-options"]
+        )
+
+        self.assertEqual(
+            metadata[str(contact.pk)]["audiences"],
+            [RolloutAudience.GROUP, RolloutAudience.EVERYONE],
+        )
+        self.assertEqual(
+            dict(form.fields["audience"].choices)[RolloutAudience.EVERYONE],
+            "Все посетители",
+        )
+
+        data = self.guided_data(
+            feature=contact.pk,
+            value="v2",
+            page="contact",
+            audience=RolloutAudience.EVERYONE,
+            confirm_dangerous="on",
+            name="Public contact page rollout",
+        )
+        data.pop("enabled")
+        form = GuidedRolloutForm(
+            data=data,
+            request_user=self.operator,
+            require_confirmation=True,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        draft = create_rollout(
+            cleaned_data=form.cleaned_data,
+            user=self.operator,
+        )
+        started = start_rollout(
+            rule_id=draft.pk,
+            user=self.operator,
+            reason="Contact page rollout approved",
+        )
+
+        self.assertEqual(started.rule_type, FeatureRuleType.EVERYONE)
+        self.assertEqual(started.value, "v2")
+        self.assertTrue(started.enabled)
+
+    def test_advanced_design_metadata_uses_per_flag_policy(self) -> None:
         form = FeatureRuleAdminForm()
         metadata = json.loads(
             form.fields["feature"].widget.attrs["data-registry-options"]
         )
         design = FeatureDefinition.objects.get(key="site_header_version")
+        contact = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
 
         self.assertEqual(
             metadata[str(design.pk)]["rule_types"],
             [[FeatureRuleType.GROUP, "Группа"]],
+        )
+        self.assertEqual(
+            metadata[str(contact.pk)]["rule_types"],
+            [
+                [FeatureRuleType.EVERYONE, "Все"],
+                [FeatureRuleType.GROUP, "Группа"],
+            ],
         )
         self.assertEqual(metadata[str(design.pk)]["suggested_value"], "v2")
         self.assertEqual(

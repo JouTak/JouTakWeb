@@ -1,13 +1,14 @@
 """Declarative source of truth for supported feature flags.
 
 Design variants are deliberately fail-closed.  Deploying the application
-must never make the prototype public: only a database rule targeting the
-``website-design-testers`` group may resolve a design flag to ``v2``.
+must never make a prototype public.  Most design flags can resolve to ``v2``
+only for the ``website-design-testers`` group; explicitly opted-in flags may
+also allow a persistent public rollout rule.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -69,6 +70,11 @@ DESIGN_ROLLOUT_POLICY = RolloutPolicy(
         ("v2", "Новая версия (v2)"),
     ),
 )
+CONTACT_PAGE_ROLLOUT_POLICY = replace(
+    DESIGN_ROLLOUT_POLICY,
+    allowed_audiences=("group", "everyone"),
+    allow_public=True,
+)
 
 PERSONALIZATION_FLAG_KEYS = (
     "profile_personalization_ui",
@@ -123,7 +129,7 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "sticky": False,
         "description": "Переключает страницу контактов.",
         "visual_impact": "Полностью заменяет содержимое страницы контактов.",
-        "rollout_policy": DESIGN_ROLLOUT_POLICY,
+        "rollout_policy": CONTACT_PAGE_ROLLOUT_POLICY,
     },
     "site_header_version": {
         "title": "Шапка сайта",
@@ -413,7 +419,14 @@ def validate_registry() -> None:
                 raise ImproperlyConfigured(
                     f"{key}: guarded rollout default can drift unsafe"
                 )
-        if policy == DESIGN_ROLLOUT_POLICY and variants != VERSIONS_VARIANTS:
+        if (
+            policy
+            in (
+                DESIGN_ROLLOUT_POLICY,
+                CONTACT_PAGE_ROLLOUT_POLICY,
+            )
+            and variants != VERSIONS_VARIANTS
+        ):
             raise ImproperlyConfigured(
                 f"{key}: design rollout variants must be legacy and v2"
             )

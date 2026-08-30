@@ -2,11 +2,53 @@ from urllib.parse import urlparse
 
 import dj_database_url
 from decouple import Csv, config
+from django.core.exceptions import ImproperlyConfigured
+from django.http.request import is_same_domain
 from observability.logging import build_logging_config
 
 from . import base as base_settings
+from .webauthn import (
+    parse_webauthn_origins,
+    validate_webauthn_configuration,
+)
 
 globals().update(base_settings.as_public_settings())
+
+
+def _required(name: str) -> str:
+    value = config(name, default="").strip()
+    if not value:
+        raise ImproperlyConfigured(f"{name} is required in production.")
+    return value
+
+
+def _csrf_origin_covers_admin_origin(
+    trusted_origin: str,
+    admin_origin: str,
+) -> bool:
+    """Return whether Django's CSRF origin pattern trusts an admin origin."""
+    trusted = urlparse(trusted_origin)
+    admin = urlparse(admin_origin)
+    try:
+        trusted_port = trusted.port
+        admin_port = admin.port
+    except ValueError:
+        return False
+    trusted_host = (trusted.hostname or "").lower()
+    admin_host = (admin.hostname or "").lower()
+    if trusted.scheme != admin.scheme or trusted_port != admin_port:
+        return False
+    if "*" in trusted_origin:
+        # Match CsrfViewMiddleware.allowed_origin_subdomains exactly: Django
+        # strips every leading ``*`` from the netloc, then applies
+        # is_same_domain(). This deliberately catches odd-but-effective forms
+        # such as ``https://*admin.example`` as well as the documented ``*.``.
+        return is_same_domain(
+            admin.netloc.lower(),
+            trusted.netloc.lower().lstrip("*"),
+        )
+    return trusted_host == admin_host
+
 
 DEBUG = False
 if (
@@ -61,10 +103,17 @@ SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", cast=bool, default=True)
 # inside the container network. Excluding it from the SSL redirect keeps
 # healthchecks green without loosening HSTS for real traffic.
 SECURE_REDIRECT_EXEMPT = [r"^health/?$"]
-SESSION_COOKIE_SECURE = config(
-    "SESSION_COOKIE_SECURE", cast=bool, default=True
+SESSION_COOKIE_NAME = config(
+    "SESSION_COOKIE_NAME", default="__Host-joutak_session"
 )
-CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", cast=bool, default=True)
+if not SESSION_COOKIE_NAME.startswith("__Host-"):
+    raise ImproperlyConfigured(
+        "SESSION_COOKIE_NAME must use the __Host- prefix in production."
+    )
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_PATH = "/"
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_PATH = "/"
 
 if config("USE_X_FORWARDED_PROTO", cast=bool, default=True):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -75,7 +124,41 @@ SECURE_HSTS_PRELOAD = True
 
 SESSION_COOKIE_SAMESITE = config("SESSION_COOKIE_SAMESITE", default="Lax")
 CSRF_COOKIE_SAMESITE = config("CSRF_COOKIE_SAMESITE", default="Lax")
-SESSION_COOKIE_DOMAIN = config("SESSION_COOKIE_DOMAIN", default=None)
+JWT_REFRESH_COOKIE_SAMESITE = (
+    str(base_settings.JWT_REFRESH_COOKIE_SAMESITE).strip().capitalize()
+)
+if SESSION_COOKIE_SAMESITE not in {"Lax", "Strict"}:
+    raise ImproperlyConfigured(
+        "SESSION_COOKIE_SAMESITE must be Lax or Strict in production."
+    )
+if CSRF_COOKIE_SAMESITE not in {"Lax", "Strict"}:
+    raise ImproperlyConfigured(
+        "CSRF_COOKIE_SAMESITE must be Lax or Strict in production."
+    )
+if JWT_REFRESH_COOKIE_SAMESITE not in {"Lax", "Strict"}:
+    raise ImproperlyConfigured(
+        "JWT_REFRESH_COOKIE_SAMESITE must be Lax or Strict in production."
+    )
+_configured_session_cookie_domain = config(
+    "SESSION_COOKIE_DOMAIN", default=None
+)
+_configured_csrf_cookie_domain = config("CSRF_COOKIE_DOMAIN", default=None)
+_configured_jwt_refresh_cookie_domain = config(
+    "JWT_REFRESH_COOKIE_DOMAIN", default=None
+)
+if (
+    _configured_session_cookie_domain
+    or _configured_csrf_cookie_domain
+    or _configured_jwt_refresh_cookie_domain
+):
+    raise ImproperlyConfigured(
+        "Production auth and CSRF cookies must be host-only; cookie Domain "
+        "settings must be unset."
+    )
+SESSION_COOKIE_DOMAIN = None
+CSRF_COOKIE_DOMAIN = None
+JWT_REFRESH_COOKIE_DOMAIN = None
+JWT_REFRESH_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 
 X_FRAME_OPTIONS = "DENY"
@@ -103,6 +186,40 @@ MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = config(
     cast=bool,
     default=False,
 )
+if MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN:
+    raise ImproperlyConfigured(
+        "MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN must be false in production."
+    )
+
+(
+    WEBAUTHN_RP_ID,
+    WEBAUTHN_RP_NAME,
+    WEBAUTHN_ACCOUNT_ORIGINS,
+    WEBAUTHN_ADMIN_ORIGINS,
+    WEBAUTHN_ALLOWED_ORIGINS,
+) = validate_webauthn_configuration(
+    rp_id=_required("WEBAUTHN_RP_ID"),
+    rp_name=_required("WEBAUTHN_RP_NAME"),
+    account_origins=parse_webauthn_origins(
+        _required("WEBAUTHN_ACCOUNT_ORIGINS")
+    ),
+    admin_origins=parse_webauthn_origins(_required("WEBAUTHN_ADMIN_ORIGINS")),
+    allowed_origins=parse_webauthn_origins(
+        _required("WEBAUTHN_ALLOWED_ORIGINS")
+    ),
+    require_https=True,
+    allow_ports=False,
+)
+if any(
+    _csrf_origin_covers_admin_origin(trusted_origin, admin_origin)
+    for trusted_origin in base_settings.CSRF_TRUSTED_ORIGINS
+    for admin_origin in WEBAUTHN_ADMIN_ORIGINS
+):
+    raise ImproperlyConfigured(
+        "Production admin origins must not appear in the global "
+        "CSRF_TRUSTED_ORIGINS allowlist. Same-origin admin requests do not "
+        "need that exception."
+    )
 
 EMAIL_BACKEND = config(
     "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"

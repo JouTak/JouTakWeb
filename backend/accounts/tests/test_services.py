@@ -31,6 +31,12 @@ from django.test import (
     override_settings,
 )
 from django.utils import timezone
+from featureflags.models import (
+    FeatureDefinition,
+    FeatureKind,
+    FeatureRule,
+    FeatureRuleType,
+)
 from ninja.errors import HttpError
 from PIL import Image
 
@@ -175,6 +181,52 @@ class AccountStatusServiceTests(TestCase):
         self.profile.is_itmo_student = False
         self.profile.save()
         AccountStatusService.require_personalized_profile(self.user)
+
+    @override_settings(FF_PROFILE_PERSONALIZATION_ENFORCE=False)
+    def test_database_enforcement_rule_blocks_incomplete_profile(self) -> None:
+        feature, _ = FeatureDefinition.objects.get_or_create(
+            key="profile_personalization_enforce",
+            defaults={
+                "kind": FeatureKind.BOOLEAN,
+                "default_value": "false",
+            },
+        )
+        feature.kind = FeatureKind.BOOLEAN
+        feature.default_value = "false"
+        feature.active = True
+        feature.save(update_fields=["kind", "default_value", "active"])
+        feature.rules.all().delete()
+        FeatureRule.objects.create(
+            feature=feature,
+            name="everyone-on",
+            priority=10,
+            rule_type=FeatureRuleType.EVERYONE,
+            value="true",
+        )
+
+        with self.assertRaises(HttpError):
+            AccountStatusService.require_personalized_profile(self.user)
+
+    def test_supplied_snapshot_avoids_second_evaluation(self) -> None:
+        decisions = {
+            "profile_personalization_ui": False,
+            "profile_personalization_interstitial": False,
+            "profile_personalization_enforce": True,
+        }
+
+        with patch(
+            "accounts.services.account_status.evaluate_many"
+        ) as evaluator:
+            status = AccountStatusService.get_status(
+                self.user,
+                profile=self.profile,
+                feature_decisions=decisions,
+            )
+
+        evaluator.assert_not_called()
+        self.assertFalse(status["personalization_ui_enabled"])
+        self.assertFalse(status["personalization_interstitial_enabled"])
+        self.assertTrue(status["personalization_enforce_enabled"])
 
 
 class EmailAddressServiceTests(TestCase):

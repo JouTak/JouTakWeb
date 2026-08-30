@@ -1,58 +1,76 @@
 x-backend-environment: &backend-environment
-  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
-  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-  DJANGO_SETTINGS_MODULE: backend.settings.prod
-  DB_SSL_REQUIRED: "False"
+  # This file is the zero-configuration development stack. Production
+  # manifests keep requiring externally managed secrets and HTTPS settings.
+  DJANGO_SETTINGS_MODULE: backend.settings.dev
+  DJANGO_DEBUG: "true"
+  DJANGO_SECRET_KEY: ${DEV_DJANGO_SECRET_KEY:-dev-only-secret-key-not-for-production-0123456789-abcdefghijklmnopqrstuvwxyz}
+  DATABASE_URL: postgresql://${DEV_POSTGRES_USER:-joutak}:${DEV_POSTGRES_PASSWORD:-joutak}@db:5432/${DEV_POSTGRES_DB:-joutak}
+  DB_SSL_REQUIRED: "false"
+  DB_CONN_MAX_AGE: "0"
 
-  # The default local stack is HTTP-only, so keep redirect handling off.
-  # Passkeys can still be exercised locally via the insecure-origin toggle.
-  USE_X_FORWARDED_PROTO: ${USE_X_FORWARDED_PROTO:-false}
-  SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-false}
-  SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
+  USE_X_FORWARDED_PROTO: "false"
+  SECURE_SSL_REDIRECT: "false"
+  SECURE_HSTS_SECONDS: "0"
+  SESSION_COOKIE_SECURE: "false"
+  CSRF_COOKIE_SECURE: "false"
+  JWT_REFRESH_COOKIE_SECURE: "false"
+  SESSION_COOKIE_SAMESITE: Lax
+  CSRF_COOKIE_SAMESITE: Lax
+  JWT_REFRESH_COOKIE_SAMESITE: Lax
 
-  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
-  DJANGO_ADMIN_HOSTS: ${DJANGO_ADMIN_HOSTS:-admin.localhost}
-  DJANGO_API_HOSTS: ${DJANGO_API_HOSTS:-api.localhost}
-  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:?DJANGO_CSRF_TRUSTED_ORIGINS is required}
-  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
-  FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?FRONTEND_BASE_URL is required}
-  # The local compose stack serves the frontend from localhost over plain HTTP.
-  DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL: ${DJANGO_ALLOW_LOCALHOST_FRONTEND_BASE_URL:-true}
-  DJANGO_SITE_DOMAIN: ${DJANGO_SITE_DOMAIN:-}
-  DJANGO_SITE_NAME: ${DJANGO_SITE_NAME:-}
-  ACCOUNT_TRUST_PROXY_HEADERS: ${ACCOUNT_TRUST_PROXY_HEADERS:-false}
-  ACCOUNT_TRUSTED_PROXY_CIDRS: ${ACCOUNT_TRUSTED_PROXY_CIDRS:-}
-  MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN: ${MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN:-true}
-  MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:-}
-  AUTH_SESSION_RETENTION_DAYS: ${AUTH_SESSION_RETENTION_DAYS:-30}
-  AUTH_TOKEN_RETENTION_DAYS: ${AUTH_TOKEN_RETENTION_DAYS:-30}
-  DJANGO_SYNC_SITE: ${DJANGO_SYNC_SITE:-1}
-  DJANGO_SYNC_EMAIL_ADDRESSES: ${DJANGO_SYNC_EMAIL_ADDRESSES:-1}
-  DJANGO_REENCRYPT_MFA_AUTHENTICATORS: ${DJANGO_REENCRYPT_MFA_AUTHENTICATORS:-1}
+  DJANGO_ALLOWED_HOSTS: ${DEV_DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,joutak.localhost,api.localhost,admin.localhost}
+  DJANGO_ADMIN_HOSTS: ${DEV_DJANGO_ADMIN_HOSTS:-admin.localhost}
+  DJANGO_API_HOSTS: ${DEV_DJANGO_API_HOSTS:-joutak.localhost,api.localhost}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DEV_DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost,http://localhost:5173,http://127.0.0.1,http://127.0.0.1:5173,http://joutak.localhost,http://api.localhost,http://api.localhost:8000,http://admin.localhost,http://admin.localhost:8000}
+  CORS_ALLOW_ALL_ORIGINS: ${DEV_CORS_ALLOW_ALL_ORIGINS:-true}
+  FRONTEND_BASE_URL: ${DEV_FRONTEND_BASE_URL:-http://localhost:5173}
+  DJANGO_SITE_DOMAIN: ${DEV_DJANGO_SITE_DOMAIN:-localhost}
+  DJANGO_SITE_NAME: ${DEV_DJANGO_SITE_NAME:-JouTak Development}
 
-  EMAIL_HOST: ${EMAIL_HOST:-}
-  EMAIL_PORT: ${EMAIL_PORT:-587}
-  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
-  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
-  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
-  EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
-  EMAIL_TIMEOUT: ${EMAIL_TIMEOUT:-10}
-  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
+  # Keep the development WebAuthn trust boundary explicit. If DEV_HTTP_PORT
+  # is changed, add that exact browser origin to the corresponding account or
+  # admin list and to the union; never derive/trust arbitrary ports.
+  WEBAUTHN_RP_ID: ${DEV_WEBAUTHN_RP_ID:-localhost}
+  WEBAUTHN_RP_NAME: ${DEV_WEBAUTHN_RP_NAME:-JouTak Development}
+  WEBAUTHN_ACCOUNT_ORIGINS: ${DEV_WEBAUTHN_ACCOUNT_ORIGINS:-http://localhost,http://localhost:5173,http://joutak.localhost}
+  WEBAUTHN_ADMIN_ORIGINS: ${DEV_WEBAUTHN_ADMIN_ORIGINS:-http://admin.localhost,http://admin.localhost:8000}
+  WEBAUTHN_ALLOWED_ORIGINS: ${DEV_WEBAUTHN_ALLOWED_ORIGINS:-http://localhost,http://localhost:5173,http://joutak.localhost,http://admin.localhost,http://admin.localhost:8000}
 
-  DJANGO_MIGRATE: ${DJANGO_MIGRATE:-1}
-  DJANGO_COLLECTSTATIC: ${DJANGO_COLLECTSTATIC:-1}
-  DJANGO_CHECK_DEPLOY: ${DJANGO_CHECK_DEPLOY:-1}
+  ACCOUNT_TRUST_PROXY_HEADERS: "false"
+  MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN: "true"
+  MFA_ENCRYPTION_KEYS: ${DEV_MFA_ENCRYPTION_KEYS:-}
+  AUTH_SESSION_RETENTION_DAYS: ${DEV_AUTH_SESSION_RETENTION_DAYS:-30}
+  AUTH_TOKEN_RETENTION_DAYS: ${DEV_AUTH_TOKEN_RETENTION_DAYS:-30}
 
-  DJANGO_CHECK_DEPLOY_STRICT: "1"
+  EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+  DEFAULT_FROM_EMAIL: ${DEV_DEFAULT_FROM_EMAIL:-dev@localhost}
+  MEDIA_ROOT: /app/media
+
+  OTEL_SERVICE_NAME: ${DEV_OTEL_SERVICE_NAME:-joutak-backend-dev}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${DEV_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${DEV_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${DEV_OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+  OTEL_METRICS_EXPORT_INTERVAL_MS: ${DEV_OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
+
+  # The backend entrypoint owns the idempotent development bootstrap.
+  DJANGO_MIGRATE: "1"
+  DJANGO_SYNC_SITE: "1"
+  DJANGO_SYNC_EMAIL_ADDRESSES: "1"
+  DJANGO_REENCRYPT_MFA_AUTHENTICATORS: "0"
+  DJANGO_COLLECTSTATIC: "0"
+  DJANGO_CHECK_DEPLOY: "0"
+  DJANGO_CHECK_DEPLOY_STRICT: "0"
 
 services:
   proxy:
     image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
     ports:
-      - "80:80"
+      - "127.0.0.1:${DEV_HTTP_PORT:-80}:80"
     volumes:
       - ./local-proxy.nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
@@ -61,9 +79,9 @@ services:
   db:
     image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${DEV_POSTGRES_DB:-joutak}
+      POSTGRES_USER: ${DEV_POSTGRES_USER:-joutak}
+      POSTGRES_PASSWORD: ${DEV_POSTGRES_PASSWORD:-joutak}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -75,16 +93,17 @@ services:
       - joutak_net
 
   backend:
-    #    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
     build:
       context: .
       dockerfile: backend/Dockerfile
-    pull_policy: always
+      target: runtime
     depends_on:
       db:
         condition: service_healthy
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+    working_dir: /app/backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${DEV_BACKEND_PORT:-8000}:8000"
     environment: *backend-environment
     healthcheck:
       test:
@@ -92,45 +111,66 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=2)",
+          "import os, urllib.request; assert os.access('/app/media', os.W_OK); urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=2)",
         ]
-      interval: 10s
+      interval: 5s
       timeout: 3s
       retries: 30
     volumes:
+      - ./backend:/app/backend:ro
       - media_data:/app/media
-      - static_data:/app/staticfiles
     networks:
       - joutak_net
 
   backend-maintenance:
-    #    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
     build:
       context: .
       dockerfile: backend/Dockerfile
-    pull_policy: always
+      target: runtime
     depends_on:
-      db:
+      backend:
         condition: service_healthy
     working_dir: /app/backend
     entrypoint: ["/usr/bin/tini", "--"]
     command: ["python", "manage.py", "run_auth_maintenance"]
     environment: *backend-environment
+    volumes:
+      - ./backend:/app/backend:ro
     networks:
       - joutak_net
 
   frontend:
-    #    image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    pull_policy: always
+      target: dev
+    depends_on:
+      backend:
+        condition: service_healthy
     environment:
-      REACT_APP_API_URL: ${PUBLIC_API_URL:-http://127.0.0.1:8000}
-      OTEL_SERVICE_NAME: ${FRONTEND_OTEL_SERVICE_NAME:-joutak-frontend}
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${FRONTEND_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+      DEV_BACKEND_PROXY_TARGET: http://backend:8000
+      CHOKIDAR_USEPOLLING: ${DEV_CHOKIDAR_USEPOLLING:-false}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:${DEV_FRONTEND_PORT:-5173}:5173"
+    volumes:
+      # Mount only live-editable inputs. Dependencies stay in the image, so a
+      # normal `docker compose up --build` cannot reuse a stale node_modules.
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+      - ./frontend/index.html:/app/index.html:ro
+      - ./frontend/vite.config.js:/app/vite.config.js:ro
+      - ./contracts/page-document.schema.json:/contracts/page-document.schema.json:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
     networks:
       - joutak_net
 
@@ -141,4 +181,3 @@ networks:
 volumes:
   postgres_data:
   media_data:
-  static_data:

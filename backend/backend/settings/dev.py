@@ -1,4 +1,7 @@
-from decouple import config
+from pathlib import Path
+
+import dj_database_url
+from decouple import Csv, config
 from observability.logging import build_logging_config
 
 from . import base as base_settings
@@ -9,39 +12,81 @@ DEBUG = True
 if not base_settings.SECRET_KEY:
     SECRET_KEY = "dev-only-insecure-secret-key-change-me"
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "api.localhost",
-    "admin.localhost",
-]
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost",
-    "http://api.localhost",
-    "http://admin.localhost:8000",
-]
-CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = config(
+    "DJANGO_ALLOWED_HOSTS",
+    default=(
+        "127.0.0.1,localhost,joutak.localhost,api.localhost,admin.localhost"
+    ),
+    cast=Csv(),
+)
+CSRF_TRUSTED_ORIGINS = config(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    default=(
+        "http://localhost,http://localhost:5173,"
+        "http://127.0.0.1,http://127.0.0.1:5173,"
+        "http://joutak.localhost,http://api.localhost,"
+        "http://api.localhost:8000,http://admin.localhost,"
+        "http://admin.localhost:8000"
+    ),
+    cast=Csv(),
+)
+CORS_ALLOW_ALL_ORIGINS = config(
+    "CORS_ALLOW_ALL_ORIGINS",
+    cast=bool,
+    default=True,
+)
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": base_settings.BASE_DIR / "db.sqlite3",
+# Compose supplies DATABASE_URL for its PostgreSQL service. Keeping the
+# SQLite fallback makes a native backend checkout zero-configuration.
+DATABASE_URL = config("DATABASE_URL", default="").strip()
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=config("DB_CONN_MAX_AGE", cast=int, default=0),
+            ssl_require=config("DB_SSL_REQUIRED", cast=bool, default=False),
+        )
     }
-}
+    DATABASES["default"]["ATOMIC_REQUESTS"] = True
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": base_settings.BASE_DIR / "db.sqlite3",
+        }
+    }
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# In dev, use in-memory cache (no need for cache table with SQLite).
+# In dev, keep the production aliases but use isolated in-memory stores (no
+# cache tables are needed with SQLite).
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
+        "LOCATION": "joutak-dev-default",
+        "OPTIONS": {"MAX_ENTRIES": 100000},
+    },
+    "ratelimit": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "joutak-dev-ratelimit",
+        "OPTIONS": {"MAX_ENTRIES": 100000},
+    },
+    "webauthn_replay": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "joutak-dev-webauthn-replay",
+        "OPTIONS": {"MAX_ENTRIES": 100000},
+    },
 }
 
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
+# base.py is imported before DEBUG is overridden above, so cookie defaults
+# derived from base_settings.DEBUG would otherwise stay production-secure.
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+JWT_REFRESH_COOKIE_SECURE = False
+SECURE_SSL_REDIRECT = False
+SECURE_HSTS_SECONDS = 0
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -50,11 +95,22 @@ STORAGES = {
     },
 }
 
+# Compose keeps uploaded files outside the read-only source bind. Native
+# development retains Django's usual backend/media location.
+MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(base_settings.MEDIA_ROOT)))
+
 HEADLESS_SERVE_SPECIFICATION = True
 MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = config(
     "MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN",
     cast=bool,
     default=True,
 )
+
+# Local WebAuthn is intentionally explicit and isolated from production.
+WEBAUTHN_RP_ID = base_settings.WEBAUTHN_RP_ID
+WEBAUTHN_RP_NAME = base_settings.WEBAUTHN_RP_NAME
+WEBAUTHN_ACCOUNT_ORIGINS = base_settings.WEBAUTHN_ACCOUNT_ORIGINS
+WEBAUTHN_ADMIN_ORIGINS = base_settings.WEBAUTHN_ADMIN_ORIGINS
+WEBAUTHN_ALLOWED_ORIGINS = base_settings.WEBAUTHN_ALLOWED_ORIGINS
 
 LOGGING = build_logging_config(root_level="DEBUG")

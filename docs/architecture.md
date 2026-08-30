@@ -42,14 +42,17 @@ reset остаются на allauth headless endpoints.
 ## Docker Services
 
 - `db`: PostgreSQL.
-- `backend`: Django/Gunicorn API container.
+- `backend`: Django API; default `compose.yaml` запускает development
+  `runserver`, production manifests — Gunicorn.
 - `backend-maintenance`: scheduled/manual auth maintenance command.
-- `frontend`: nginx-served Vite build.
-- `traefik`: production Swarm ingress в `stack.yml`.
+- `frontend`: Vite dev server в `compose.yaml`, nginx-served build в
+  production manifests.
+- `proxy`: локальный nginx для frontend, API и admin host routing.
+- `traefik`: production Swarm ingress в `docker-compose.stack.yml`.
 
 Локальная разработка использует `compose.yaml` и запускается командой
 `docker compose up --build`. Image-based deployment использует
-`docker-compose.images.yml` или `stack.yml`.
+`docker-compose.images.yml` или `docker-compose.stack.yml`.
 
 ## CI Jobs
 

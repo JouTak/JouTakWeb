@@ -6,7 +6,7 @@ import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
-const Contact = lazy(() => import("./pages/Contact.jsx"));
+const Contact = lazy(() => import("./pages/Contact/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
 const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));

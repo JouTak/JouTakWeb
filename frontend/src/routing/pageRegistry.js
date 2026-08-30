@@ -15,6 +15,10 @@ const PRODUCT_ROUTES = Object.freeze({
     productId: "minigames",
     endpoint: "/bff/pages/minigames",
   },
+  "/contact": {
+    productId: "contact",
+    endpoint: "/bff/pages/contact",
+  },
 });
 
 export function normalizeRoutePath(pathname) {

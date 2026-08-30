@@ -2,8 +2,6 @@ import ContactCategory from "../../components/ContactElements/ContactCategory";
 import { usePageDocument } from "../../features/pageDocument/pageDocumentContext";
 import styles from "./Contact.module.scss";
 
-const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
-
 const CONTACTS_DATA = [
   {
     title: "Самые свежие новости:",
@@ -67,20 +65,10 @@ const CONTACTS_DATA = [
   },
 ];
 
-export default function Contact() {
-  const { document, loading } = usePageDocument();
-  if (loading && !document) {
-    return <div className="py-5 text-center text-secondary">Загрузка...</div>;
-  }
+function ContactSimplePage() {
+  const PUBLIC_IMG_BASE = "https://storage.yandexcloud.net/joutak-public/img";
 
-  return document?.effective_page_variant === "v2" ? (
-    <div className={styles.contactMain}>
-      <h1>НАШИ КОНТАКТЫ</h1>
-      {CONTACTS_DATA.map((contactData, index) => {
-        return <ContactCategory {...contactData} key={index} />;
-      })}
-    </div>
-  ) : (
+  return (
     <div
       className="p-5 mb-4 bg-light shadow-lg position-relative"
       style={{
@@ -145,5 +133,29 @@ export default function Contact() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ContactV2Page() {
+  return (
+    <div className={styles.contactMain}>
+      <h1>НАШИ КОНТАКТЫ</h1>
+      {CONTACTS_DATA.map((contactData, index) => {
+        return <ContactCategory {...contactData} key={index} />;
+      })}
+    </div>
+  );
+}
+
+export default function Contact() {
+  const { document, loading } = usePageDocument();
+  if (loading && !document) {
+    return <div className="py-5 text-center text-secondary">Загрузка...</div>;
+  }
+
+  return document?.effective_page_variant === "v2" ? (
+    <ContactV2Page />
+  ) : (
+    <ContactSimplePage />
   );
 }

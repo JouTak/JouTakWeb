@@ -46,6 +46,7 @@ TECHNICAL_ACCOUNT_MODELS = (
     DJANGO_ALLOWED_HOSTS=("admin.localhost",),
     DJANGO_ADMIN_HOSTS=("admin.localhost",),
     DJANGO_API_HOSTS=("api.localhost",),
+    WEBAUTHN_ADMIN_ORIGINS=("http://admin.localhost",),
 )
 class AccountAdminTests(TestCase):
     def setUp(self) -> None:
@@ -257,6 +258,7 @@ class AccountAdminTests(TestCase):
                 "_save": "Save",
             },
             HTTP_HOST="admin.localhost",
+            HTTP_ORIGIN="http://admin.localhost",
         )
 
         self.assertEqual(response.status_code, 302)
@@ -287,6 +289,7 @@ class AccountAdminTests(TestCase):
                 "index": "0",
             },
             HTTP_HOST="admin.localhost",
+            HTTP_ORIGIN="http://admin.localhost",
         )
         self.assertEqual(csv_attempt.status_code, 200)
         self.assertFalse(

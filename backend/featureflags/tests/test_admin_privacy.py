@@ -394,6 +394,7 @@ class FeatureGroupRawAdminPermissionTests(TestCase):
     DJANGO_ALLOWED_HOSTS=("admin.localhost", "api.localhost"),
     DJANGO_ADMIN_HOSTS=("admin.localhost",),
     DJANGO_API_HOSTS=("api.localhost",),
+    WEBAUTHN_ADMIN_ORIGINS=("http://admin.localhost",),
 )
 class FeatureGroupRawAdminIntegrationTests(TestCase):
     def setUp(self) -> None:
@@ -481,6 +482,7 @@ class FeatureGroupRawAdminIntegrationTests(TestCase):
             f"/admin/featureflags/rollouts/{rule.pk}/stop/",
             {"reason": "Crafted archived stop"},
             HTTP_HOST="admin.localhost",
+            HTTP_ORIGIN="http://admin.localhost",
         )
 
         self.assertEqual(response.status_code, 302)
@@ -512,6 +514,7 @@ class FeatureGroupRawAdminIntegrationTests(TestCase):
             f"/admin/featureflags/rollouts/{rule.pk}/start/",
             {"reason": "Crafted hidden restart"},
             HTTP_HOST="admin.localhost",
+            HTTP_ORIGIN="http://admin.localhost",
         )
 
         self.assertEqual(response.status_code, 302)

@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
@@ -58,10 +60,10 @@ jobs:
 
       - name: Reject whitespace errors
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha || github.sha }}
         run: |
-          if [[ -n "$BASE_SHA" ]]; then
+          if [[ -n "$BASE_SHA" && "$BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
             git diff --check "$BASE_SHA..$HEAD_SHA"
           else
             git diff-tree --check --no-commit-id --root -r "$HEAD_SHA"
@@ -143,7 +145,7 @@ jobs:
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-      - run: uv sync --python 3.12 --group dev --group test
+      - run: uv sync --locked --python 3.12 --group dev --group test
       - name: Ruff
         run: uv run ruff check .
       - name: Ruff format
@@ -168,17 +170,6 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/backend
           DJANGO_SETTINGS_MODULE: backend.settings.dev
         run: uv run python scripts/check_frontend_openapi_contracts.py
-      - name: Check generated requirements
-        run: |
-          tmp_dir="$(mktemp -d)"
-          trap 'rm -rf "$tmp_dir"' EXIT
-          uv export --frozen --no-dev --no-hashes -q -o "$tmp_dir/prod.txt"
-          uv export --frozen --group dev --group test --no-hashes -q -o "$tmp_dir/dev.txt"
-          uv export --frozen --no-default-groups --group test --no-hashes -q -o "$tmp_dir/test.txt"
-          diff -u <(tail -n +3 backend/requirements/prod.txt) <(tail -n +3 "$tmp_dir/prod.txt")
-          diff -u <(tail -n +3 backend/requirements/dev.txt) <(tail -n +3 "$tmp_dir/dev.txt")
-          diff -u <(tail -n +3 backend/requirements/test.txt) <(tail -n +3 "$tmp_dir/test.txt")
-
   backend_audit:
     name: Backend dependency audit
     runs-on: ubuntu-latest
@@ -188,10 +179,8 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
-      - run: uv sync --python 3.12 --group dev
-      - run: |
-          uv export --frozen --no-dev --no-hashes -q -o /tmp/joutak-requirements.txt
-          uv run pip-audit --no-deps -r /tmp/joutak-requirements.txt
+      - run: uv sync --locked --python 3.12 --group dev
+      - run: uv run pip-audit --local
 
   backend_test:
     name: Backend tests
@@ -223,7 +212,7 @@ jobs:
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-      - run: uv sync --python 3.12 --group test
+      - run: uv sync --locked --python 3.12 --group test
       - run: uv run python backend/manage.py check
       - run: uv run pytest backend -q
 
@@ -254,7 +243,7 @@ jobs:
           docker compose -f docker-compose.yml config >/dev/null
           docker compose -f docker-compose.images.yml config >/dev/null
           cp .env.example .env.production
-          docker compose -f stack.yml config >/dev/null
+          docker compose -f docker-compose.stack.yml config >/dev/null
           rm -f .env.production
       - run: docker build -f ./backend/Dockerfile -t joutakweb-api:ci .
       - run: docker build -f ./frontend/Dockerfile -t joutakweb:ci .

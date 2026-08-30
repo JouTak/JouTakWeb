@@ -20,12 +20,17 @@ POSTGRES_USER=gate_user \
 POSTGRES_PASSWORD=gate_password \
 DJANGO_SECRET_KEY=gate-secret-key-change-me \
 FRONTEND_BASE_URL=https://joutak.ru \
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru \
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,joutak.localhost,api.localhost,admin.localhost,joutak.ru,api.joutak.ru,admin.joutak.ru \
 DJANGO_ADMIN_HOSTS=admin.localhost,admin.joutak.ru \
-DJANGO_API_HOSTS=api.localhost,api.joutak.ru \
-DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru \
+DJANGO_API_HOSTS=localhost,joutak.localhost,api.localhost,joutak.ru,api.joutak.ru \
+DJANGO_CSRF_TRUSTED_ORIGINS=https://joutak.ru \
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,https://joutak.ru \
 PUBLIC_API_URL=http://api.localhost \
+WEBAUTHN_RP_ID=joutak.ru \
+WEBAUTHN_RP_NAME=JouTak \
+WEBAUTHN_ACCOUNT_ORIGINS=https://joutak.ru \
+WEBAUTHN_ADMIN_ORIGINS=https://admin.joutak.ru \
+WEBAUTHN_ALLOWED_ORIGINS=https://joutak.ru,https://admin.joutak.ru \
 docker compose -f docker-compose.yml config >/dev/null
 
 POSTGRES_DB=gate_db \
@@ -33,12 +38,17 @@ POSTGRES_USER=gate_user \
 POSTGRES_PASSWORD=gate_password \
 DJANGO_SECRET_KEY=gate-secret-key-change-me \
 FRONTEND_BASE_URL=https://joutak.ru \
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru \
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,joutak.localhost,api.localhost,admin.localhost,joutak.ru,api.joutak.ru,admin.joutak.ru \
 DJANGO_ADMIN_HOSTS=admin.localhost,admin.joutak.ru \
-DJANGO_API_HOSTS=api.localhost,api.joutak.ru \
-DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru \
+DJANGO_API_HOSTS=localhost,joutak.localhost,api.localhost,joutak.ru,api.joutak.ru \
+DJANGO_CSRF_TRUSTED_ORIGINS=https://joutak.ru \
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,https://joutak.ru \
 PUBLIC_API_URL=http://api.localhost \
+WEBAUTHN_RP_ID=joutak.ru \
+WEBAUTHN_RP_NAME=JouTak \
+WEBAUTHN_ACCOUNT_ORIGINS=https://joutak.ru \
+WEBAUTHN_ADMIN_ORIGINS=https://admin.joutak.ru \
+WEBAUTHN_ALLOWED_ORIGINS=https://joutak.ru,https://admin.joutak.ru \
 docker compose -f docker-compose.images.yml config >/dev/null
 
 trap 'rm -f .env.production' EXIT
@@ -49,13 +59,19 @@ POSTGRES_USER=gate_user \
 POSTGRES_PASSWORD=gate_password \
 DJANGO_SECRET_KEY=gate-secret-key-change-me \
 FRONTEND_BASE_URL=https://joutak.ru \
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,api.localhost,admin.localhost,api.joutak.ru,admin.joutak.ru \
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,joutak.localhost,api.localhost,admin.localhost,joutak.ru,api.joutak.ru,admin.joutak.ru \
 DJANGO_ADMIN_HOSTS=admin.localhost,admin.joutak.ru \
-DJANGO_API_HOSTS=api.localhost,api.joutak.ru \
-DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1,http://api.localhost,http://admin.localhost,https://joutak.ru,https://api.joutak.ru,https://admin.joutak.ru \
+DJANGO_API_HOSTS=localhost,joutak.localhost,api.localhost,joutak.ru,api.joutak.ru \
+DJANGO_CSRF_TRUSTED_ORIGINS=https://joutak.ru \
 CORS_ALLOWED_ORIGINS=http://localhost,http://127.0.0.1,https://joutak.ru \
-PUBLIC_API_URL=https://api.joutak.ru \
-docker compose -f stack.yml config >/dev/null
+PUBLIC_API_URL=https://joutak.ru/api \
+WEBAUTHN_RP_ID=joutak.ru \
+WEBAUTHN_RP_NAME=JouTak \
+WEBAUTHN_ACCOUNT_ORIGINS=https://joutak.ru \
+WEBAUTHN_ADMIN_ORIGINS=https://admin.joutak.ru \
+WEBAUTHN_ALLOWED_ORIGINS=https://joutak.ru,https://admin.joutak.ru \
+TRAEFIK_ACME_EMAIL=ops@example.com \
+docker compose -f docker-compose.stack.yml config >/dev/null
 
 if [[ "${run_smoke}" == "1" ]]; then
   docker compose down -v || true

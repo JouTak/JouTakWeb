@@ -42,7 +42,8 @@
 - Если меняешь API contracts, обновляй frontend contract check и связанные тесты.
 - Если меняешь auth, sessions, profile, password, OAuth или account deletion, добавляй или обновляй tests в `backend/accounts/tests/`.
 - Если меняешь BFF, feature flags или observability code, обновляй тесты и местные app-level проверки в соответствующем пакете.
-- Не редактируй generated requirements вручную.
+- Не создавай и не коммить generated requirements: используй `pyproject.toml`,
+  `uv.lock` и locked `uv sync` напрямую.
 
 ## Проверки
 
@@ -65,6 +66,7 @@ uv run pytest backend -q
 ## Зависимости и окружение
 
 - Backend dependencies меняй через `uv`.
-- Коммить `uv.lock` и regenerated files в `backend/requirements/`, когда меняются backend dependencies.
+- Коммить `pyproject.toml` и `uv.lock`, когда меняются backend dependencies.
 - `.env`, `.env.development`, `.env.production` и secret variants должны оставаться локальными.
-- `stack.yml` ожидает production secrets через Docker secrets и локальный `.env.production`; этот файл не коммитится.
+- `docker-compose.stack.yml` ожидает production secrets через Docker secrets и
+  локальный `.env.production`; этот файл не коммитится.

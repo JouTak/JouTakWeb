@@ -3,61 +3,97 @@ from __future__ import annotations
 import json
 import logging
 
-from allauth.mfa.adapter import get_adapter as get_mfa_adapter
-from allauth.mfa.models import Authenticator
+from accounts.services import admin_mfa as admin_mfa_service
+from accounts.services.admin_mfa import (
+    SESSION_KEY_ADMIN_MFA_ASSURANCE,
+    SESSION_KEY_ADMIN_MFA_PENDING,
+    AdminMFAError,
+    AdminMFARateLimitError,
+    AdminMFAVerificationError,
+    abort_pending_admin_login,
+    admin_user_has_primary_mfa,
+    admin_user_has_webauthn,
+    begin_admin_webauthn,
+    clear_admin_mfa_state,
+    complete_admin_login,
+    get_pending_admin_login,
+    register_failed_webauthn_verification,
+    safe_admin_next,
+    start_pending_admin_login,
+    verify_admin_code,
+    verify_admin_webauthn,
+)
 from django.conf import settings
 from django.contrib.admin import AdminSite
 from django.contrib.admin.forms import AdminAuthenticationForm
-from django.contrib.auth import get_user_model
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
 from django.core.exceptions import ValidationError
 from django.http import (
     HttpRequest,
     HttpResponse,
+    HttpResponseNotAllowed,
     HttpResponseRedirect,
     JsonResponse,
 )
 from django.shortcuts import render
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 
 logger = logging.getLogger(__name__)
 
-SESSION_KEY_ADMIN_MFA_VERIFIED = "_admin_mfa_verified"
-SESSION_KEY_ADMIN_MFA_PENDING_USER = "_admin_mfa_pending_user_pk"
+# Compatibility aliases for middleware and older tests. The values now hold
+# structured, versioned state rather than a user id / boolean.
+SESSION_KEY_ADMIN_MFA_VERIFIED = SESSION_KEY_ADMIN_MFA_ASSURANCE
+SESSION_KEY_ADMIN_MFA_PENDING_USER = SESSION_KEY_ADMIN_MFA_PENDING
+admin_mfa_is_enabled = admin_user_has_primary_mfa
+is_admin_mfa_verified = admin_mfa_service.is_admin_mfa_verified
 
 
-def admin_mfa_is_enabled(user: object | None) -> bool:
-    """Check whether the user has at least one MFA authenticator enrolled."""
-    if not user or not getattr(user, "is_authenticated", False):
-        return False
-    return bool(get_mfa_adapter().is_mfa_enabled(user))
+def _audit_event(
+    level: int,
+    event: str,
+    request: HttpRequest,
+    *,
+    user_id: object | None = None,
+    method: str | None = None,
+    reason_code: str | None = None,
+) -> None:
+    extra = {
+        "event": event,
+        "request_id": getattr(request, "request_id", None),
+        "request_host": request.get_host().split(":", 1)[0].lower(),
+        "request_path": request.path,
+    }
+    if user_id is not None:
+        extra["user_id"] = str(user_id)
+    if method is not None:
+        extra["method"] = method
+    if reason_code is not None:
+        extra["reason_code"] = reason_code
+    logger.log(level, event, extra=extra)
 
 
-def is_admin_mfa_verified(request: HttpRequest) -> bool:
-    """Check whether the current session completed admin MFA verification."""
-    return request.session.get(SESSION_KEY_ADMIN_MFA_VERIFIED, False) is True
-
-
-def _user_has_webauthn(user) -> bool:
-    """Check if the user has any WebAuthn authenticators enrolled."""
-    return Authenticator.objects.filter(
-        user=user, type=Authenticator.Type.WEBAUTHN
-    ).exists()
+def _rate_limited_json(
+    request: HttpRequest,
+    pending,
+) -> JsonResponse:
+    abort_pending_admin_login(request, pending)
+    response = JsonResponse(
+        {"error": "Too many attempts. Start the admin login again."},
+        status=429,
+    )
+    response["Retry-After"] = "60"
+    return response
 
 
 class AdminMFAAuthenticationForm(AdminAuthenticationForm):
-    """
-    Admin login form that blocks staff without MFA enrollment.
-    """
+    """Admin password form that requires a primary MFA authenticator."""
 
     def confirm_login_allowed(self, user) -> None:
         super().confirm_login_allowed(user)
-        if not getattr(user, "is_staff", False):
-            return
-        if admin_mfa_is_enabled(user):
+        if admin_user_has_primary_mfa(user):
             return
         mfa_setup_url = (
             f"{settings.FRONTEND_BASE_URL.rstrip('/')}/account/security#mfa"
@@ -82,50 +118,72 @@ class JouTakAdminSite(AdminSite):
 
     def has_permission(self, request) -> bool:
         user = getattr(request, "user", None)
-        if not (
-            user and user.is_active and user.is_authenticated and user.is_staff
-        ):
-            return False
-        if admin_mfa_is_enabled(user):
-            return is_admin_mfa_verified(request)
-        return True
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.is_staff
+            and admin_mfa_is_enabled(user)
+            and is_admin_mfa_verified(request)
+        )
 
     def login(self, request: HttpRequest, extra_context=None) -> HttpResponse:
-        """
-        Complete override of admin login POST. Never delegates to
-        super().login() on POST to prevent LoginView.form_valid()
-        from calling auth_login() and bypassing MFA.
-        """
+        """Run the password stage without creating an authenticated session."""
         if request.method == "POST":
+            # A previous/force-created admin session must not donate either its
+            # identity or MFA assurance to a new password flow.
+            if getattr(request.user, "is_authenticated", False):
+                auth_logout(request)
+            else:
+                clear_admin_mfa_state(request)
+
             form = self.login_form(request, data=request.POST)
             if form.is_valid():
                 user = form.get_user()
-                if admin_mfa_is_enabled(user):
-                    request.session[SESSION_KEY_ADMIN_MFA_PENDING_USER] = (
-                        user.pk
+                try:
+                    start_pending_admin_login(
+                        request,
+                        user,
+                        next_url=request.POST.get("next"),
                     )
-                    request.session.save()
-                    logger.info(
-                        "Admin login: credentials valid, MFA required "
-                        "for user=%s, redirecting to verify",
-                        user.pk,
+                except AdminMFAVerificationError as exc:
+                    # A primary factor can be removed after form validation.
+                    # Keep that expected state race fail-closed without
+                    # turning it into a 500.
+                    form.add_error(
+                        None,
+                        ValidationError(
+                            "Не удалось начать подтверждение. Проверьте "
+                            "настройки MFA и попробуйте войти снова.",
+                            code="admin_mfa_state_changed",
+                        ),
+                    )
+                    _audit_event(
+                        logging.WARNING,
+                        "admin.mfa.pending_failed",
+                        request,
+                        user_id=user.pk,
+                        reason_code=exc.reason_code,
+                    )
+                else:
+                    _audit_event(
+                        logging.INFO,
+                        "admin.mfa.pending_started",
+                        request,
+                        user_id=user.pk,
                     )
                     return HttpResponseRedirect("/admin/mfa-verify/")
-                auth_login(
-                    request,
-                    user,
-                    backend=("django.contrib.auth.backends.ModelBackend"),
-                )
-                request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
-                return HttpResponseRedirect(
-                    request.POST.get("next", "/admin/")
-                )
+
             context = self.each_context(request)
             context.update(
                 {
                     "form": form,
                     "title": "Log in",
                     "app_path": request.get_full_path(),
+                    "next": safe_admin_next(
+                        request,
+                        request.POST.get("next"),
+                    ),
                     **(extra_context or {}),
                 }
             )
@@ -134,6 +192,8 @@ class JouTakAdminSite(AdminSite):
         return super().login(request, extra_context=extra_context)
 
     def get_urls(self):
+        from featureflags.admin import get_rollout_admin_urls
+
         custom_urls = [
             path(
                 "mfa-verify/",
@@ -151,141 +211,257 @@ class JouTakAdminSite(AdminSite):
                 name="admin_mfa_webauthn_complete",
             ),
         ]
-        return custom_urls + super().get_urls()
+        return custom_urls + get_rollout_admin_urls(self) + super().get_urls()
 
-    def _get_pending_user(self, request):
-        """Resolve and validate the pending MFA user from session."""
-        user_model = get_user_model()
-        pending_pk = request.session.get(SESSION_KEY_ADMIN_MFA_PENDING_USER)
-        if not pending_pk:
-            return None
-        try:
-            return user_model.objects.get(
-                pk=pending_pk, is_staff=True, is_active=True
-            )
-        except user_model.DoesNotExist:
-            request.session.pop(SESSION_KEY_ADMIN_MFA_PENDING_USER, None)
-            return None
+    def get_app_list(self, request, app_label=None):
+        from backend.admin_navigation import build_navigation_app_list
 
-    def _complete_mfa_login(self, request, user):
-        """Finalize admin login after MFA verification."""
-        request.session.pop(SESSION_KEY_ADMIN_MFA_PENDING_USER, None)
-        auth_login(
-            request,
-            user,
-            backend="django.contrib.auth.backends.ModelBackend",
+        app_list = super().get_app_list(request, app_label)
+        rollout_console = None
+        can_view_rollouts = request.user.has_perm(
+            "featureflags.view_featuredefinition"
+        ) and (
+            request.user.has_perm("featureflags.view_featurerule")
+            or request.user.has_perm("featureflags.change_featurerule")
         )
-        request.session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
-        logger.info(
-            "Admin MFA verification successful for user=%s",
-            user.pk,
+        if can_view_rollouts:
+            can_add_rollout = request.user.has_perms(
+                (
+                    "featureflags.add_featurerule",
+                    "featureflags.view_featuregroup",
+                )
+            )
+            rollout_console = {
+                "name": "Управление раскатками",
+                "object_name": "GuidedRollout",
+                "perms": {
+                    "add": can_add_rollout,
+                    "change": False,
+                    "delete": False,
+                    "view": True,
+                },
+                "admin_url": reverse("admin:featureflags_rollout_index"),
+                "add_url": (
+                    reverse("admin:featureflags_rollout_add")
+                    if can_add_rollout
+                    else None
+                ),
+                "view_only": True,
+            }
+        return build_navigation_app_list(
+            app_list,
+            rollout_console=rollout_console,
         )
 
     def mfa_verify_view(self, request: HttpRequest) -> HttpResponse:
         """MFA verification page: TOTP, recovery code, or Passkey."""
-        user = self._get_pending_user(request)
-        if not user:
+        if request.method not in {"GET", "POST"}:
+            return HttpResponseNotAllowed(["GET", "POST"])
+
+        pending = get_pending_admin_login(request)
+        if not pending:
+            _audit_event(
+                logging.INFO,
+                "admin.mfa.expired",
+                request,
+                reason_code="pending_missing_or_expired",
+            )
             return HttpResponseRedirect("/admin/login/")
 
-        has_passkeys = _user_has_webauthn(user)
-
         error = ""
+        restart_required = False
+        status = 200
         if request.method == "POST":
             code = request.POST.get("mfa_code", "").strip()
-            if not code:
-                error = "Введите код подтверждения."
-            elif self._verify_mfa_code(user, code):
-                self._complete_mfa_login(request, user)
-                return HttpResponseRedirect("/admin/")
-            else:
-                error = "Неверный код. Попробуйте ещё раз."
-                logger.warning(
-                    "Admin MFA verification failed for user=%s",
-                    user.pk,
+            try:
+                verification = verify_admin_code(
+                    request,
+                    pending,
+                    code,
                 )
+                next_url = complete_admin_login(
+                    request,
+                    pending,
+                    verification,
+                )
+            except AdminMFARateLimitError as exc:
+                abort_pending_admin_login(request, pending)
+                error = "Слишком много попыток. Войдите заново."
+                restart_required = True
+                status = 429
+                _audit_event(
+                    logging.WARNING,
+                    "admin.mfa.rate_limited",
+                    request,
+                    user_id=pending.user.pk,
+                    method="code",
+                    reason_code=exc.reason_code,
+                )
+            except AdminMFAVerificationError as exc:
+                error = (
+                    "Введите код подтверждения."
+                    if exc.reason_code == "missing_code"
+                    else "Неверный код. Попробуйте ещё раз."
+                )
+                _audit_event(
+                    logging.WARNING,
+                    "admin.mfa.failed",
+                    request,
+                    user_id=pending.user.pk,
+                    method="code",
+                    reason_code=exc.reason_code,
+                )
+            else:
+                _audit_event(
+                    logging.INFO,
+                    "admin.mfa.succeeded",
+                    request,
+                    user_id=pending.user.pk,
+                    method=verification.method,
+                )
+                return HttpResponseRedirect(next_url)
 
         context = {
             "title": "Двухфакторная аутентификация",
-            "username": user.get_username(),
+            "username": pending.user.get_username(),
             "error": error,
-            "has_passkeys": has_passkeys,
+            "has_passkeys": admin_user_has_webauthn(pending.user),
+            "restart_required": restart_required,
             "site_header": self.site_header,
             "site_title": self.site_title,
         }
-        return render(request, "admin/mfa_verify.html", context)
+        response = render(
+            request,
+            "admin/mfa_verify.html",
+            context,
+            status=status,
+        )
+        if status == 429:
+            response["Retry-After"] = "60"
+        return response
 
     def webauthn_options_view(self, request: HttpRequest) -> HttpResponse:
-        """Return WebAuthn authentication options (challenge) as JSON."""
-        from allauth.core import context as allauth_context
-        from allauth.mfa.webauthn.internal.auth import (
-            begin_authentication,
-        )
+        """Return admin WebAuthn options with user verification required."""
+        if request.method != "GET":
+            return HttpResponseNotAllowed(["GET"])
 
-        user = self._get_pending_user(request)
-        if not user:
-            return JsonResponse({"error": "No pending user"}, status=403)
+        pending = get_pending_admin_login(request)
+        if not pending:
+            return JsonResponse({"error": "No pending login"}, status=403)
 
-        # allauth's webauthn uses context.request for session state
-        allauth_context.request = request
         try:
-            options = begin_authentication(user=user)
-        finally:
-            allauth_context.request = None
+            options = begin_admin_webauthn(request, pending)
+        except AdminMFARateLimitError as exc:
+            _audit_event(
+                logging.WARNING,
+                "admin.mfa.rate_limited",
+                request,
+                user_id=pending.user.pk,
+                method="webauthn_options",
+                reason_code=exc.reason_code,
+            )
+            return _rate_limited_json(request, pending)
+        except AdminMFAError as exc:
+            _audit_event(
+                logging.WARNING,
+                "admin.mfa.failed",
+                request,
+                user_id=pending.user.pk,
+                method="webauthn",
+                reason_code=exc.reason_code,
+            )
+            return JsonResponse(
+                {"error": "Unable to start verification"},
+                status=400,
+            )
 
         return JsonResponse(options)
 
     def webauthn_complete_view(self, request: HttpRequest) -> HttpResponse:
-        """Verify a WebAuthn authentication response."""
-        from allauth.core import context as allauth_context
-        from allauth.mfa.webauthn.internal.auth import (
-            complete_authentication,
-        )
+        """Verify an admin WebAuthn authentication response."""
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
 
-        user = self._get_pending_user(request)
-        if not user:
-            return JsonResponse({"error": "No pending user"}, status=403)
+        pending = get_pending_admin_login(request)
+        if not pending:
+            return JsonResponse({"error": "No pending login"}, status=403)
 
         try:
-            body = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
-
-        allauth_context.request = request
-        try:
-            complete_authentication(user, body)
-        except Exception:
-            logger.warning(
-                "Admin WebAuthn verification failed for user=%s",
-                user.pk,
-                exc_info=True,
+            credential = json.loads(request.body)
+            if not isinstance(credential, dict):
+                raise ValueError
+        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+            try:
+                register_failed_webauthn_verification(request, pending)
+            except AdminMFARateLimitError as exc:
+                _audit_event(
+                    logging.WARNING,
+                    "admin.mfa.rate_limited",
+                    request,
+                    user_id=pending.user.pk,
+                    method="webauthn",
+                    reason_code=exc.reason_code,
+                )
+                return _rate_limited_json(request, pending)
+            _audit_event(
+                logging.WARNING,
+                "admin.mfa.failed",
+                request,
+                user_id=pending.user.pk,
+                method="webauthn",
+                reason_code="invalid_json",
             )
             return JsonResponse({"error": "Verification failed"}, status=400)
-        finally:
-            allauth_context.request = None
 
-        self._complete_mfa_login(request, user)
-        return JsonResponse({"ok": True, "redirect": "/admin/"})
+        try:
+            verification = verify_admin_webauthn(
+                request,
+                pending,
+                credential,
+            )
+            next_url = complete_admin_login(
+                request,
+                pending,
+                verification,
+            )
+        except AdminMFARateLimitError as exc:
+            _audit_event(
+                logging.WARNING,
+                "admin.mfa.rate_limited",
+                request,
+                user_id=pending.user.pk,
+                method="webauthn",
+                reason_code=exc.reason_code,
+            )
+            return _rate_limited_json(request, pending)
+        except AdminMFAVerificationError as exc:
+            _audit_event(
+                logging.WARNING,
+                "admin.mfa.failed",
+                request,
+                user_id=pending.user.pk,
+                method="webauthn",
+                reason_code=exc.reason_code,
+            )
+            return JsonResponse({"error": "Verification failed"}, status=400)
+        except Exception:
+            # Keep the public response and event payload generic. No credential
+            # body, challenge, origin or authenticator material is logged.
+            _audit_event(
+                logging.ERROR,
+                "admin.mfa.failed",
+                request,
+                user_id=pending.user.pk,
+                method="webauthn",
+                reason_code="internal_error",
+            )
+            return JsonResponse({"error": "Verification failed"}, status=400)
 
-    @staticmethod
-    def _verify_mfa_code(user, code: str) -> bool:
-        """
-        Verify a TOTP or recovery code against allauth.mfa
-        enrolled authenticators.
-        """
-        totp_authenticators = Authenticator.objects.filter(
-            user=user, type=Authenticator.Type.TOTP
+        _audit_event(
+            logging.INFO,
+            "admin.mfa.succeeded",
+            request,
+            user_id=pending.user.pk,
+            method=verification.method,
         )
-        for authenticator in totp_authenticators:
-            instance = authenticator.wrap()
-            if instance.validate_code(code):
-                return True
-
-        recovery_authenticators = Authenticator.objects.filter(
-            user=user, type=Authenticator.Type.RECOVERY_CODES
-        )
-        for authenticator in recovery_authenticators:
-            instance = authenticator.wrap()
-            if instance.validate_code(code):
-                return True
-
-        return False
+        return JsonResponse({"ok": True, "redirect": next_url})

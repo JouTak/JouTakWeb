@@ -604,7 +604,8 @@
           "enum": [
             "itmocraft",
             "joutak",
-            "minigames"
+            "minigames",
+            "contact"
           ],
           "title": "Id",
           "type": "string"

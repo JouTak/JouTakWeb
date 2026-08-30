@@ -170,15 +170,13 @@ npm --prefix frontend uninstall <package>
 ```
 
 Backend dependencies меняются через uv. Коммитьте `pyproject.toml` и
-`uv.lock`; временные requirements для image build и audit генерируются из
-lockfile и не хранятся в репозитории:
+`uv.lock`; Docker и CI устанавливают их напрямую через locked `uv sync`:
 
 ```bash
 uv add <package>
 uv add --group dev <package>
 uv add --group test <package>
 uv lock --check
-uv export --frozen --no-dev --no-hashes -o /tmp/joutak-requirements.txt
 ```
 
 ## CI

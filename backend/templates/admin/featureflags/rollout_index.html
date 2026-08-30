@@ -1,0 +1,97 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'featureflags/admin_rollout.css' %}">{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; Раскаты
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="rollout-admin">
+  <div class="object-tools rollout-toolbar">
+    <a href="{{ definition_list_url }}" class="button">Функции и значения по умолчанию</a>
+    <a href="#rollout-history" class="button">История изменений</a>
+    {% if can_add_tester %}<a href="{{ design_tester_url }}" class="button">Добавить дизайн-тестера</a>{% endif %}
+    {% if has_add_permission %}<a href="{{ rollout_add_url }}" class="addlink">Новый раскат</a>{% endif %}
+  </div>
+
+  <section class="module">
+    <h2>Активные раскаты</h2>
+    {% if active_rollouts %}
+      {% for rollout in active_rollouts %}
+      {% with rule=rollout.rule %}
+      <article class="rollout-card">
+        <header><strong>{{ rollout.feature_title }}</strong> <code>{{ rule.feature.key }}</code> · {{ rule.name }}</header>
+        <p>{{ rollout.audience }} · {{ rollout.target }} → <b>{{ rollout.value }}</b> · {{ rollout.page }}</p>
+        <p><strong>Вне аудитории:</strong> {{ rollout.others }}</p>
+        {% for warning in rollout.warnings %}<p class="errornote">{{ warning }}</p>{% endfor %}
+        {% if rollout.can_stop %}
+        <form method="post" action="{% url 'admin:featureflags_rollout_stop' rule.pk %}" class="rollout-stop-form">
+          {% csrf_token %}
+          <label for="stop-reason-{{ rule.pk }}">Причина остановки</label>
+          <input id="stop-reason-{{ rule.pk }}" name="reason" minlength="5" maxlength="100" required>
+          <button class="button" type="submit">Остановить без удаления</button>
+        </form>
+        {% elif can_stop %}
+        <p class="help">Этот runtime-неактивный раскат нельзя изменить из task-console.</p>
+        {% endif %}
+      </article>
+      {% endwith %}
+      {% endfor %}
+    {% else %}
+      <p>Активных правил нет. Для каждого флага используется его значение по умолчанию.</p>
+    {% endif %}
+  </section>
+
+  {% if draft_rollouts %}
+  <section class="module">
+    <h2>Черновики</h2>
+    {% for rollout in draft_rollouts %}
+    {% with rule=rollout.rule %}
+    <article class="rollout-card">
+      <header><strong>{{ rollout.feature_title }}</strong> <code>{{ rule.feature.key }}</code> · {{ rule.name }}</header>
+      <p>{{ rollout.audience }} · {{ rollout.target }} → <b>{{ rollout.value }}</b> · {{ rollout.page }}</p>
+      <p><strong>После запуска вне аудитории:</strong> {{ rollout.others }}</p>
+      {% for warning in rollout.warnings %}<p class="errornote">{{ warning }}</p>{% endfor %}
+      {% if rollout.can_start %}
+      <form method="post" action="{% url 'admin:featureflags_rollout_start' rule.pk %}" class="rollout-stop-form">
+        {% csrf_token %}
+        <label for="start-reason-{{ rule.pk }}">Причина запуска</label>
+        <input id="start-reason-{{ rule.pk }}" name="reason" minlength="5" maxlength="100" required>
+        <button class="button" type="submit">Запустить</button>
+      </form>
+      {% elif can_stop %}
+      <p class="help">Черновик нельзя запустить: текущая политика реестра или права оператора не разрешают эту аудиторию.</p>
+      {% endif %}
+    </article>
+    {% endwith %}
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section class="module" id="rollout-history">
+    <h2>Последние изменения</h2>
+    {% if recent_history %}
+    <div class="results"><table>
+      <thead><tr><th>Когда</th><th>Флаг</th><th>Раскат</th><th>Действие</th><th>Кто</th><th>Причина</th></tr></thead>
+      <tbody>
+      {% for item in recent_history %}
+        <tr>
+          <td>{{ item.history_date }}</td>
+          <td>{{ item.feature.key|default:"—" }}</td>
+          <td>{{ item.name }}</td>
+          <td>{{ item.get_history_type_display }}</td>
+          <td>{{ item.history_user|default:"система" }}</td>
+          <td>{{ item.history_change_reason|default:"—" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p>История пока пуста.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

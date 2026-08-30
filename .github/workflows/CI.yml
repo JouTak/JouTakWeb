@@ -180,9 +180,7 @@ jobs:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - run: uv sync --locked --python 3.12 --group dev
-      - run: |
-          uv export --frozen --no-dev --no-hashes -q -o /tmp/joutak-requirements.txt
-          uv run pip-audit --no-deps -r /tmp/joutak-requirements.txt
+      - run: uv run pip-audit --local
 
   backend_test:
     name: Backend tests

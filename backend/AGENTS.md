@@ -42,7 +42,8 @@
 - Если меняешь API contracts, обновляй frontend contract check и связанные тесты.
 - Если меняешь auth, sessions, profile, password, OAuth или account deletion, добавляй или обновляй tests в `backend/accounts/tests/`.
 - Если меняешь BFF, feature flags или observability code, обновляй тесты и местные app-level проверки в соответствующем пакете.
-- Не редактируй generated requirements вручную.
+- Не создавай и не коммить generated requirements: используй `pyproject.toml`,
+  `uv.lock` и locked `uv sync` напрямую.
 
 ## Проверки
 

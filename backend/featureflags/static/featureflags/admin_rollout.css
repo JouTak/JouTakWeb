@@ -1,0 +1,31 @@
+.rollout-admin { max-width: 960px; }
+.rollout-intro { padding: 16px; margin-bottom: 20px; }
+.rollout-intro h2 { margin-top: 0; }
+.rollout-feature-context { margin-bottom: 20px; padding: 12px 16px; }
+.rollout-feature-context h2 { margin: 0 0 8px; }
+.rollout-feature-context p { margin: 6px 0; }
+.rollout-fields .flex-container { align-items: flex-start; }
+.rollout-control { width: min(100%, 620px); }
+.rollout-control select,
+.rollout-control input[type="text"],
+.rollout-control input[type="number"],
+.rollout-control textarea { box-sizing: border-box; max-width: 100%; width: 100%; }
+.rollout-control select[multiple] { min-height: 140px; }
+.rollout-review { border-left: 4px solid var(--accent); padding: 16px; }
+.rollout-review dl div { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 5px 0; }
+.rollout-review dt { font-weight: 600; }
+.rollout-review dd { margin: 0; }
+.rollout-toolbar { display: flex; flex-wrap: wrap; gap: 8px; float: none; margin: 0 0 16px; }
+.rollout-card { border-bottom: 1px solid var(--hairline-color); padding: 14px 16px; }
+.rollout-card:last-child { border-bottom: 0; }
+.rollout-card header { font-size: 14px; }
+.rollout-stop-form { align-items: end; display: grid; gap: 8px; grid-template-columns: minmax(220px, 1fr) auto; max-width: 700px; }
+.rollout-stop-form label { grid-column: 1 / -1; }
+.rollout-admin .results { max-width: 100%; overflow-x: auto; }
+.rollout-admin .results table { table-layout: fixed; width: 100%; }
+.rollout-admin .results td,
+.rollout-admin .results th { overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .rollout-review dl div,
+  .rollout-stop-form { grid-template-columns: 1fr; }
+}

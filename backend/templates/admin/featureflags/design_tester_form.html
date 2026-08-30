@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'featureflags/admin_rollout.css' %}">{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  {% if has_view_permission %}&rsaquo; <a href="{{ rollout_index_url }}">Раскаты</a>{% endif %}
+  &rsaquo; Дизайн-тестер
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="rollout-admin">
+  <div class="module rollout-intro">
+    <h2>Доступ к новому дизайну</h2>
+    <p>Пользователь будет добавлен в единственную разрешённую группу <code>website-design-testers</code>. Флаги и правила менять не нужно.</p>
+  </div>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="errornote">{{ form.non_field_errors }}</div>{% endif %}
+    <fieldset class="module aligned">
+      {% for field in form %}
+      <div class="form-row{% if field.errors %} errors{% endif %}">{{ field.errors }}<div class="flex-container">{{ field.label_tag }}<div>{{ field }}{% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}</div></div></div>
+      {% endfor %}
+    </fieldset>
+    <div class="submit-row"><a class="button" href="{{ design_tester_return_url }}">Отмена</a><input type="submit" value="Добавить" class="default"></div>
+  </form>
+</div>
+{% endblock %}

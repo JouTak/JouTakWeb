@@ -111,5 +111,5 @@ docker compose -f docker-compose.images.yml config >/dev/null
 
 Коммитьте `frontend/package-lock.json`, когда меняются frontend dependencies.
 Коммитьте `pyproject.toml` и `uv.lock`, когда меняются backend dependencies.
-Временные requirements для image build и audit генерируются из `uv.lock` и не
-хранятся в репозитории.
+Docker и CI устанавливают backend dependencies напрямую через locked
+`uv sync`; requirements-файлы не создаются и не хранятся в репозитории.

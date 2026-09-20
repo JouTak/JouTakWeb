@@ -5,7 +5,7 @@ vi.mock("../http/client", () => ({
 }));
 
 import { BACKEND_ROOT_URL } from "../http/client";
-import { sanitizeUrl } from "../urlSafety";
+import { isSafeInternalPath, sanitizeUrl } from "../urlSafety";
 
 describe("sanitizeUrl", () => {
   it("allows backend-relative urls", () => {
@@ -32,4 +32,21 @@ describe("sanitizeUrl", () => {
     const target = `${backendOrigin}/accounts/yandex/login/?process=connect`;
     expect(sanitizeUrl(target)).toBe(target);
   });
+});
+
+describe("internal return paths", () => {
+  it.each(["/", "/account/security?tab=sessions#current", "/minigames"])(
+    "preserves %s",
+    (path) => expect(isSafeInternalPath(path)).toBe(true),
+  );
+
+  it.each([
+    null,
+    "",
+    "https://evil.example",
+    "//evil.example",
+    "/\\evil.example",
+    "/\n/evil.example",
+    "/\t/evil.example",
+  ])("rejects %s", (path) => expect(isSafeInternalPath(path)).toBe(false));
 });

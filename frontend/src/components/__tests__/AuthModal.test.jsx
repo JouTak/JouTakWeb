@@ -1,11 +1,20 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { tokenStore } from "../../services/auth/tokenStore";
 import AuthModal from "../AuthModal.jsx";
 
 const navigate = vi.fn();
 const addToast = vi.fn();
+
+afterEach(cleanup);
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -65,6 +74,7 @@ vi.mock("../../services/api", () => ({
   doSignupAndLogin: vi.fn(),
   authenticateMfaCode: vi.fn(),
   authenticateWithWebAuthnCredential: vi.fn(),
+  announceAuthenticatedSession: vi.fn(),
   finalizeSessionAuthentication: vi.fn(),
   getMfaConfig: vi.fn().mockResolvedValue({
     supported_types: ["totp", "webauthn", "recovery_codes"],
@@ -75,11 +85,17 @@ vi.mock("../../services/api", () => ({
   requestPasswordReset: vi.fn(),
 }));
 
-const { authenticateMfaCode, doLogin, finalizeSessionAuthentication, me } =
-  await import("../../services/api");
+const {
+  announceAuthenticatedSession,
+  authenticateMfaCode,
+  doLogin,
+  finalizeSessionAuthentication,
+  me,
+} = await import("../../services/api");
 
 describe("AuthModal MFA flow", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     vi.clearAllMocks();
     navigate.mockReset();
     addToast.mockReset();
@@ -128,8 +144,96 @@ describe("AuthModal MFA flow", () => {
       expect(authenticateMfaCode).toHaveBeenCalledWith("314159");
     });
     expect(finalizeSessionAuthentication).toHaveBeenCalled();
+    expect(me).toHaveBeenCalled();
+    expect(announceAuthenticatedSession).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/account/security", {
       replace: true,
     });
+  });
+});
+
+async function submitPasswordLogin() {
+  fireEvent.change(screen.getByLabelText("Email или старый логин"), {
+    target: { value: "player@example.com" },
+  });
+  fireEvent.change(screen.getByLabelText("Пароль"), {
+    target: { value: "StrongPass123!" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Войти" }));
+}
+
+describe("AuthModal completion ordering", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.clearAllMocks();
+    doLogin.mockResolvedValue({ status: "authenticated" });
+    finalizeSessionAuthentication.mockResolvedValue({});
+    me.mockResolvedValue({
+      account_active: true,
+      personalization_ui_enabled: false,
+    });
+  });
+
+  it("waits for the profile before announcing auth and navigating", async () => {
+    let resolveProfile;
+    me.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveProfile = resolve;
+      }),
+    );
+    render(
+      <MemoryRouter>
+        <AuthModal open successRedirectTo="/account/security" />
+      </MemoryRouter>,
+    );
+    await submitPasswordLogin();
+    await waitFor(() => expect(me).toHaveBeenCalledTimes(1));
+    expect(finalizeSessionAuthentication).toHaveBeenCalledTimes(1);
+    expect(announceAuthenticatedSession).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    resolveProfile({ account_active: true, personalization_ui_enabled: false });
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/account/security", {
+        replace: true,
+      }),
+    );
+    expect(announceAuthenticatedSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not load the profile or announce login after a failed exchange", async () => {
+    finalizeSessionAuthentication.mockRejectedValueOnce(
+      new Error("Exchange unavailable"),
+    );
+    render(
+      <MemoryRouter>
+        <AuthModal open successRedirectTo="/account/security" />
+      </MemoryRouter>,
+    );
+    await submitPasswordLogin();
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: "danger" }),
+      ),
+    );
+    expect(me).not.toHaveBeenCalled();
+    expect(announceAuthenticatedSession).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("does not mark an unfinished MFA session complete when the modal closes", async () => {
+    tokenStore.set({ session_token: "pending", pending_mfa: true });
+    doLogin.mockResolvedValueOnce({ status: "pending_mfa", types: ["totp"] });
+    const onClose = vi.fn();
+    render(
+      <MemoryRouter>
+        <AuthModal open onClose={onClose} />
+      </MemoryRouter>,
+    );
+    await submitPasswordLogin();
+    await screen.findByText("Подтверждение входа");
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(tokenStore.get().pending_mfa).toBe(true);
+    expect(announceAuthenticatedSession).not.toHaveBeenCalled();
   });
 });

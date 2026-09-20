@@ -89,6 +89,7 @@ class EventItem(ContractModel):
     image: MediaRef
     starts_at: datetime
     action: ActionRef
+    action_label: str = "Регистрация"
 
     @field_validator("starts_at")
     @classmethod
@@ -102,6 +103,28 @@ class EventsSection(ContractModel):
     type: Literal["events"]
     title: str
     items: list[EventItem]
+
+
+class ProductFact(ContractModel):
+    id: str
+    label: str
+    value: str
+
+
+class ProductActionItem(ContractModel):
+    id: str
+    label: str
+    action: ActionRef
+    emphasis: Literal["primary", "secondary", "tertiary"] = "secondary"
+
+
+class ProductActionsSection(ContractModel):
+    type: Literal["actions"]
+    eyebrow: str | None = None
+    title: str
+    description: str
+    facts: list[ProductFact] = Field(default_factory=list)
+    items: list[ProductActionItem]
 
 
 class GalleryItem(ContractModel):
@@ -133,6 +156,7 @@ Section = Annotated[
     HeroSection
     | ProjectsSection
     | EventsSection
+    | ProductActionsSection
     | GallerySection
     | FAQSection,
     Field(discriminator="type"),

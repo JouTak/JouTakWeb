@@ -229,7 +229,13 @@ export async function sessionDelete(url, params, options = {}) {
 export async function allauthAppRequest(
   method,
   url,
-  { data = null, headers = {}, includeSession = true, params } = {},
+  {
+    data = null,
+    headers = {},
+    includeSession = true,
+    emitSession = true,
+    params,
+  } = {},
 ) {
   try {
     const suffix = String(url || "").startsWith("/")
@@ -251,14 +257,14 @@ export async function allauthAppRequest(
 
     const sessionToken = extractSessionToken(response);
     if (sessionToken) {
-      setSessionToken(sessionToken, { emit: true });
+      setSessionToken(sessionToken, { emit: emitSession });
     }
 
     return response;
   } catch (error) {
     const sessionToken = extractSessionToken(error?.response);
     if (sessionToken) {
-      setSessionToken(sessionToken, { emit: true });
+      setSessionToken(sessionToken, { emit: emitSession });
     }
     if (isRevokedSessionError(error)) {
       performHardLogout(HARD_LOGOUT_REASONS.SESSION_UNAUTHORIZED);

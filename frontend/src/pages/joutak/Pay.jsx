@@ -1,43 +1,103 @@
 import "./pay.css";
 
-import { Link } from "react-router-dom";
+import { Button, Loader } from "@gravity-ui/uikit";
+import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import {
+  PageActions,
+  PageNotice,
+  PagePanel,
+  PageShell,
+} from "../../components/ui/PageShell.jsx";
+import { useThemePreference } from "../../theme/themeContext.js";
+
+const PAYMENT_FORM_URL = "https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b";
 
 export default function Pay() {
+  const navigate = useNavigate();
+  const { theme } = useThemePreference();
+  const [loadedFrameUrl, setLoadedFrameUrl] = useState("");
+  const isFirstFrameLoad = useRef(true);
+  const iframeUrl = useMemo(
+    () => `${PAYMENT_FORM_URL}?iframe=1&theme=${theme}`,
+    [theme],
+  );
+  const frameReady = loadedFrameUrl === iframeUrl;
+
+  function handleFrameLoad() {
+    setLoadedFrameUrl(iframeUrl);
+    if (isFirstFrameLoad.current) {
+      isFirstFrameLoad.current = false;
+      requestAnimationFrame(() =>
+        window.scrollTo({ top: 0, behavior: "auto" }),
+      );
+    }
+  }
+
   return (
-    <section className="text-center mb-4">
-      <h1 className="mt-4 display-5 fw-bold">Оплата проходочки</h1>
-      <p className="mt-4 fs-4 lh-xs mx-auto">
-        Теперь оплатить доступ к&nbsp;JouTak можно на&nbsp;этой странице!
-      </p>
-      <Link className="btn btn-primary btn-lg" to="/joutak/">
-        О сервере
-      </Link>
+    <PageShell
+      eyebrow="JouTak SMP"
+      title="Оплата доступа"
+      description="JouTak существует на взносы игроков: деньги идут на хостинг и поддержку сервера, а не на игровые преимущества."
+    >
+      <PagePanel className="pay-intro">
+        <div>
+          <h2>Как устроен взнос</h2>
+          <p>
+            Можно выбрать любую сумму не ниже минимальной. Чем устойчивее общий
+            ежемесячный сбор, тем надёжнее работает сервер. Дополнительная
+            оплата не даёт привилегий и не влияет на игровой баланс.
+          </p>
+        </div>
+        <PageActions>
+          <Button view="outlined" size="l" onClick={() => navigate("/joutak")}>
+            Вернуться к серверу
+          </Button>
+          <a
+            className="pay-external-link"
+            href={PAYMENT_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Открыть форму отдельно ↗
+          </a>
+        </PageActions>
+      </PagePanel>
 
-      <p className="mt-4 col-md-9 fs-4 lh-xs mx-auto">
-        Джоутек спонсируют только его&nbsp;игроки.
-        <br />
-        Каждый месяц мы&nbsp;скидываемся на&nbsp;хостинг&nbsp;— никто
-        на&nbsp;этом ничего не&nbsp;зарабатывает, это&nbsp;способ существования
-        сервера.
-      </p>
+      <PagePanel className="pay-form-panel">
+        <div className="pay-form-heading">
+          <div>
+            <h2>Форма оплаты</h2>
+            <p>
+              Форма откроется ниже. Если браузер блокирует встроенный контент,
+              используй ссылку «Открыть форму отдельно».
+            </p>
+          </div>
+          <PageNotice tone="info">
+            Платёж оформляется на защищённой странице Яндекс Форм.
+          </PageNotice>
+        </div>
 
-      <p className="mt-2 col-md-9 fs-4 lh-xs mx-auto">
-        Всё работает по&nbsp;принципам донейшена: вы&nbsp;оплачиваете любую
-        сумму, но&nbsp;не&nbsp;меньше минимальной. Чем больше
-        (в&nbsp;перерасчёте на&nbsp;месяц) присылают игроки, тем&nbsp;лучше себя
-        чувствует сервер. За&nbsp;дополнительную оплату игроки не&nbsp;получают
-        привилегий.
-      </p>
-
-      <iframe
-        className="pay"
-        src="https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b?iframe=1&theme=dark"
-        name="ya-form-6515e3dcd04688fca3cc271b"
-        title="Форма оплаты JouTak"
-        loading="lazy"
-        referrerPolicy="strict-origin-when-cross-origin"
-        sandbox="allow-forms allow-popups allow-same-origin allow-scripts"
-      />
-    </section>
+        <div className="pay-frame-shell" aria-busy={!frameReady}>
+          {!frameReady && (
+            <div className="pay-frame-loading" aria-live="polite">
+              <Loader size="l" />
+              <span>Загружаем защищённую форму…</span>
+            </div>
+          )}
+          <iframe
+            className="pay"
+            src={iframeUrl}
+            name="ya-form-6515e3dcd04688fca3cc271b"
+            title="Форма оплаты JouTak"
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            sandbox="allow-forms allow-popups allow-same-origin allow-scripts"
+            onLoad={handleFrameLoad}
+          />
+        </div>
+      </PagePanel>
+    </PageShell>
   );
 }

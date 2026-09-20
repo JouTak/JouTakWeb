@@ -17,6 +17,8 @@
   text-shadow: 5px 5px 0 var(--site-accent-shadow);
   font-size: 64px;
   font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1024px) {

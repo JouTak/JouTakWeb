@@ -17,6 +17,8 @@ const defaultNavigationItems = [
 
 const defaultContactItems = [
   { label: "Контакты", href: "/contact" },
+  { label: "Политика конфиденциальности", href: "/privacy-policy" },
+  { label: "Условия использования", href: "/terms-of-use" },
   { label: "Наша команда", designPlaceholder: true },
   { label: "Документы", designPlaceholder: true },
 ];
@@ -115,7 +117,7 @@ const CustomFooter = ({
               })}
             </div>
 
-            <a href="/joutak" className={styles.copyright}>
+            <a href="/" className={styles.copyright}>
               {copyrightText}
             </a>
           </div>

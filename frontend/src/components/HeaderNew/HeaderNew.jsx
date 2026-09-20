@@ -7,6 +7,7 @@ import {
   hasStoredAuth,
   logout,
   me,
+  readStoredTokens,
 } from "../../services/api";
 import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
@@ -33,7 +34,7 @@ function ProjectSelect() {
       { value: "jou_tak", content: "JouTak" },
       { value: "mini_games", content: "miniGAMES" },
       { value: "legacy", content: "Legacy" },
-      { value: "modex", content: "Modex" },
+      { value: "modex", content: "Modex", disabled: true },
     ],
     [],
   );
@@ -84,6 +85,11 @@ function ProjectSelect() {
             type="button"
             className={styles.serverOption}
             tabIndex={isOpen ? 0 : -1}
+            disabled={option.disabled}
+            aria-label={
+              option.disabled ? `${option.content} — скоро` : option.content
+            }
+            title={option.disabled ? "Скоро" : undefined}
             onClick={() => onSelectServer(option.value)}
           >
             {option.content}
@@ -105,6 +111,11 @@ export default function HeaderNew() {
     useState(false);
 
   const loadProfileIfTokens = useCallback(async () => {
+    if (readStoredTokens()?.pending_mfa) {
+      setProfile(null);
+      setLoadingProfile(false);
+      return;
+    }
     if (!hasStoredAuth()) {
       setProfile(null);
       return;
@@ -230,11 +241,23 @@ export default function HeaderNew() {
               </button>
 
               <div className={styles.rightNavGroup}>
-                <button type="button" className={styles.navButton}>
+                <button
+                  type="button"
+                  className={styles.navButton}
+                  disabled
+                  aria-label="Календарь — скоро"
+                  title="Скоро"
+                >
                   Календарь
                 </button>
 
-                <button type="button" className={styles.navButton}>
+                <button
+                  type="button"
+                  className={styles.navButton}
+                  disabled
+                  aria-label="Новости — скоро"
+                  title="Скоро"
+                >
                   Новости
                 </button>
               </div>

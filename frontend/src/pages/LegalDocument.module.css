@@ -1,5 +1,9 @@
+.page {
+  overflow: clip;
+}
+
 .content {
-  max-width: 960px;
+  max-width: 1200px;
 }
 
 .page h1 {
@@ -17,14 +21,14 @@
   flex-wrap: wrap;
   gap: 20px 40px;
   margin: 0;
-  color: #ebf7ff;
+  color: var(--g-color-text-primary);
   font-size: 14px;
   line-height: 1.5;
 }
 
 .metadata dt {
   margin-bottom: 4px;
-  color: #aebbc7;
+  color: var(--g-color-text-secondary);
   font-weight: 400;
 }
 
@@ -39,39 +43,22 @@
   line-height: 1.7;
 }
 
-.caption {
-  margin: 0;
-  color: var(--g-color-text-secondary);
-  font-size: 14px;
-}
-
-.contents {
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--g-color-line-generic);
 }
 
-.contents ol {
-  margin: 16px 0 0;
-  padding-left: 24px;
+.version {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
 }
 
-.contents a {
-  color: var(--g-color-text-link);
-  text-underline-offset: 4px;
-}
-
-.panel h2 {
-  margin: 0 0 16px;
-  font-size: clamp(20px, 2vw, 26px);
-  font-weight: 500;
-  line-height: 1.4;
-  scroll-margin-top: 24px;
-}
-
-.section p {
-  margin: 0 0 16px;
-}
-
-.section p:last-child {
-  margin-bottom: 0;
+.version label {
+  color: var(--g-color-text-secondary);
 }

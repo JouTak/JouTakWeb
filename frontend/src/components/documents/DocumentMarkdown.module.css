@@ -1,0 +1,145 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 40px;
+  align-items: start;
+}
+
+.contents {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 24px;
+  padding-left: 20px;
+  border-left: 1px solid var(--g-color-line-generic);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.contents h2 {
+  margin: 0 0 16px;
+}
+
+.contents ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.contents li + li {
+  margin-top: 10px;
+}
+
+.contents .nested {
+  padding-left: 16px;
+}
+
+.body {
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+  overflow-wrap: anywhere;
+}
+
+.body .heading {
+  display: block;
+  margin: 32px 0 16px;
+  font-family: inherit;
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 500;
+  line-height: 1.4;
+  scroll-margin-top: 24px;
+}
+
+.body .heading:first-child {
+  margin-top: 0;
+}
+
+.body h3.heading {
+  font-size: 20px;
+}
+
+.body .paragraph {
+  display: block;
+  margin: 0 0 20px;
+  font: inherit;
+}
+
+.body ul,
+.body ol {
+  padding-left: 24px;
+  margin: 0 0 20px;
+}
+
+.body li + li {
+  margin-top: 6px;
+}
+
+.body blockquote {
+  margin: 24px 0;
+  padding: 16px 20px;
+  border-left: 4px solid var(--g-color-line-brand);
+  background: var(--g-color-base-generic);
+}
+
+.body blockquote .paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.body pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 16px;
+  background: var(--g-color-base-generic);
+}
+
+.body code {
+  font-family: var(--g-font-family-monospace);
+}
+
+.body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 24px 0;
+}
+
+.table-scroll table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+}
+
+.table-scroll th,
+.table-scroll td {
+  border: 1px solid var(--g-color-line-generic);
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.table-scroll th {
+  background: var(--g-color-base-generic);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .contents {
+    grid-column: 1;
+    position: static;
+    padding: 0 0 24px;
+    border-left: 0;
+    border-bottom: 1px solid var(--g-color-line-generic);
+  }
+
+  .body {
+    grid-row: 2;
+  }
+}

@@ -8,13 +8,7 @@ import {
   PagePanel,
   PageShell,
 } from "../components/ui/PageShell.jsx";
-
-function safeInternalPath(path) {
-  if (typeof path !== "string") return "/";
-  if (!path.startsWith("/")) return "/";
-  if (path.startsWith("//")) return "/";
-  return path;
-}
+import { isSafeInternalPath } from "../services/urlSafety";
 
 const reasonText = {
   auth_required:
@@ -35,7 +29,8 @@ export default function SessionExpired() {
 
   const { nextPath, reason } = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    const next = safeInternalPath(params.get("next") || "/");
+    const requestedPath = params.get("next");
+    const next = isSafeInternalPath(requestedPath) ? requestedPath : "/";
     const r = params.get("reason") || "SESSION_UNAUTHORIZED";
     return {
       nextPath: next,

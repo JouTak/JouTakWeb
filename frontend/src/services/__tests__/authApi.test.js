@@ -3,8 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   announceAuthenticatedSession,
   doLogin,
+  doSignupAndLogin,
   finalizeSessionAuthentication,
 } from "../api/authApi";
+import {
+  authenticateMfaCode,
+  authenticateWithWebAuthnCredential,
+  getWebAuthnRequestOptions,
+} from "../api/mfaApi";
 import { AUTH_STATE_EVENT, tokenStore } from "../auth/tokenStore";
 import { bareClient } from "../http/client";
 
@@ -84,4 +90,94 @@ describe("authApi MFA login", () => {
     expect(authStateListener).toHaveBeenCalledTimes(1);
     window.removeEventListener(AUTH_STATE_EVENT, authStateListener);
   });
+});
+
+describe("session bootstrap failures", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("keeps MFA pending if the JWT exchange fails", async () => {
+    tokenStore.set({ session_token: "mfa-session", pending_mfa: true });
+    const request = vi
+      .spyOn(bareClient, "request")
+      .mockRejectedValue(httpError(503));
+    await expect(finalizeSessionAuthentication()).rejects.toThrow("HTTP 503");
+    expect(tokenStore.get().pending_mfa).toBe(true);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an exchange without an access token", async () => {
+    vi.spyOn(bareClient, "request").mockResolvedValue({ data: {} });
+    await expect(finalizeSessionAuthentication()).rejects.toThrow(
+      "Access token is missing",
+    );
+  });
+});
+
+describe("signup and passkey bootstrap", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("exchanges signup once without publishing auth before the profile loads", async () => {
+    const listener = vi.spyOn(window, "dispatchEvent");
+    const request = vi
+      .spyOn(bareClient, "request")
+      .mockResolvedValueOnce({ data: { meta: { session_token: "signup" } } })
+      .mockResolvedValueOnce({ data: { access: "jwt" } });
+    await doSignupAndLogin({
+      email: "new@example.com",
+      password: "StrongPass123!",
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(tokenStore.get()).toEqual({
+      session_token: "signup",
+      access: "jwt",
+    });
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("propagates signup exchange failures", async () => {
+    vi.spyOn(bareClient, "request")
+      .mockResolvedValueOnce({ data: { meta: { session_token: "signup" } } })
+      .mockRejectedValueOnce(httpError(503));
+    await expect(
+      doSignupAndLogin({
+        email: "new@example.com",
+        password: "StrongPass123!",
+      }),
+    ).rejects.toThrow("HTTP 503");
+  });
+
+  it("does not announce the anonymous session returned by passkey options", async () => {
+    const listener = vi.spyOn(window, "dispatchEvent");
+    vi.spyOn(bareClient, "request").mockResolvedValue({
+      data: {
+        meta: { session_token: "anonymous-passkey" },
+        data: { request_options: {} },
+      },
+    });
+    await getWebAuthnRequestOptions("login");
+    expect(tokenStore.get().session_token).toBe("anonymous-passkey");
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it.each(["code", "passkey"])(
+    "does not announce %s challenge completion before JWT bootstrap",
+    async (method) => {
+      tokenStore.set({ session_token: "pending", pending_mfa: true });
+      const listener = vi.spyOn(window, "dispatchEvent");
+      vi.spyOn(bareClient, "request").mockResolvedValue({
+        data: { meta: { session_token: "completed" } },
+      });
+      if (method === "code") await authenticateMfaCode("123456");
+      else await authenticateWithWebAuthnCredential("authenticate", {});
+      expect(tokenStore.get().session_token).toBe("completed");
+      expect(tokenStore.get().pending_mfa).toBe(true);
+      expect(listener).not.toHaveBeenCalled();
+    },
+  );
 });

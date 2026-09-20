@@ -6,10 +6,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
     VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH
-
-RUN python -m venv "$VIRTUAL_ENV"
 
 RUN pip install --no-cache-dir uv
 
@@ -18,8 +17,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv export --frozen --no-dev -q -o /tmp/req.lock.txt \
-    && uv pip install --python "$VIRTUAL_ENV/bin/python" -r /tmp/req.lock.txt
+    uv sync --locked --python 3.12 --no-dev --no-install-project
 
 
 FROM python:3.12-slim@sha256:57cd7c3a7a273101a6485ba99423ee568157882804b1124b4dd04266317710de AS runtime

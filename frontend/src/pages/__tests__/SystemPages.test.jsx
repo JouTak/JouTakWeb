@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
-import Contact from "../Contact.jsx";
 import NotFound from "../NotFound.jsx";
 import SessionExpired from "../SessionExpired.jsx";
 
@@ -54,19 +53,5 @@ describe("V2 system pages", () => {
     expect(
       screen.getByText("/login?next=%2Faccount%2Fsecurity"),
     ).toBeInTheDocument();
-  });
-
-  it("renders community destinations as external links", () => {
-    render(
-      <MemoryRouter>
-        <Contact />
-      </MemoryRouter>,
-    );
-
-    for (const name of ["Telegram", "VK", "Discord"]) {
-      const link = screen.getByRole("link", { name: new RegExp(name, "i") });
-      expect(link).toHaveAttribute("target", "_blank");
-      expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    }
   });
 });

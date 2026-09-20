@@ -18,101 +18,160 @@ JouTakWeb - web-приложение для серверов комьюнити 
 backend/                  Django project, apps, tests, Dockerfile
 backend/accounts/         Auth, account, OAuth and session APIs
 backend/core/             Shared backend models and infrastructure
-backend/requirements/     Generated uv exports for container installs
 frontend/                 Vite React application
 frontend/src/services/    Frontend HTTP, auth/session and API clients
 docs/                     Contributor, architecture and security docs
 .github/workflows/        CI and release workflows
 compose.yaml              Default local Compose entry point
 docker-compose*.yml       Image-based Compose entry points and overrides
-stack.yml                 Docker Swarm production stack template
+docker-compose.stack.yml  Docker Swarm production stack template
 ```
 
-## Для начала работы вам потребуется
+## Локальная разработка
 
-- Git.
-- Node.js `>=20.19`; для локальной разработки предпочтительно Node 22.
-- npm, поставляется вместе с Node.
-- Python 3.12.
-- [uv](https://docs.astral.sh/uv/) для Python dependency management.
-- Docker и Docker Compose для локального full stack.
+### Full stack в Docker
 
-### Запуск Frontend
+Для основного dev-flow нужны только Git, Docker и Docker Compose.
+На чистом checkout не нужно создавать `.env` или знать параметры
+backend:
 
 ```bash
-cd frontend
-npm ci
-npm run dev
+docker compose up --build
 ```
 
-Dev server выведет локальный URL, обычно `http://localhost:5173`.
+Первый запуск соберёт образы, поднимет PostgreSQL, применит миграции,
+синхронизирует feature registry и запустит весь стек. После запуска доступны:
 
-Backend не является обязательной зависимостью для `npm run dev`: интерфейс
-должен открываться и без поднятого API. При этом auth/BFF-запросы будут
-ошибаться, что ожидаемо для standalone frontend development.
+- frontend через proxy: `http://localhost`;
+- Vite напрямую: `http://localhost:5173`;
+- API/BFF: `http://api.localhost`;
+- Django admin: `http://admin.localhost/admin/`;
+- backend health: `http://api.localhost/health/`.
+
+`compose.yaml` — development-стек: Django работает с `DEBUG=True` и
+autoreload, frontend — через Vite HMR. Исходники подключены в контейнеры,
+поэтому после изменения Python, JavaScript, JSX и CSS пересборка образа
+не нужна. Пересобирайте образ только после изменения dependencies или
+Dockerfile.
+
+Полезные команды:
+
+```bash
+# Поднять весь стек в background
+docker compose up -d --build
+
+# Статус и логи
+docker compose ps
+docker compose logs -f backend frontend
+
+# Django shell в dev-container
+docker compose exec backend python manage.py shell
+
+# Только backend с PostgreSQL (db поднимется автоматически)
+docker compose up --build backend
+
+# Frontend/HMR вместе с его backend и PostgreSQL dependencies
+docker compose up --build frontend
+
+# Остановить стек, сохранив базу
+docker compose down
+```
+
+`docker compose down -v` удалит локальную PostgreSQL и загруженные
+media. Используйте эту команду только для намеренного полного reset.
+
+Рекомендуемые сценарии по ролям:
+
+- frontend-разработчик может поднять готовые backend и PostgreSQL командой
+  `docker compose up -d --build backend`, а Vite запустить нативно через
+  `npm run dev`; параметры backend и env-файл для этого не нужны;
+- backend-разработчик может выполнить `docker compose up --build frontend`:
+  Compose автоматически поднимет PostgreSQL и backend dependency, после чего
+  интеграцию можно проверять на `http://localhost:5173`;
+- для сквозной проверки с локальным proxy и maintenance worker используйте
+  полный `docker compose up --build`.
+
+### Frontend без Docker
+
+Нужны Node.js `24.18.0` и npm `11.16.0`. Версия Node зафиксирована в
+`.node-version`, а npm — в `frontend/package.json`.
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run dev
+```
+
+Frontend откроется на `http://localhost:5173` и по умолчанию будет
+делать same-origin запросы. Vite сам проксирует `/api`, `/bff`, `/accounts`,
+`/media` и `/health` на backend `http://127.0.0.1:8000`, поэтому задавать
+frontend API URL не нужно. Без backend интерфейс откроется, но auth/BFF-запросы
+будут ожидаемо завершаться ошибкой.
 
 Проверки frontend:
 
 ```bash
-npm --prefix frontend run lint
-npm --prefix frontend run format
-npm --prefix frontend run lint:styles
-npm --prefix frontend run test:run
-npm --prefix frontend run build
 npm --prefix frontend run check
 ```
 
-### Запуск Backend
+### Backend без Docker
+
+Нужны Python 3.12 и [uv](https://docs.astral.sh/uv/). Без `DATABASE_URL`
+development settings используют SQLite, поэтому PostgreSQL для такого
+запуска не нужен.
 
 ```bash
-uv sync --python 3.12 --group dev --group test
+uv sync --locked --python 3.12 --group dev --group test
 uv run python backend/manage.py migrate --settings backend.settings.dev
-uv run python backend/manage.py runserver 8000 --settings backend.settings.dev
+uv run python backend/manage.py sync_feature_registry --settings backend.settings.dev
+uv run python backend/manage.py runserver 127.0.0.1:8000 --settings backend.settings.dev
 ```
+
+Адреса для прямого запуска: API — `http://api.localhost:8000`, Django admin —
+`http://admin.localhost:8000/admin/`, health — `http://127.0.0.1:8000/health/`.
 
 Проверки backend:
 
 ```bash
 uv run ruff check .
-uv run bandit -r backend/accounts backend/core backend/backend -x "*/tests/*,*/migrations/*" --skip B104,B105
 PYTHONPATH=backend DJANGO_SETTINGS_MODULE=backend.settings.dev uv run python scripts/check_frontend_openapi_contracts.py
-uv export --frozen --no-dev --no-hashes -q -o /tmp/joutak-requirements.txt
-uv run pip-audit --no-deps -r /tmp/joutak-requirements.txt
 uv run pytest backend -q
 ```
 
-### Локальный Docker Stack
-
-Создайте локальный env-файл из очищенного примера и замените placeholder values:
-
-`compose.yaml` теперь является дефолтным локальным Compose-файлом, поэтому
-достаточно короткой команды:
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-По умолчанию локальный стек остаётся HTTP-only, чтобы `docker compose up
---build` не упирался в TLS-redirect loop. Для `Passkeys` локально включён
-`MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN`, а если нужен именно HTTPS-сценарий
-для ручной проверки, поднимайте production-style stack или свой TLS
-override.
-
-Полезные команды для сверки конфигов:
-
-```bash
-docker compose config >/dev/null
-docker compose -f docker-compose.yml config >/dev/null
-docker compose -f docker-compose.images.yml config >/dev/null
-```
+Если нужен весь поток передачи данных между frontend и backend, не собирайте
+части стека вручную: используйте `docker compose up --build`.
 
 ## Environment Files
 
-- `.env.example` содержит только очищенные placeholders.
+- Для `compose.yaml` env-файл не нужен. Все defaults предназначены только
+  для локальной development-среды. Необязательные overrides имеют префикс
+  `DEV_`, например `DEV_HTTP_PORT`, `DEV_BACKEND_PORT`,
+  `DEV_FRONTEND_PORT` и `DEV_CHOKIDAR_USEPOLLING`.
+- При смене опубликованных портов согласуйте `DEV_FRONTEND_BASE_URL` и
+  `DEV_DJANGO_CSRF_TRUSTED_ORIGINS` с адресом, через который открываете
+  frontend.
+- `DEV_HTTP_PORT` не расширяет WebAuthn trust boundary автоматически. Для
+  нестандартного proxy-порта явно перечислите browser origins в
+  `DEV_WEBAUTHN_ACCOUNT_ORIGINS`, `DEV_WEBAUTHN_ADMIN_ORIGINS` и их точное
+  объединение в `DEV_WEBAUTHN_ALLOWED_ORIGINS`. Например, для порта `8080`:
+
+  ```bash
+  DEV_HTTP_PORT=8080 \
+  DEV_WEBAUTHN_ACCOUNT_ORIGINS=http://localhost,http://localhost:5173,http://localhost:8080,http://joutak.localhost,http://joutak.localhost:8080 \
+  DEV_WEBAUTHN_ADMIN_ORIGINS=http://admin.localhost,http://admin.localhost:8000,http://admin.localhost:8080 \
+  DEV_WEBAUTHN_ALLOWED_ORIGINS=http://localhost,http://localhost:5173,http://localhost:8080,http://joutak.localhost,http://joutak.localhost:8080,http://admin.localhost,http://admin.localhost:8000,http://admin.localhost:8080 \
+  docker compose up --build
+  ```
+
+  Proxy сохраняет browser `host:port`; непрописанный origin fail-closed и не
+  получает доступ к admin/WebAuthn flow.
+
+- `.env.example` — очищенный production-oriented template. Не копируйте его
+  в `.env` для обычного локального запуска. Production-переменные намеренно
+  не переопределяют безопасные defaults из `compose.yaml`.
 - `.env`, `.env.development`, `.env.production` и secret variants остаются
   локальными.
-- `stack.yml` ожидает production secrets через Docker secrets и локальный
+- `docker-compose.stack.yml` ожидает production secrets через Docker secrets и
+  локальный
   `.env.production`; этот файл нельзя коммитить.
 - Optional `*_FILE` variables имеют приоритет там, где поддерживаются.
 
@@ -126,16 +185,14 @@ npm --prefix frontend install <package>
 npm --prefix frontend uninstall <package>
 ```
 
-Backend dependencies меняются через uv. Generated requirements руками не
-редактируем:
+Backend dependencies меняются через uv. Коммитьте `pyproject.toml` и
+`uv.lock`; Docker и CI устанавливают их напрямую через locked `uv sync`:
 
 ```bash
 uv add <package>
 uv add --group dev <package>
 uv add --group test <package>
-uv export --frozen --no-dev --no-hashes -o backend/requirements/prod.txt
-uv export --frozen --group dev --group test --no-hashes -o backend/requirements/dev.txt
-uv export --frozen --no-default-groups --group test --no-hashes -o backend/requirements/test.txt
+uv lock --check
 ```
 
 ## CI

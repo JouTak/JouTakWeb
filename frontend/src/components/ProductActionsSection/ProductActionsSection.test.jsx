@@ -39,6 +39,9 @@ describe("ProductActionsSection", () => {
 
     expect(screen.getByText("mc.joutak.ru")).toBeInTheDocument();
     expect(
+      screen.getByRole("region", { name: "Подключиться к серверу" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("link", { name: /Зарегистрироваться/ }),
     ).toHaveAttribute("target", "_blank");
     expect(

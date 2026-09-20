@@ -63,7 +63,9 @@ export async function getWebAuthnRequestOptions(usage) {
       : usage === "reauthenticate"
         ? "/auth/webauthn/reauthenticate"
         : "/auth/webauthn/authenticate";
-  const { data } = await allauthAppRequest("get", endpoint);
+  const { data } = await allauthAppRequest("get", endpoint, {
+    emitSession: usage === "reauthenticate",
+  });
   return data?.data?.request_options || data?.data || data;
 }
 

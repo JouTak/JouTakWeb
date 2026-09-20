@@ -7,13 +7,14 @@ import styles from "./gallery.module.css";
 
 function mediaDescriptor(media) {
   if (typeof media === "string") {
-    return { src: media, sources: [] };
+    return { src: media.trim() === "#" ? "" : media.trim(), sources: [] };
   }
   return getMediaDescriptor(media);
 }
 
 function GalleryMedia({ media, alt, className }) {
   const descriptor = mediaDescriptor(media);
+  const [failedSource, setFailedSource] = useState(null);
 
   if (descriptor?.designPlaceholder) {
     return (
@@ -28,12 +29,29 @@ function GalleryMedia({ media, alt, className }) {
     );
   }
 
-  if (!descriptor?.src) {
-    return null;
+  if (!descriptor?.src || failedSource === descriptor.src) {
+    return (
+      <div className={`${className} ${styles.designPlaceholder}`} role="status">
+        <span>Фото недоступно</span>
+        <small>Попробуй выбрать другой кадр.</small>
+      </div>
+    );
   }
 
   return (
-    <img className={className} src={descriptor.src} alt={alt} loading="lazy" />
+    <img
+      className={className}
+      src={descriptor.src}
+      srcSet={
+        descriptor.sources
+          .map((source) => `${source.src} ${source.width}w`)
+          .join(", ") || undefined
+      }
+      sizes="(max-width: 1440px) 100vw, 786px"
+      alt={media?.alt || alt}
+      loading="lazy"
+      onError={() => setFailedSource(descriptor.src)}
+    />
   );
 }
 
@@ -64,7 +82,15 @@ export default function GallerySection({
     );
   }
 
-  const totalPhotos = activeGallery.photos.length;
+  const photos = activeGallery.photos.filter((photo) => {
+    const descriptor = mediaDescriptor(photo);
+    return (
+      descriptor?.designPlaceholder ||
+      (descriptor?.src && descriptor.src !== "#")
+    );
+  });
+  const totalPhotos = photos.length;
+  const photoIndex = Math.min(activePhotoIndex, Math.max(0, totalPhotos - 1));
 
   const handleProjectChange = (nextIndex) => {
     setActiveIndex(nextIndex);
@@ -76,9 +102,7 @@ export default function GallerySection({
       return;
     }
 
-    setActivePhotoIndex(
-      (prev) => (prev + direction + totalPhotos) % totalPhotos,
-    );
+    setActivePhotoIndex((photoIndex + direction + totalPhotos) % totalPhotos);
   };
 
   return (
@@ -110,8 +134,8 @@ export default function GallerySection({
               {totalPhotos ? (
                 <GalleryMedia
                   className={styles.photoViewerImage}
-                  media={activeGallery.photos[activePhotoIndex]}
-                  alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
+                  media={photos[photoIndex]}
+                  alt={`${activeGallery.label} screenshot ${photoIndex + 1}`}
                 />
               ) : (
                 <p role="status">Для этого раздела пока нет фотографий.</p>
@@ -132,7 +156,7 @@ export default function GallerySection({
                 />
               </button>
               <span className={styles.paginationCounter}>
-                {totalPhotos ? activePhotoIndex + 1 : 0}/{totalPhotos}
+                {totalPhotos ? photoIndex + 1 : 0}/{totalPhotos}
               </span>
               <button
                 className={styles.paginationButton}

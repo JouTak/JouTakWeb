@@ -33,24 +33,39 @@ function isRuntimePlaceholder(value) {
   return raw.startsWith("__JOUTAK_RUNTIME_") && raw.endsWith("__");
 }
 
-export function resolveBackendRoot(value) {
+export function resolveBackendRoot(
+  value,
+  fallbackUrl = LOCAL_BACKEND_FALLBACK_URL,
+) {
   const normalized = normalizeBackendRoot(value);
   if (!normalized || isRuntimePlaceholder(normalized)) {
-    return LOCAL_BACKEND_FALLBACK_URL;
+    return fallbackUrl;
   }
 
   try {
     const parsed = new URL(normalized);
     if (parsed.hostname === "localhost" && !parsed.port) {
-      return LOCAL_BACKEND_FALLBACK_URL;
+      return fallbackUrl;
     }
     return normalized;
   } catch {
-    return LOCAL_BACKEND_FALLBACK_URL;
+    return fallbackUrl;
   }
 }
 
-export const BACKEND_ROOT_URL = resolveBackendRoot(BACKEND_URL);
+// In development, Vite proxies backend paths on the same origin. This keeps
+// cookies first-party and lets both native and Compose workflows start without
+// exposing Docker-only hostnames to browser code. Production keeps using the
+// runtime-substituted absolute URL.
+const DEVELOPMENT_BACKEND_FALLBACK_URL =
+  import.meta.env.DEV && typeof window !== "undefined"
+    ? window.location.origin
+    : LOCAL_BACKEND_FALLBACK_URL;
+
+export const BACKEND_ROOT_URL = resolveBackendRoot(
+  BACKEND_URL,
+  DEVELOPMENT_BACKEND_FALLBACK_URL,
+);
 export const API_BASE = `${BACKEND_ROOT_URL}/api`;
 export const OTEL_EXPORTER_TRACES_URL =
   normalizeOptionalRuntimeValue(OTEL_TRACES_URL);

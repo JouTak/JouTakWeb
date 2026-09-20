@@ -39,7 +39,7 @@ export default function RequireAuth({ children }) {
     return <LoadingPage description="Проверяем защищённую сессию аккаунта" />;
   }
 
-  const next = location.pathname;
+  const next = `${location.pathname}${location.search}${location.hash}`;
   const params = new URLSearchParams({
     reason: "auth_required",
     next,

@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { useId } from "react";
 import { Link } from "react-router-dom";
 
 import sectionStyles from "../shared/sectionLayout.module.css";
@@ -58,16 +59,14 @@ export default function ProductActionsSection({
   facts = [],
   items = [],
 }) {
+  const titleId = useId();
   return (
-    <section
-      className={sectionStyles.section}
-      aria-labelledby={`actions-${title}`}
-    >
+    <section className={sectionStyles.section} aria-labelledby={titleId}>
       <div className={sectionStyles.inner}>
         <div className={styles.panel}>
           <div className={styles.copy}>
             {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
-            <h2 id={`actions-${title}`} className={styles.title}>
+            <h2 id={titleId} className={styles.title}>
               {title}
             </h2>
             <p className={styles.description}>{description}</p>

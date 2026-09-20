@@ -9,6 +9,14 @@
     Подтвердите вход как <strong>{{ username }}</strong>
   </p>
 
+  {% if restart_required %}
+  {% if error %}
+  <p class="errornote" style="margin-bottom: 12px">{{ error }}</p>
+  {% endif %}
+  <p>
+    <a href="/admin/login/">Вернуться к входу в админку</a>
+  </p>
+  {% else %}
   {% if has_passkeys %}
   <div
     id="passkey-section"
@@ -125,9 +133,10 @@
       </a>
     </div>
   </form>
+  {% endif %}
 </div>
 
-{% if has_passkeys %}
+{% if has_passkeys and not restart_required %}
 <script>
   function getCookie(name) {
     const value = `; ${document.cookie}`;

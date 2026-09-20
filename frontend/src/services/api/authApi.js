@@ -108,6 +108,9 @@ export async function jwtFromSession() {
   });
 
   const pair = response.data;
+  if (!pair?.access) {
+    throw new Error("Access token is missing in session exchange response");
+  }
   mergeStoredTokens(
     {
       access: pair?.access || null,
@@ -131,11 +134,7 @@ export async function doLogin({ login, password }) {
 
 export async function doSignupAndLogin({ email, password }) {
   await signupApp({ email, password });
-  try {
-    await jwtFromSession();
-  } catch {
-    // Session can still be valid for headless endpoints even if JWT exchange fails.
-  }
+  await finalizeSessionAuthentication();
   return {
     status: "authenticated",
     tokens: tokenStore.get(),
@@ -147,11 +146,7 @@ export function announceAuthenticatedSession() {
 }
 
 export async function finalizeSessionAuthentication() {
-  try {
-    await jwtFromSession();
-  } catch {
-    // Headless session may still be usable for app endpoints.
-  }
+  await jwtFromSession();
   markPendingMfaSession(false, { emit: false });
   return tokenStore.get();
 }

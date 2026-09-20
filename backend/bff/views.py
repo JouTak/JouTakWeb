@@ -83,6 +83,21 @@ def minigames(request):
 
 @require_GET
 @bff_ratelimit
+def contact(request):
+    return _build_bff_response(
+        request,
+        page="contact",
+        build_payload=lambda req, context: build_page_document(
+            req,
+            context,
+            product_id="contact",
+            requested_path="/contact",
+        ),
+    )
+
+
+@require_GET
+@bff_ratelimit
 def joutak(request):
     return _build_bff_response(
         request,

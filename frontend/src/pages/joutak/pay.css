@@ -81,7 +81,7 @@
 iframe.pay {
   display: block;
   width: 100%;
-  height: 1320px;
+  height: 1500px;
   padding: 0;
   background: #111820;
   border: 0;
@@ -96,7 +96,7 @@ iframe.pay {
 
 @media (max-width: 768px) {
   iframe.pay {
-    height: 1480px;
+    height: 1600px;
   }
 }
 

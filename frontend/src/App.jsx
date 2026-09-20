@@ -10,8 +10,9 @@ import {
   PagePanel,
   PageShell,
 } from "./components/ui/PageShell.jsx";
+import { isSafeInternalPath } from "./services/urlSafety";
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
-const Contact = lazy(() => import("./pages/Contact.jsx"));
+const Contact = lazy(() => import("./pages/Contact/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
 const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
@@ -28,13 +29,6 @@ const MinigamesRoute = lazy(
   () => import("./pages/minigames/MinigamesRoute.jsx"),
 );
 
-function safeInternalPath(path) {
-  if (typeof path !== "string") return "/";
-  if (!path.startsWith("/")) return "/";
-  if (path.startsWith("//")) return "/";
-  return path;
-}
-
 function RouteFallback() {
   return <LoadingPage />;
 }
@@ -45,9 +39,10 @@ function LoginModalRoute() {
   const params = new URLSearchParams(location.search);
   const nextFromQuery = params.get("next");
   const nextFromState = location.state?.next;
-  const successRedirectTo = safeInternalPath(
-    nextFromQuery || nextFromState || "/",
-  );
+  const requestedPath = nextFromQuery || nextFromState;
+  const successRedirectTo = isSafeInternalPath(requestedPath)
+    ? requestedPath
+    : "/";
   const hasBackground = Boolean(location.state?.background);
 
   return (

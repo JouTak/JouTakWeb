@@ -16,17 +16,11 @@ import {
   me,
   requestPasswordReset,
 } from "../services/api";
-import { markPendingMfaSession } from "../services/auth/tokenStore";
 import { extractErrorMessage } from "../services/errors";
+import { isSafeInternalPath } from "../services/urlSafety";
 import { markPostSignupPersonalizationSession } from "../utils/personalizationNotice";
 import { needsPersonalization } from "../utils/profileState";
 import styles from "./AuthModal.module.css";
-
-function isSafeInternalPath(path) {
-  return (
-    typeof path === "string" && path.startsWith("/") && !path.startsWith("//")
-  );
-}
 
 export default function AuthModal({
   open = false,
@@ -97,7 +91,6 @@ export default function AuthModal({
   }
 
   function close({ notifyParent = true } = {}) {
-    markPendingMfaSession(false);
     resetForms();
     setBusy(false);
     if (notifyParent) onClose?.();
@@ -336,13 +329,13 @@ export default function AuthModal({
         email: suEmail.trim(),
         password: suPassword,
       });
+      const profile = await me();
+      announceAuthenticatedSession();
       toaster.add({
         title: "Аккаунт создан",
         content: "Аккаунт создан. Теперь можно продолжить настройку профиля.",
         theme: "success",
       });
-      const profile = await me();
-      announceAuthenticatedSession();
       if (needsPersonalization(profile)) {
         markPostSignupPersonalizationSession();
         close({ notifyParent: !safeSuccessRedirectTo });

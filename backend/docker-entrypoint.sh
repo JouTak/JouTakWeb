@@ -56,7 +56,7 @@ django_bootstrap() {
     log "Applying migrations ..."
     python manage.py migrate --noinput
     log "Ensuring cache table exists ..."
-    python manage.py createcachetable --database default 2>/dev/null || true
+    python manage.py createcachetable --database default
   fi
 
   if [ "${DJANGO_SYNC_SITE:-1}" = "1" ]; then

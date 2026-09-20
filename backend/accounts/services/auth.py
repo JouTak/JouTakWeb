@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone as dt_timezone
+from typing import Mapping
 
 from accounts.services.account_status import AccountStatusService
 from accounts.services.auth_cookies import get_refresh_cookie
@@ -176,7 +177,11 @@ class AuthService:
         dj_logout(request)
 
     @staticmethod
-    def profile(user: User) -> ProfileOut:
+    def profile(
+        user: User,
+        *,
+        feature_decisions: Mapping[str, bool | str] | None = None,
+    ) -> ProfileOut:
         if not user or not getattr(user, "is_authenticated", False):
             raise HttpError(401, "Not authenticated")
         has_2fa = get_mfa_adapter().is_mfa_enabled(user)
@@ -186,7 +191,11 @@ class AuthService:
             )
         )
         extended = ProfileService.get_or_create_extended_profile(user)
-        status = AccountStatusService.get_status(user, profile=extended)
+        status = AccountStatusService.get_status(
+            user,
+            profile=extended,
+            feature_decisions=feature_decisions,
+        )
         return ProfileOut(
             username=user.username,
             email=user.email,

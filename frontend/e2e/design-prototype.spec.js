@@ -6,6 +6,7 @@ const ROUTES = [
   { path: "/itmocraft", product: "itmocraft", legacyAlias: true },
   { path: "/joutak", product: "joutak", legacyAlias: false },
   { path: "/minigames", product: "minigames", legacyAlias: false },
+  { path: "/contact", product: "contact", legacyAlias: false },
 ];
 const WIDTHS = [320, 375, 480, 768, 1024, 1440];
 
@@ -49,94 +50,95 @@ function pageDocument({ path, product, legacyAlias }, variant = "v2") {
     },
     content: {
       template: legacy ? "landing-legacy" : "landing-v2",
-      sections: legacy
-        ? []
-        : [
-            {
-              type: "hero",
-              background: asset(
-                `${product}.hero.background`,
-                `${product} background`,
-              ),
-              logo: asset(`${product}.logo`, `${product} logo`),
-              eyebrow: "Design prototype",
-              title: product,
-              description: "Tester-only page",
-              primary_action: null,
-            },
-            {
-              type: "actions",
-              eyebrow: "Доступ",
-              title: `Действия ${product}`,
-              description:
-                "Проверяем, что основные пользовательские действия доступны на каждой ширине.",
-              facts:
-                product === "joutak"
-                  ? [
-                      {
-                        id: "server",
-                        label: "Адрес сервера",
-                        value: "mc.joutak.ru",
-                      },
-                    ]
-                  : [],
-              items: [
-                {
-                  id: "primary-action",
-                  label: "Основное действие",
-                  emphasis: "primary",
-                  action: {
-                    kind: "external",
-                    href: "https://example.com/action",
+      sections:
+        legacy || product === "contact"
+          ? []
+          : [
+              {
+                type: "hero",
+                background: asset(
+                  `${product}.hero.background`,
+                  `${product} background`,
+                ),
+                logo: asset(`${product}.logo`, `${product} logo`),
+                eyebrow: "Design prototype",
+                title: product,
+                description: "Tester-only page",
+                primary_action: null,
+              },
+              {
+                type: "actions",
+                eyebrow: "Доступ",
+                title: `Действия ${product}`,
+                description:
+                  "Проверяем, что основные пользовательские действия доступны на каждой ширине.",
+                facts:
+                  product === "joutak"
+                    ? [
+                        {
+                          id: "server",
+                          label: "Адрес сервера",
+                          value: "mc.joutak.ru",
+                        },
+                      ]
+                    : [],
+                items: [
+                  {
+                    id: "primary-action",
+                    label: "Основное действие",
+                    emphasis: "primary",
+                    action: {
+                      kind: "external",
+                      href: "https://example.com/action",
+                    },
                   },
-                },
-                {
-                  id: "secondary-action",
-                  label: "Внутреннее действие",
-                  emphasis: "secondary",
-                  action: { kind: "internal", path: "/contact" },
-                },
-              ],
-            },
-            {
-              type: "events",
-              title: "События",
-              items: [
-                {
-                  id: "bunker",
-                  title: "Бункер",
-                  description: "Тестовое событие",
-                  location: "Online",
-                  image: asset("events.bunker", "Бункер"),
-                  starts_at: "2026-08-01T18:00:00+03:00",
-                  action: { kind: "internal", path: "/" },
-                },
-              ],
-            },
-            {
-              type: "gallery",
-              title: "Галерея",
-              items: [
-                {
-                  id: "joutak",
-                  label: "JouTak",
-                  cover: asset("gallery.joutak.cover", "JouTak gallery"),
-                  photos: [asset("gallery.joutak.cover", "JouTak gallery")],
-                },
-              ],
-            },
-            {
-              type: "faq",
-              title: "FAQ",
-              items: [
-                {
-                  id: "prototype",
-                  question: "Что это?",
-                  answer: "Прототип для согласования дизайна.",
-                },
-              ],
-            },
-          ],
+                  {
+                    id: "secondary-action",
+                    label: "Внутреннее действие",
+                    emphasis: "secondary",
+                    action: { kind: "internal", path: "/contact" },
+                  },
+                ],
+              },
+              {
+                type: "events",
+                title: "События",
+                items: [
+                  {
+                    id: "bunker",
+                    title: "Бункер",
+                    description: "Тестовое событие",
+                    location: "Online",
+                    image: asset("events.bunker", "Бункер"),
+                    starts_at: "2026-08-01T18:00:00+03:00",
+                    action: { kind: "internal", path: "/" },
+                  },
+                ],
+              },
+              {
+                type: "gallery",
+                title: "Галерея",
+                items: [
+                  {
+                    id: "joutak",
+                    label: "JouTak",
+                    cover: asset("gallery.joutak.cover", "JouTak gallery"),
+                    photos: [asset("gallery.joutak.cover", "JouTak gallery")],
+                  },
+                ],
+              },
+              {
+                type: "faq",
+                title: "FAQ",
+                items: [
+                  {
+                    id: "prototype",
+                    question: "Что это?",
+                    answer: "Прототип для согласования дизайна.",
+                  },
+                ],
+              },
+            ],
     },
   };
 }
@@ -178,19 +180,38 @@ test.beforeEach(async ({ page }) => {
   await mockPageDocuments(page);
 });
 
-test("route and viewport matrix has no horizontal overflow or header overlap", async ({
-  page,
-}) => {
-  for (const variant of ["legacy", "v2"]) {
-    await page.unroute("http://127.0.0.1:8000/bff/pages/**");
-    await mockPageDocuments(page, { variant });
-
-    for (const width of WIDTHS) {
+for (const variant of ["legacy", "v2"]) {
+  for (const width of WIDTHS) {
+    test(`${variant} ${width}px routes have no overflow or header overlap`, async ({
+      page,
+    }) => {
+      await page.unroute("http://127.0.0.1:8000/bff/pages/**");
+      await mockPageDocuments(page, { variant });
       await page.setViewportSize({ width, height: 900 });
       for (const route of ROUTES) {
         await test.step(`${variant} ${width}px ${route.path}`, async () => {
           await page.goto(route.path);
-          await expect(page.locator("main")).toBeVisible();
+          if (route.product === "contact") {
+            await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+              variant === "v2" ? "НАШИ КОНТАКТЫ" : "Наши сообщества",
+            );
+          } else if (variant === "v2" && !route.legacyAlias) {
+            await expect(
+              page.getByRole("link", { name: "Основное действие" }),
+            ).toHaveAttribute("href", "https://example.com/action");
+          } else if (route.product === "minigames") {
+            await expect(
+              page.getByRole("img", { name: "MiniGames Logo" }),
+            ).toBeVisible();
+          } else {
+            await expect(
+              page.getByRole("heading", {
+                level: 1,
+                name: route.product === "itmocraft" ? "ITMOcraft" : "JouTak",
+                exact: true,
+              }),
+            ).toBeVisible();
+          }
           await expect
             .poll(
               () =>
@@ -235,12 +256,15 @@ test("route and viewport matrix has no horizontal overflow or header overlap", a
           expect(main.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
         });
       }
-    }
+    });
   }
-});
+}
 
 test("tester v2 has no serious or critical axe findings", async ({ page }) => {
   await page.goto("/");
+  await expect(
+    page.getByRole("link", { name: "Основное действие" }),
+  ).toBeVisible();
   const results = await new AxeBuilder({ page })
     .exclude("[data-design-placeholder='true']")
     .analyze();
@@ -259,6 +283,10 @@ test("initial image transfer stays within the responsive budgets", async ({
   ]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: "Основное действие" }),
+    ).toBeVisible();
+    await page.waitForLoadState("networkidle");
     const imageBytes = await page.evaluate(() =>
       performance
         .getEntriesByType("resource")
@@ -272,3 +300,49 @@ test("initial image transfer stays within the responsive budgets", async ({
     expect(imageBytes).toBeLessThanOrEqual(budget);
   }
 });
+
+for (const width of [320, 768, 1440]) {
+  test(`system pages stay usable at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("https://forms.yandex.ru/**", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><title>Payment test fixture</title><p>Payment form</p>",
+      }),
+    );
+    for (const [path, title] of [
+      ["/joutak/pay", "Оплата доступа"],
+      ["/session-expired", "Сессия завершена"],
+      ["/reset-password", "Сброс пароля"],
+      ["/confirm-email", "Подтверждение email"],
+      ["/privacy-policy", "Политика конфиденциальности"],
+      ["/terms-of-use", "Условия использования"],
+      ["/missing", "Такой страницы нет"],
+    ]) {
+      await page.goto(path);
+      await expect(
+        page.getByRole("heading", { level: 1, name: title, exact: true }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(true);
+      if (path === "/joutak/pay") {
+        await expect(
+          page.getByRole("link", { name: "Открыть форму отдельно" }),
+        ).toHaveAttribute(
+          "href",
+          "https://forms.yandex.ru/u/6515e3dcd04688fca3cc271b",
+        );
+        expect(
+          await page
+            .locator("iframe.pay")
+            .evaluate((frame) => frame.clientHeight),
+        ).toBeGreaterThanOrEqual(1500);
+      }
+    }
+  });
+}

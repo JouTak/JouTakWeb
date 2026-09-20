@@ -140,7 +140,7 @@ Section = Annotated[
 
 
 class ProductInfo(ContractModel):
-    id: Literal["itmocraft", "joutak", "minigames"]
+    id: Literal["itmocraft", "joutak", "minigames", "contact"]
     canonical_path: str
     requested_path: str
     is_legacy_alias: bool

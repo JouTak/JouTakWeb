@@ -25,7 +25,7 @@ HMR. Для проверки frontend→backend integration открывайте
 
 - frontend: Node.js `24.18.0`, npm `11.16.0`, затем
   `cd frontend && npm ci && npm run dev`;
-- backend: Python 3.12, `uv sync --python 3.12 --group dev --group test --frozen`,
+- backend: Python 3.12, `uv sync --locked --python 3.12 --group dev --group test`,
   migrations, `sync_feature_registry` и `runserver` с
   `backend.settings.dev`.
 
@@ -110,6 +110,6 @@ docker compose -f docker-compose.images.yml config >/dev/null
 ## Lockfiles
 
 Коммитьте `frontend/package-lock.json`, когда меняются frontend dependencies.
-Коммитьте `uv.lock` и regenerated files в `backend/requirements/`, когда
-меняются backend dependencies. Генерируемые поля в requirement'ах руками не
-редактируем.
+Коммитьте `pyproject.toml` и `uv.lock`, когда меняются backend dependencies.
+Docker и CI устанавливают backend dependencies напрямую через locked
+`uv sync`; requirements-файлы не создаются и не хранятся в репозитории.

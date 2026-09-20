@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from unittest.mock import patch
 
 from django.contrib import admin
@@ -474,16 +475,82 @@ class RegistryAwareAdminFormTests(TestCase):
             form.fields["feature"].label_from_instance(self.feature),
         )
 
-    def test_advanced_design_metadata_only_offers_group_rule(self) -> None:
+    def test_guided_contact_rollout_offers_and_accepts_everyone(self) -> None:
+        grant(
+            self.operator,
+            "featureflags.change_featuredefinition",
+        )
+        contact = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+        contact.rules.all().delete()
+        form = GuidedRolloutForm(
+            initial={"feature": contact},
+            request_user=self.operator,
+        )
+        metadata = json.loads(
+            form.fields["feature"].widget.attrs["data-registry-options"]
+        )
+
+        self.assertEqual(
+            metadata[str(contact.pk)]["audiences"],
+            [RolloutAudience.GROUP, RolloutAudience.EVERYONE],
+        )
+        self.assertEqual(
+            dict(form.fields["audience"].choices)[RolloutAudience.EVERYONE],
+            "Все посетители",
+        )
+
+        data = self.guided_data(
+            feature=contact.pk,
+            value="v2",
+            page="contact",
+            audience=RolloutAudience.EVERYONE,
+            confirm_dangerous="on",
+            name="Public contact page rollout",
+        )
+        data.pop("enabled")
+        form = GuidedRolloutForm(
+            data=data,
+            request_user=self.operator,
+            require_confirmation=True,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        draft = create_rollout(
+            cleaned_data=form.cleaned_data,
+            user=self.operator,
+        )
+        started = start_rollout(
+            rule_id=draft.pk,
+            user=self.operator,
+            reason="Contact page rollout approved",
+        )
+
+        self.assertEqual(started.rule_type, FeatureRuleType.EVERYONE)
+        self.assertEqual(started.value, "v2")
+        self.assertTrue(started.enabled)
+
+    def test_advanced_design_metadata_uses_per_flag_policy(self) -> None:
         form = FeatureRuleAdminForm()
         metadata = json.loads(
             form.fields["feature"].widget.attrs["data-registry-options"]
         )
         design = FeatureDefinition.objects.get(key="site_header_version")
+        contact = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
 
         self.assertEqual(
             metadata[str(design.pk)]["rule_types"],
             [[FeatureRuleType.GROUP, "Группа"]],
+        )
+        self.assertEqual(
+            metadata[str(contact.pk)]["rule_types"],
+            [
+                [FeatureRuleType.EVERYONE, "Все"],
+                [FeatureRuleType.GROUP, "Группа"],
+            ],
         )
         self.assertEqual(metadata[str(design.pk)]["suggested_value"], "v2")
         self.assertEqual(
@@ -653,6 +720,7 @@ class RolloutAdminPermissionTests(TestCase):
     ),
     DJANGO_ADMIN_HOSTS=("admin.localhost",),
     DJANGO_API_HOSTS=("api.localhost",),
+    WEBAUTHN_ADMIN_ORIGINS=("http://admin.localhost",),
 )
 class RolloutAdminIntegrationTests(TestCase):
     def setUp(self) -> None:
@@ -664,14 +732,9 @@ class RolloutAdminIntegrationTests(TestCase):
             "backend.middleware.admin_mfa_is_enabled",
             return_value=True,
         )
-        self.middleware_verified = patch(
-            "backend.middleware.is_admin_mfa_verified",
-            return_value=True,
-        )
         for patcher in (
             self.admin_mfa,
             self.middleware_mfa,
-            self.middleware_verified,
         ):
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -695,8 +758,14 @@ class RolloutAdminIntegrationTests(TestCase):
             default_value="true",
         )
         self.client.force_login(self.operator)
+        self.client.defaults["HTTP_ORIGIN"] = "http://admin.localhost"
         session = self.client.session
-        session[SESSION_KEY_ADMIN_MFA_VERIFIED] = True
+        session[SESSION_KEY_ADMIN_MFA_VERIFIED] = {
+            "version": 1,
+            "user_pk": str(self.operator.pk),
+            "verified_at": time.time(),
+            "method": "totp",
+        }
         session.save()
 
     def rollout_data(self, action: str, *, confirm: bool = False) -> dict:
@@ -989,6 +1058,56 @@ class RolloutAdminIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "tabular inline-related")
         self.assertContains(response, "Что увидит пользователь")
+
+    def test_public_contact_definition_exposes_both_admin_actions(
+        self,
+    ) -> None:
+        grant(
+            self.operator,
+            "featureflags.change_featuregroup",
+            "auth.view_user",
+        )
+        contact = FeatureDefinition.objects.get(
+            key="site_contact_page_version"
+        )
+        header = FeatureDefinition.objects.get(key="site_header_version")
+
+        response = self.client.get(
+            f"/admin/featureflags/featuredefinition/{contact.pk}/change/",
+            HTTP_HOST="admin.localhost",
+        )
+        header_response = self.client.get(
+            f"/admin/featureflags/featuredefinition/{header.pk}/change/",
+            HTTP_HOST="admin.localhost",
+        )
+        actions = str(
+            admin.site._registry[FeatureDefinition].rollout_actions(contact)
+        )
+        header_actions = str(
+            admin.site._registry[FeatureDefinition].rollout_actions(header)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Добавить дизайн-тестера")
+        self.assertContains(
+            response,
+            "/admin/featureflags/design-testers/add/",
+        )
+        self.assertContains(
+            response,
+            f"/admin/featureflags/rollouts/new/?feature={contact.pk}",
+        )
+        self.assertEqual(header_response.status_code, 200)
+        self.assertContains(header_response, "Добавить дизайн-тестера")
+        self.assertNotContains(
+            header_response,
+            f"/admin/featureflags/rollouts/new/?feature={header.pk}",
+        )
+        self.assertIn("Добавить тестера", actions)
+        self.assertIn("Новый раскат", actions)
+        self.assertIn(f"?feature={contact.pk}", actions)
+        self.assertIn("Добавить тестера", header_actions)
+        self.assertNotIn("Новый раскат", header_actions)
 
     def test_guided_single_registry_page_is_hidden_and_submitted(self) -> None:
         response = self.client.get(

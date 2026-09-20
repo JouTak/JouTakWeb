@@ -84,6 +84,13 @@ def assert_status(
         )
 
 
+def assert_not_spa(response: SmokeResponse, *, label: str) -> None:
+    if '<div id="root"></div>' in response.body:
+        raise AssertionError(
+            f"{label}: backend path returned the frontend SPA"
+        )
+
+
 def response_header(response: SmokeResponse, name: str) -> str:
     expected = name.casefold()
     return next(
@@ -133,6 +140,100 @@ def run_smoke() -> None:
         expected=200,
         label="proxied frontend /",
     )
+
+    same_origin_frontend = fetch_step(
+        "root-host SPA fallback through local nginx",
+        "/smoke/client-side-route",
+        host="joutak.localhost",
+        headers={"Accept": "text/html"},
+        retries=3,
+    )
+    assert_status(
+        same_origin_frontend,
+        expected=200,
+        label="root-host SPA fallback",
+    )
+    if '<div id="root"></div>' not in same_origin_frontend.body:
+        raise AssertionError(
+            "root-host SPA fallback did not return index.html"
+        )
+
+    same_origin_health = fetch_step(
+        "root-host health through local nginx",
+        "/health/",
+        host="joutak.localhost",
+        retries=3,
+    )
+    assert_status(
+        same_origin_health,
+        expected=200,
+        label="root-host health",
+    )
+    if same_origin_health.body != "Alive":
+        raise AssertionError("root-host health did not reach Django")
+    assert_not_spa(same_origin_health, label="root-host health")
+
+    same_origin_bootstrap = fetch_step(
+        "root-host BFF through local nginx",
+        "/bff/bootstrap",
+        host="joutak.localhost",
+        retries=3,
+    )
+    assert_status(
+        same_origin_bootstrap,
+        expected=200,
+        label="root-host bff bootstrap",
+    )
+    same_origin_bootstrap_payload = json.loads(same_origin_bootstrap.body)
+    if "viewer" not in same_origin_bootstrap_payload:
+        raise AssertionError("root-host BFF did not return its JSON contract")
+    assert_not_spa(same_origin_bootstrap, label="root-host bff bootstrap")
+
+    same_origin_api = fetch_step(
+        "root-host API through local nginx",
+        "/api/account/status",
+        host="joutak.localhost",
+        retries=3,
+    )
+    assert_status(
+        same_origin_api,
+        expected=401,
+        label="root-host unauthenticated API",
+    )
+    if not response_header(same_origin_api, "Content-Type").startswith(
+        "application/json"
+    ):
+        raise AssertionError("root-host API did not return JSON")
+    assert_not_spa(same_origin_api, label="root-host API")
+
+    for label, path in (
+        ("root-host headless account path", "/accounts/login/"),
+        (
+            "root-host missing media",
+            f"/media/__smoke_missing_{time.time_ns()}__",
+        ),
+    ):
+        response = fetch_step(
+            label,
+            path,
+            host="joutak.localhost",
+            retries=3,
+        )
+        assert_status(response, expected=404, label=label)
+        assert_not_spa(response, label=label)
+
+    for label, path in (
+        ("root-host admin denial", "/admin/"),
+        ("root-host admin static denial", "/static/admin/css/base.css"),
+    ):
+        response = fetch_step(
+            label,
+            path,
+            host="joutak.localhost",
+            retries=3,
+        )
+        assert_status(response, expected=403, label=label)
+        assert_not_spa(response, label=label)
 
     vite_frontend = fetch_step(
         "frontend through Vite", "/", host="localhost", port=5173, retries=3

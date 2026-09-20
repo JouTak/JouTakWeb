@@ -58,11 +58,24 @@ else:
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-# In dev, use in-memory cache (no need for cache table with SQLite).
+# In dev, keep the production aliases but use isolated in-memory stores (no
+# cache tables are needed with SQLite).
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-    }
+        "LOCATION": "joutak-dev-default",
+        "OPTIONS": {"MAX_ENTRIES": 100000},
+    },
+    "ratelimit": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "joutak-dev-ratelimit",
+        "OPTIONS": {"MAX_ENTRIES": 100000},
+    },
+    "webauthn_replay": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "joutak-dev-webauthn-replay",
+        "OPTIONS": {"MAX_ENTRIES": 100000},
+    },
 }
 
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -92,5 +105,12 @@ MFA_WEBAUTHN_ALLOW_INSECURE_ORIGIN = config(
     cast=bool,
     default=True,
 )
+
+# Local WebAuthn is intentionally explicit and isolated from production.
+WEBAUTHN_RP_ID = base_settings.WEBAUTHN_RP_ID
+WEBAUTHN_RP_NAME = base_settings.WEBAUTHN_RP_NAME
+WEBAUTHN_ACCOUNT_ORIGINS = base_settings.WEBAUTHN_ACCOUNT_ORIGINS
+WEBAUTHN_ADMIN_ORIGINS = base_settings.WEBAUTHN_ADMIN_ORIGINS
+WEBAUTHN_ALLOWED_ORIGINS = base_settings.WEBAUTHN_ALLOWED_ORIGINS
 
 LOGGING = build_logging_config(root_level="DEBUG")

@@ -871,12 +871,10 @@ class GuidedRolloutForm(forms.Form):
                     "Политика реестра не разрешает эту аудиторию для флага.",
                 )
             required_slug = get_required_group_slug(feature.key)
-            if required_slug:
+            if required_slug and audience == RolloutAudience.GROUP:
                 groups = list(cleaned_data.get("target_groups") or [])
-                if (
-                    audience != RolloutAudience.GROUP
-                    or not groups
-                    or any(group.slug != required_slug for group in groups)
+                if not groups or any(
+                    group.slug != required_slug for group in groups
                 ):
                     raise ValidationError(
                         f"Политика реестра требует группу {required_slug}."

@@ -8,9 +8,12 @@
     {% if is_design_flag and can_add_tester %}
       {% url 'admin:featureflags_design_tester_add' as tester_url %}
       {% if tester_url %}<li><a href="{{ tester_url }}">Добавить дизайн-тестера</a></li>{% endif %}
-    {% elif can_add_rollout %}
-      {% url 'admin:featureflags_rollout_add' as rollout_url %}
-      {% if rollout_url %}<li><a href="{{ rollout_url }}?feature={{ original.pk }}" class="addlink">Новый раскат</a></li>{% endif %}
+    {% endif %}
+    {% if can_add_rollout %}
+      {% if allows_public_rollout or not is_design_flag or not can_add_tester %}
+        {% url 'admin:featureflags_rollout_add' as rollout_url %}
+        {% if rollout_url %}<li><a href="{{ rollout_url }}?feature={{ original.pk }}" class="addlink">Новый раскат</a></li>{% endif %}
+      {% endif %}
     {% endif %}
   {% endif %}
   {{ block.super }}

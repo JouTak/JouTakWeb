@@ -1,7 +1,7 @@
 import {
   Button,
   Loader,
-  RadioButton,
+  SegmentedRadioGroup,
   TextInput,
   useToaster,
 } from "@gravity-ui/uikit";
@@ -374,7 +374,7 @@ export default function ProfileCard({ profile, onUpdated }) {
                     <legend style={choiceLegendStyle}>
                       Есть лицензия Minecraft?
                     </legend>
-                    <RadioButton
+                    <SegmentedRadioGroup
                       size="l"
                       width="max"
                       value={licenseDraft || null}
@@ -387,7 +387,7 @@ export default function ProfileCard({ profile, onUpdated }) {
                   </fieldset>
                   <fieldset style={choiceGroupStyle}>
                     <legend style={choiceLegendStyle}>Вы студент ИТМО?</legend>
-                    <RadioButton
+                    <SegmentedRadioGroup
                       size="l"
                       width="max"
                       value={itmoDraft || null}

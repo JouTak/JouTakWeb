@@ -10,22 +10,30 @@ describe("LegalDocument", () => {
   it.each([
     ["privacy", "Политика конфиденциальности"],
     ["terms", "Условия использования"],
-  ])("renders an honest pending state for %s", (documentType, title) => {
-    render(
-      <MemoryRouter>
-        <LegalDocument documentType={documentType} />
-      </MemoryRouter>,
-    );
+  ])(
+    "renders the document preview and publication metadata for %s",
+    (documentType, title) => {
+      render(
+        <MemoryRouter>
+          <LegalDocument documentType={documentType} />
+        </MemoryRouter>,
+      );
 
-    expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "нет утверждённого юридического текста",
-    );
-    expect(
-      screen.getByRole("button", { name: "На главную ITMOcraft" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Связаться с нами" }),
-    ).toBeInTheDocument();
-  });
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(screen.getByRole("article", { name: title })).toHaveTextContent(
+        "Lorem ipsum",
+      );
+      expect(screen.getByText("Команда JouTak")).toBeInTheDocument();
+      expect(screen.getAllByText("21 сентября 2026")).toHaveLength(2);
+      expect(
+        screen.getByRole("navigation", { name: "Содержание документа" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "На главную ITMOcraft" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Связаться с нами" }),
+      ).toBeInTheDocument();
+    },
+  );
 });

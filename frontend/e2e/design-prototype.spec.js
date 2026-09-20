@@ -8,7 +8,7 @@ const ROUTES = [
   { path: "/minigames", product: "minigames", legacyAlias: false },
   { path: "/contact", product: "contact", legacyAlias: false },
 ];
-const WIDTHS = [320, 375, 480, 768, 1024, 1440];
+const WIDTHS = [320, 375, 480, 768, 1024, 1440, 1920, 2560];
 
 function asset(id, alt) {
   return { kind: "asset", id, alt };
@@ -69,7 +69,10 @@ function pageDocument({ path, product, legacyAlias }, variant = "v2") {
               {
                 type: "actions",
                 eyebrow: "Доступ",
-                title: `Действия ${product}`,
+                title:
+                  product === "minigames"
+                    ? "Играть и участвовать"
+                    : `Действия ${product}`,
                 description:
                   "Проверяем, что основные пользовательские действия доступны на каждой ширине.",
                 facts:
@@ -94,7 +97,7 @@ function pageDocument({ path, product, legacyAlias }, variant = "v2") {
                   },
                   {
                     id: "secondary-action",
-                    label: "Внутреннее действие",
+                    label: "Зарегистрироваться",
                     emphasis: "secondary",
                     action: { kind: "internal", path: "/contact" },
                   },
@@ -123,7 +126,15 @@ function pageDocument({ path, product, legacyAlias }, variant = "v2") {
                     id: "joutak",
                     label: "JouTak",
                     cover: asset("gallery.joutak.cover", "JouTak gallery"),
-                    photos: [asset("gallery.joutak.cover", "JouTak gallery")],
+                    photos: [
+                      {
+                        kind: "design_placeholder",
+                        id: "joutak-photo-1",
+                        alt: "JouTak screenshot placeholder",
+                        broken: true,
+                      },
+                      asset("gallery.joutak.cover", "JouTak gallery"),
+                    ],
                   },
                 ],
               },
@@ -190,7 +201,7 @@ for (const variant of ["legacy", "v2"]) {
       await page.setViewportSize({ width, height: 900 });
       for (const route of ROUTES) {
         await test.step(`${variant} ${width}px ${route.path}`, async () => {
-          await page.goto(route.path);
+          await page.goto(route.path, { waitUntil: "domcontentloaded" });
           if (route.product === "contact") {
             await expect(page.getByRole("heading", { level: 1 })).toHaveText(
               variant === "v2" ? "НАШИ КОНТАКТЫ" : "Наши сообщества",
@@ -212,6 +223,7 @@ for (const variant of ["legacy", "v2"]) {
               }),
             ).toBeVisible();
           }
+          await page.evaluate(() => document.fonts.ready);
           await expect
             .poll(
               () =>
@@ -343,6 +355,123 @@ for (const width of [320, 768, 1440]) {
             .evaluate((frame) => frame.clientHeight),
         ).toBeGreaterThanOrEqual(1500);
       }
+    }
+  });
+}
+
+for (const width of [320, 390, 768, 1024, 1440, 2560]) {
+  test(`v2 navigation and Cyrillic typography fit at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/minigames");
+    const title = page.getByRole("heading", { name: "Играть и участвовать" });
+    await expect(title).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const header = page.locator("header").first();
+    const bounds = await header.boundingBox();
+    const controls = await header.locator("button").evaluateAll((buttons) =>
+      buttons
+        .filter(
+          (button) =>
+            !button.closest('[aria-hidden="true"]') &&
+            button.getClientRects().length,
+        )
+        .map((button) => {
+          const rect = button.getBoundingClientRect();
+          return {
+            label: button.textContent || button.getAttribute("aria-label"),
+            top: rect.top,
+            bottom: rect.bottom,
+          };
+        }),
+    );
+    for (const control of controls) {
+      expect(control.top, control.label).toBeGreaterThanOrEqual(bounds.y);
+      expect(control.bottom, control.label).toBeLessThanOrEqual(
+        bounds.y + bounds.height,
+      );
+    }
+    if (width > 1024) {
+      const logo = await header
+        .getByRole("img", { name: "Logo", exact: true })
+        .boundingBox();
+      expect(
+        Math.abs(logo.x + logo.width / 2 - (bounds.x + bounds.width / 2)),
+      ).toBeLessThan(20);
+    }
+
+    const typography = await title.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const context = document.createElement("canvas").getContext("2d");
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const metrics = context.measureText(element.textContent);
+      return {
+        lineHeight: parseFloat(style.lineHeight),
+        inkHeight:
+          metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent,
+      };
+    });
+    expect(typography.lineHeight).toBeGreaterThan(typography.inkHeight + 4);
+    const section = page.getByRole("region", { name: "Играть и участвовать" });
+    const sectionBounds = await section.boundingBox();
+    for (const link of await section.getByRole("link").all()) {
+      const rect = await link.boundingBox();
+      expect(rect.x).toBeGreaterThanOrEqual(sectionBounds.x);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(
+        sectionBounds.x + sectionBounds.width,
+      );
+      expect(
+        await link.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+    }
+  });
+}
+
+for (const width of [320, 768, 1440, 2560]) {
+  test(`gallery frames and controls stay above the footer at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/joutak");
+    const tabs = page.getByRole("group", { name: "Разделы галереи" });
+    await expect(tabs).toBeVisible();
+    const gallery = tabs.locator("..");
+    await gallery.scrollIntoViewIfNeeded();
+    await expect(gallery.getByText("Скриншот готовится")).toBeVisible();
+    for (const state of ["placeholder", "photo"]) {
+      if (state === "photo") {
+        await gallery.getByRole("button", { name: "Next photo" }).click();
+        await expect(gallery.getByText("2/2")).toBeVisible();
+        await expect(
+          gallery.getByRole("img", { name: "JouTak gallery" }),
+        ).toBeVisible();
+      }
+      const bounds = await gallery.boundingBox();
+      const children = await gallery
+        .locator("img, button, [role='status']")
+        .evaluateAll((elements) =>
+          elements.map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              left: rect.left,
+              right: rect.right,
+              top: rect.top,
+              bottom: rect.bottom,
+            };
+          }),
+        );
+      for (const rect of children) {
+        expect(rect.left).toBeGreaterThanOrEqual(bounds.x);
+        expect(rect.right).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+        expect(rect.top).toBeGreaterThanOrEqual(bounds.y);
+        expect(rect.bottom).toBeLessThanOrEqual(bounds.y + bounds.height + 1);
+      }
+      const footer = await page.getByRole("contentinfo").boundingBox();
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(footer.y);
     }
   });
 }

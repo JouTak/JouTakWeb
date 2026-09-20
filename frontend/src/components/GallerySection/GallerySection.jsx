@@ -47,7 +47,7 @@ function GalleryMedia({ media, alt, className }) {
           .map((source) => `${source.src} ${source.width}w`)
           .join(", ") || undefined
       }
-      sizes="(max-width: 1440px) 100vw, 786px"
+      sizes="(max-width: 760px) 100vw, (max-width: 1520px) 70vw, 1100px"
       alt={media?.alt || alt}
       loading="lazy"
       onError={() => setFailedSource(descriptor.src)}
@@ -110,25 +110,25 @@ export default function GallerySection({
       <div className={sectionStyles.inner}>
         <h2 className={sectionStyles.title}>{title}</h2>
         <div className={styles.gallery}>
-          <GalleryMedia
-            className={styles.galleryImage}
-            media={activeGallery.image}
-            alt="Gallery main view"
-          />
-          {galleryItems.map((item, index) => (
-            <button
-              key={item.label}
-              className={`${styles.galleryButton} ${
-                activeIndex === index ? styles.chosenButton : ""
-              }`}
-              style={{ top: `${46 + index * 100}px` }}
-              onClick={() => handleProjectChange(index)}
-              type="button"
-              aria-pressed={activeIndex === index}
-            >
-              {item.label}
-            </button>
-          ))}
+          <div
+            className={styles.galleryTabs}
+            role="group"
+            aria-label="Разделы галереи"
+          >
+            {galleryItems.map((item, index) => (
+              <button
+                key={item.label}
+                className={`${styles.galleryButton} ${
+                  activeIndex === index ? styles.chosenButton : ""
+                }`}
+                onClick={() => handleProjectChange(index)}
+                type="button"
+                aria-pressed={activeIndex === index}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           <div className={styles.photoViewer}>
             <div aria-live="polite">
               {totalPhotos ? (

@@ -17,6 +17,7 @@
     font-size: 23px;
     transform-origin: right top;
     width: 446px;
+    flex: 0 0 446px;
     height: 100%;
     @media (max-width: 768px) {
       transform: scale(0.8);

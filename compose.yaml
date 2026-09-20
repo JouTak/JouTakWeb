@@ -77,7 +77,7 @@ services:
       - joutak_net
 
   db:
-    image: postgres:18-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
+    image: postgres:16-alpine@sha256:3c5c8892d184f738f4fe282d14ddaa613a38f00f4189d2d94725ebe6f2909ddb
     environment:
       POSTGRES_DB: ${DEV_POSTGRES_DB:-joutak}
       POSTGRES_USER: ${DEV_POSTGRES_USER:-joutak}

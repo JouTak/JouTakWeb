@@ -169,7 +169,7 @@ def feature_overrides(request):
 
     try:
         payload = json.loads(request.body or b"{}")
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except ValueError:
         return _invalid_feature_override_response()
     if not isinstance(payload, dict):
         return _invalid_feature_override_response()

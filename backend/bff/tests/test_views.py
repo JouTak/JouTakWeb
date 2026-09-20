@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from unittest.mock import patch
 
 from accounts.services.auth import AuthService
@@ -301,6 +302,89 @@ class BffViewTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.cookies["joutak_ff_override"]["max-age"], 0)
+
+    def test_invalid_preview_does_not_expose_exception_details(self):
+        staff = self.create_legacy_user(
+            email=self.unique_email("staff-invalid-preview")
+        )
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        self.client.force_login(staff)
+        internal_detail = "failed at /srv/joutak/backend/featureflags.py:42"
+
+        with patch(
+            "bff.views.set_override_cookie",
+            side_effect=ValueError(internal_detail),
+        ):
+            response = self.client.post(
+                "/bff/feature-overrides",
+                data=json.dumps(
+                    {
+                        "overrides": {
+                            "site_itmocraft_page_version": "v2",
+                        }
+                    }
+                ),
+                content_type="application/json",
+                HTTP_HOST="api.localhost",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Invalid feature override request."},
+        )
+        self.assertNotIn(internal_detail, response.content.decode())
+
+    def test_preview_rejects_oversized_json_integer(self):
+        staff = self.create_legacy_user(
+            email=self.unique_email("staff-oversized-json-integer")
+        )
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        self.client.force_login(staff)
+        original_limit = sys.get_int_max_str_digits()
+        self.addCleanup(sys.set_int_max_str_digits, original_limit)
+        limit = sys.int_info.str_digits_check_threshold
+        sys.set_int_max_str_digits(limit)
+        oversized_integer = "1" * (limit + 1)
+
+        response = self.client.post(
+            "/bff/feature-overrides",
+            data='{"overrides":{"site_itmocraft_page_version":'
+            + oversized_integer
+            + "}}",
+            content_type="application/json",
+            HTTP_HOST="api.localhost",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Invalid feature override request."},
+        )
+        self.assertNotIn("joutak_ff_override", response.cookies)
+
+    def test_preview_rejects_non_object_json(self):
+        staff = self.create_legacy_user(
+            email=self.unique_email("staff-invalid-json-shape")
+        )
+        staff.is_staff = True
+        staff.save(update_fields=["is_staff"])
+        self.client.force_login(staff)
+
+        response = self.client.post(
+            "/bff/feature-overrides",
+            data="[]",
+            content_type="application/json",
+            HTTP_HOST="api.localhost",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {"detail": "Invalid feature override request."},
+        )
 
     def test_staff_preview_for_one_key_does_not_unlock_another(self):
         staff = self.create_legacy_user(email=self.unique_email("staff-key"))

@@ -3,6 +3,7 @@ import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import AuthModal from "./components/AuthModal.jsx";
 import Layout from "./components/Layout";
+import PageLoading from "./components/PageLoading";
 import RequireAuth from "./components/RequireAuth.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
@@ -29,10 +30,6 @@ function safeInternalPath(path) {
   return path;
 }
 
-function RouteFallback() {
-  return <div className="py-5 text-center text-secondary">Загрузка...</div>;
-}
-
 function LoginModalRoute() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,7 +54,7 @@ function AppRoutes() {
   const background = location.state && location.state.background;
 
   return (
-    <Suspense fallback={<RouteFallback />}>
+    <Suspense fallback={<PageLoading />}>
       <Routes location={background || location}>
         <Route path="/" element={<ItmoCraftRoute />} />
         <Route path="/joutak" element={<JouTakRoute />} />

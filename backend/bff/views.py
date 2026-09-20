@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 
+from backend.ratelimiting import (
+    BFF_ACCOUNT_RATE,
+    bff_ratelimit,
+)
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 from featureflags.services import (
@@ -11,10 +15,6 @@ from featureflags.services import (
     set_override_cookie,
 )
 
-from backend.ratelimiting import (
-    BFF_ACCOUNT_RATE,
-    bff_ratelimit,
-)
 from bff.services import (
     build_account_summary_payload,
     build_bootstrap_payload,

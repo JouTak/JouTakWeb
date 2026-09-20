@@ -112,7 +112,7 @@ def _positive_setting(name: str, default: int) -> int:
     value = getattr(settings, name, default)
     try:
         parsed = int(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return default
     return parsed if parsed > 0 else default
 

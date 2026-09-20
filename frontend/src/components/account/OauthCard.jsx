@@ -1,5 +1,5 @@
 import { Button, DropdownMenu, Loader, useToaster } from "@gravity-ui/uikit";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getOAuthLink, getOAuthProviders } from "../../services/api";
 import { SectionCard } from "../ui/primitives";
@@ -30,59 +30,32 @@ function readCsrfToken() {
 
 export default function OauthCard() {
   const [providers, setProviders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const requestSeqRef = useRef(0);
-  const mountedRef = useRef(false);
-  const isCancelledRef = useRef(false);
   const { add } = useToaster();
 
-  const loadProviders = useCallback(async () => {
-    const requestSeq = ++requestSeqRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const list = await getOAuthProviders();
-      if (
-        !mountedRef.current ||
-        isCancelledRef.current ||
-        requestSeq !== requestSeqRef.current
-      ) {
-        return;
-      }
-      setProviders(Array.isArray(list) ? list : []);
-      setReady(true);
-    } catch (error) {
-      if (
-        !mountedRef.current ||
-        isCancelledRef.current ||
-        requestSeq !== requestSeqRef.current
-      ) {
-        return;
-      }
-      setReady(true);
-      setLoadError(error);
-    } finally {
-      if (
-        mountedRef.current &&
-        !isCancelledRef.current &&
-        requestSeq === requestSeqRef.current
-      ) {
-        setLoading(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProviders() {
+      try {
+        const list = await getOAuthProviders();
+        if (!cancelled) setProviders(Array.isArray(list) ? list : []);
+      } catch (error) {
+        if (!cancelled) setLoadError(error);
+      } finally {
+        if (!cancelled) {
+          setReady(true);
+          setLoading(false);
+        }
       }
     }
-  }, []);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    isCancelledRef.current = false;
     void loadProviders();
     return () => {
-      mountedRef.current = false;
-      isCancelledRef.current = true;
+      cancelled = true;
     };
-  }, [loadProviders]);
+  }, [attempt]);
 
   function submitPost(url, fields = {}) {
     const form = document.createElement("form");
@@ -110,7 +83,7 @@ export default function OauthCard() {
         "/account/security#linked",
       );
       if (method === "GET") {
-        window.location.href = url;
+        window.location.assign(url);
         return;
       }
       const u = new URL(url, window.location.origin);
@@ -147,7 +120,14 @@ export default function OauthCard() {
           <div style={{ opacity: 0.8 }}>
             Не удалось загрузить список провайдеров.
           </div>
-          <Button view="outlined" onClick={() => void loadProviders()}>
+          <Button
+            view="outlined"
+            onClick={() => {
+              setLoading(true);
+              setLoadError(null);
+              setAttempt((value) => value + 1);
+            }}
+          >
             Повторить
           </Button>
           {providers?.length ? (

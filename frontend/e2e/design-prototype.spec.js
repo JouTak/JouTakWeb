@@ -171,6 +171,9 @@ test("route and viewport matrix has no horizontal overflow or header overlap", a
 
 test("tester v2 has no serious or critical axe findings", async ({ page }) => {
   await page.goto("/");
+  await expect(
+    page.getByText("Tester-only page", { exact: true }),
+  ).toBeVisible();
   const results = await new AxeBuilder({ page })
     .exclude("[data-design-placeholder='true']")
     .analyze();
@@ -201,4 +204,34 @@ test("initial image transfer stays within the responsive budgets", async ({
     );
     expect(imageBytes).toBeLessThanOrEqual(budget);
   }
+});
+
+test("pending page data has an accessible loading state", async ({ page }) => {
+  let release;
+  const pending = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route("http://127.0.0.1:8000/bff/pages/**", async (route) => {
+    await pending;
+    await route.fallback();
+  });
+  try {
+    await page.goto("/");
+    await expect(
+      page.getByRole("status", { name: "" }).filter({ hasText: "Загрузка..." }),
+    ).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .include('[role="status"]')
+      .analyze();
+    expect(
+      results.violations.filter(({ impact }) =>
+        ["serious", "critical"].includes(impact),
+      ),
+    ).toEqual([]);
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByText("Tester-only page", { exact: true }),
+  ).toBeVisible();
 });

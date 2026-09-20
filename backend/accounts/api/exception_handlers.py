@@ -18,7 +18,7 @@ def _normalize_form_errors(
     else:
         try:
             data = json.loads(raw)
-        except (JSONDecodeError, TypeError):
+        except JSONDecodeError, TypeError:
             return None, None
     if not isinstance(data, dict):
         return None, None
@@ -51,7 +51,7 @@ def _normalize_error_payload(
     else:
         try:
             data = json.loads(raw)
-        except (JSONDecodeError, TypeError):
+        except JSONDecodeError, TypeError:
             return None
     if not isinstance(data, dict):
         return None

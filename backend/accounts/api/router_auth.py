@@ -15,16 +15,15 @@ from accounts.transport.schemas import (
     TokenRefreshOut,
 )
 from allauth.headless.contrib.ninja.security import x_session_token_auth
-from django.contrib.auth import get_user_model
-from django.http import HttpRequest, HttpResponse
-from ninja import Body, Router
-from ninja.errors import HttpError
-
 from backend.ratelimiting import (
     API_AUTH_RATE,
     API_AUTH_SENSITIVE_RATE,
     ratelimit_method,
 )
+from django.contrib.auth import get_user_model
+from django.http import HttpRequest, HttpResponse
+from ninja import Body, Router
+from ninja.errors import HttpError
 
 auth_router = Router(tags=["Auth"])
 BODY_REQUIRED = Body(...)

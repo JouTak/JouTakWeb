@@ -74,31 +74,42 @@ export default function ProfileCard({ profile, onUpdated }) {
     setItmoIsu(data.itmo_isu || "");
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await me();
-      applyProfileData(data);
-    } catch {
-      add({
-        name: "profile-load-error",
-        title: "Ошибка",
-        content: "Не удалось загрузить данные профиля",
-        theme: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [add, applyProfileData]);
-
-  useEffect(() => {
+  const [previousInput, setPreviousInput] = useState(profile);
+  if (previousInput !== profile) {
+    setPreviousInput(profile);
     if (profile) {
       applyProfileData(profile);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
     }
-    load();
-  }, [applyProfileData, load, profile]);
+  }
+
+  useEffect(() => {
+    if (profile) return undefined;
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await me();
+        if (cancelled) return;
+        applyProfileData(data);
+      } catch {
+        if (cancelled) return;
+        add({
+          name: "profile-load-error",
+          title: "Ошибка",
+          content: "Не удалось загрузить данные профиля",
+          theme: "danger",
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, add, applyProfileData]);
 
   function openForm() {
     setFDraft(firstName);

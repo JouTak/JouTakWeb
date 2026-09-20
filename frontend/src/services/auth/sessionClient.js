@@ -130,7 +130,7 @@ export async function requestWithSession(
   } = {},
 ) {
   const initialSessionToken = tokenStore.getSessionToken();
-  let lastError = null;
+  let lastError;
   let refreshFailed = false;
 
   try {

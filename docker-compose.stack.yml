@@ -49,7 +49,17 @@ services:
         constraints: [node.role == manager]
 
   db:
-    image: postgres:16-alpine@sha256:3c5c8892d184f738f4fe282d14ddaa613a38f00f4189d2d94725ebe6f2909ddb
+    image: postgres:18-alpine@sha256:6c538e7206ea40ff740ef27883529390a690b6ead6ba96b44c67a9f7c638e8fd
+    # Refuse an unmigrated PG16 volume instead of initializing an empty DB.
+    command:
+      - sh
+      - -ec
+      - |
+        if [ -f /var/lib/postgresql/PG_VERSION ]; then
+          echo "PostgreSQL migration required: see docs/postgres18-upgrade.md" >&2
+          exit 1
+        fi
+        exec docker-entrypoint.sh postgres
     environment:
       POSTGRES_DB: joutak
       POSTGRES_USER: joutak
@@ -57,7 +67,7 @@ services:
     secrets:
       - postgres_password
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     networks:
       - joutak_net
     deploy:

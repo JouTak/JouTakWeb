@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { getProductRoute } from "../../routing/pageRegistry";
@@ -14,80 +14,44 @@ export function PageDocumentProvider({ children }) {
     () => getProductRoute(location.pathname),
     [location.pathname],
   );
-  const sequence = useRef(0);
-  const [state, setState] = useState({
-    route: null,
-    document: null,
-    loading: false,
-    error: null,
-  });
-
-  const load = useCallback(async (activeRoute, signal) => {
-    const requestSequence = ++sequence.current;
-    if (!activeRoute) {
-      setState({
-        route: null,
-        document: null,
-        loading: false,
-        error: null,
-      });
-      return null;
-    }
-    setState((current) => ({
-      route: activeRoute,
-      document:
-        current.route?.endpoint === activeRoute.endpoint
-          ? current.document
-          : null,
-      loading: true,
-      error: null,
-    }));
-    try {
-      const document = validatePageDocument(
-        await getPageDocument(activeRoute, { signal }),
-      );
-      if (signal?.aborted || requestSequence !== sequence.current) return null;
-      setState({
-        route: activeRoute,
-        document,
-        loading: false,
-        error: null,
-      });
-      return document;
-    } catch (error) {
-      if (signal?.aborted || requestSequence !== sequence.current) return null;
-      setState({
-        route: activeRoute,
-        document: null,
-        loading: false,
-        error,
-      });
-      return null;
-    }
-  }, []);
+  const [revision, setRevision] = useState(0);
+  const [result, setResult] = useState(null);
+  const reload = useCallback(() => setRevision((value) => value + 1), []);
 
   useEffect(() => {
+    if (!route) return undefined;
     const controller = new AbortController();
-    void load(route, controller.signal);
+    async function load() {
+      try {
+        const document = validatePageDocument(
+          await getPageDocument(route, { signal: controller.signal }),
+        );
+        if (!controller.signal.aborted)
+          setResult({ route, revision, document, error: null });
+      } catch (error) {
+        if (!controller.signal.aborted)
+          setResult({ route, revision, document: null, error });
+      }
+    }
+    void load();
     return () => controller.abort();
-  }, [load, route]);
+  }, [route, revision]);
 
   useEffect(() => {
-    const reloadAfterAuth = () => {
-      const controller = new AbortController();
-      void load(route, controller.signal);
-    };
-    window.addEventListener(AUTH_STATE_EVENT, reloadAfterAuth);
-    return () => window.removeEventListener(AUTH_STATE_EVENT, reloadAfterAuth);
-  }, [load, route]);
+    window.addEventListener(AUTH_STATE_EVENT, reload);
+    return () => window.removeEventListener(AUTH_STATE_EVENT, reload);
+  }, [reload]);
 
-  const value = useMemo(
-    () => ({
-      ...state,
-      reload: () => load(route),
-    }),
-    [load, route, state],
-  );
+  const value = useMemo(() => {
+    const current = result?.route === route && result?.revision === revision;
+    return {
+      route,
+      document: result?.route === route ? result.document : null,
+      loading: Boolean(route) && !current,
+      error: current ? result.error : null,
+      reload,
+    };
+  }, [reload, result, revision, route]);
 
   return (
     <PageDocumentContext.Provider value={value}>
@@ -96,6 +60,4 @@ export function PageDocumentProvider({ children }) {
   );
 }
 
-PageDocumentProvider.propTypes = {
-  children: PropTypes.node.isRequired,
-};
+PageDocumentProvider.propTypes = { children: PropTypes.node.isRequired };

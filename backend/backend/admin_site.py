@@ -390,7 +390,7 @@ class JouTakAdminSite(AdminSite):
             credential = json.loads(request.body)
             if not isinstance(credential, dict):
                 raise ValueError
-        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        except json.JSONDecodeError, UnicodeDecodeError, ValueError:
             try:
                 register_failed_webauthn_verification(request, pending)
             except AdminMFARateLimitError as exc:

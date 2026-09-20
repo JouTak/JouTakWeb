@@ -133,3 +133,22 @@ describe("AuthModal MFA flow", () => {
     });
   });
 });
+
+it("clears credentials and restores login mode when reopened", () => {
+  const modal = (open) => (
+    <MemoryRouter>
+      <AuthModal open={open} />
+    </MemoryRouter>
+  );
+  const { rerender } = render(modal(true));
+  fireEvent.change(screen.getByLabelText("Email или старый логин"), {
+    target: { value: "private@example.com" },
+  });
+  fireEvent.change(screen.getByLabelText("Пароль"), {
+    target: { value: "private-password" },
+  });
+  rerender(modal(false));
+  rerender(modal(true));
+  expect(screen.getByLabelText("Email или старый логин")).toHaveValue("");
+  expect(screen.getByLabelText("Пароль")).toHaveValue("");
+});

@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -8,6 +9,7 @@ import {
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { AUTH_STATE_EVENT } from "../../../services/auth/tokenStore";
 import { usePageDocument } from "../pageDocumentContext";
 import { PageDocumentProvider } from "../PageDocumentProvider";
 
@@ -50,7 +52,9 @@ function Consumer() {
   const { document, loading } = usePageDocument();
   return (
     <>
-      <output>{loading ? "loading" : document?.product.id || "none"}</output>
+      <output data-product={document?.product.id || "none"}>
+        {loading ? "loading" : document?.product.id || "none"}
+      </output>
       <button type="button" onClick={() => navigate("/joutak")}>
         JouTak
       </button>
@@ -110,5 +114,35 @@ describe("PageDocumentProvider", () => {
     await waitFor(() => {
       expect(screen.getByText("joutak")).toBeInTheDocument();
     });
+  });
+  it("preserves the layout during auth refresh and cancels it on navigation", async () => {
+    let resolveRefresh;
+    getPageDocument
+      .mockResolvedValueOnce(documentFor("itmocraft"))
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveRefresh = resolve;
+        }),
+      )
+      .mockResolvedValueOnce(documentFor("joutak", "v2"));
+    render(
+      <MemoryRouter>
+        <PageDocumentProvider>
+          <Consumer />
+        </PageDocumentProvider>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText("itmocraft")).toBeInTheDocument();
+    act(() => window.dispatchEvent(new Event(AUTH_STATE_EVENT)));
+    expect(screen.getByRole("status")).toHaveAttribute(
+      "data-product",
+      "itmocraft",
+    );
+    expect(screen.getByText("loading")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "JouTak" }));
+    expect(await screen.findByText("joutak")).toBeInTheDocument();
+    expect(getPageDocument.mock.calls[1][1].signal.aborted).toBe(true);
+    await act(async () => resolveRefresh(documentFor("itmocraft")));
+    expect(screen.getByText("joutak")).toBeInTheDocument();
   });
 });

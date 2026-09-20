@@ -112,7 +112,11 @@ export default function MfaCard({ profile = null }) {
   const [authenticators, setAuthenticators] = useState([]);
   const [totpStatus, setTotpStatus] = useState(null);
   const [totpCode, setTotpCode] = useState("");
-  const [qrDataUrl, setQrDataUrl] = useState("");
+  const [qrResult, setQrResult] = useState(null);
+  const qrDataUrl =
+    qrResult && qrResult.url === totpStatus?.totp_url && !totpStatus?.enabled
+      ? qrResult.data
+      : "";
   const [recoveryCodes, setRecoveryCodes] = useState([]);
   const [newPasskeyName, setNewPasskeyName] = useState("Основной ключ");
   const [renamingId, setRenamingId] = useState(null);
@@ -148,7 +152,6 @@ export default function MfaCard({ profile = null }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
       try {
         const [nextAuthenticators, nextTotp] = await Promise.all([
           listAuthenticatorsSafe(),
@@ -190,7 +193,6 @@ export default function MfaCard({ profile = null }) {
   useEffect(() => {
     let cancelled = false;
     if (totpStatus?.enabled || !totpStatus?.totp_url) {
-      setQrDataUrl("");
       return undefined;
     }
     QRCode.toDataURL(totpStatus.totp_url, {
@@ -199,10 +201,10 @@ export default function MfaCard({ profile = null }) {
       color: { dark: "#f4f7fb", light: "#0000" },
     })
       .then((value) => {
-        if (!cancelled) setQrDataUrl(value);
+        if (!cancelled) setQrResult({ url: totpStatus.totp_url, data: value });
       })
       .catch(() => {
-        if (!cancelled) setQrDataUrl("");
+        if (!cancelled) setQrResult(null);
       });
     return () => {
       cancelled = true;

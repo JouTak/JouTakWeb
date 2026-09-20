@@ -1,0 +1,5 @@
+# Always include this override after migration, including future deploys.
+volumes:
+  postgres_data:
+    external: true
+    name: ${POSTGRES_VOLUME_NAME:?Set POSTGRES_VOLUME_NAME to the verified PG18 volume}

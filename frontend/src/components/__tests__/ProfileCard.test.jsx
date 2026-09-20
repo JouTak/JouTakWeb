@@ -1,5 +1,6 @@
 import { ThemeProvider, Toaster, ToasterProvider } from "@gravity-ui/uikit";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -9,7 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { updateProfile } from "../../services/api";
+import { me, updateProfile } from "../../services/api";
 import ProfileCard from "../account/ProfileCard";
 
 vi.mock("../../services/api", () => ({
@@ -79,5 +80,45 @@ it("saves segmented profile choices and requires ISU for ITMO students", async (
   );
   expect(onUpdated).toHaveBeenCalled();
   expect(toaster.has("name-save")).toBe(true);
+  toaster.destroy();
+});
+
+it("updates displayed profile when the parent supplies new data", () => {
+  const toaster = new Toaster();
+  const card = (name) => (
+    <ThemeProvider theme="dark">
+      <ToasterProvider toaster={toaster}>
+        <ProfileCard profile={{ first_name: name }} />
+      </ToasterProvider>
+    </ThemeProvider>
+  );
+  const { rerender } = render(card("Before"));
+  expect(screen.getByText("Before")).toBeInTheDocument();
+  rerender(card("After"));
+  expect(screen.queryByText("Before")).not.toBeInTheDocument();
+  expect(screen.getByText("After")).toBeInTheDocument();
+  toaster.destroy();
+});
+
+it("ignores a fetch superseded by profile data from the parent", async () => {
+  let resolveFetch;
+  me.mockReturnValue(
+    new Promise((resolve) => {
+      resolveFetch = resolve;
+    }),
+  );
+  const toaster = new Toaster();
+  const card = (profile) => (
+    <ThemeProvider theme="dark">
+      <ToasterProvider toaster={toaster}>
+        <ProfileCard profile={profile} />
+      </ToasterProvider>
+    </ThemeProvider>
+  );
+  const { rerender } = render(card(undefined));
+  rerender(card({ first_name: "Current" }));
+  await act(async () => resolveFetch({ first_name: "Stale" }));
+  expect(screen.getByText("Current")).toBeInTheDocument();
+  expect(screen.queryByText("Stale")).not.toBeInTheDocument();
   toaster.destroy();
 });

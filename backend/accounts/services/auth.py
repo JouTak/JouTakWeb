@@ -52,7 +52,7 @@ def _refresh_expires_at(refresh: RefreshToken) -> datetime | None:
         return None
     try:
         return datetime.fromtimestamp(int(exp), tz=dt_timezone.utc)
-    except (TypeError, ValueError, OSError):
+    except TypeError, ValueError, OSError:
         return None
 
 

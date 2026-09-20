@@ -908,7 +908,7 @@ class FeatureOverrideAdmin(OperationsOnlyAdminMixin, SimpleHistoryAdmin):
         if obj.scope_type == FeatureOverrideScope.USER:
             try:
                 user = User.objects.get(pk=int(obj.scope_value))
-            except (TypeError, ValueError, User.DoesNotExist):
+            except TypeError, ValueError, User.DoesNotExist:
                 return f"User #{obj.scope_value}"
             return user_label(user)
         if obj.scope_type == FeatureOverrideScope.ANONYMOUS:

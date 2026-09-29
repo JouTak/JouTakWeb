@@ -15,6 +15,15 @@ updates:
     directory: /frontend
     patterns: ["*"]
     multi-ecosystem-group: weekly-dependencies
+    ignore:
+      # React and accessibility plugins do not yet support ESLint 10.
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      # New compiler rules need a separate application refactor.
+      - dependency-name: eslint-plugin-react-hooks
+        update-types: ["version-update:semver-major"]
     groups:
       security-updates:
         applies-to: security-updates
@@ -44,6 +53,10 @@ updates:
       - /frontend
     patterns: ["*"]
     multi-ecosystem-group: weekly-dependencies
+    ignore:
+      # Keep the image aligned with uv sync --python 3.12 and CI.
+      - dependency-name: python
+        versions: [">=3.13"]
     groups:
       security-updates:
         applies-to: security-updates
@@ -53,6 +66,10 @@ updates:
     directory: /
     patterns: ["*"]
     multi-ecosystem-group: weekly-dependencies
+    ignore:
+      # Major upgrades require migration of existing persistent databases.
+      - dependency-name: postgres
+        versions: [">=17"]
     groups:
       security-updates:
         applies-to: security-updates

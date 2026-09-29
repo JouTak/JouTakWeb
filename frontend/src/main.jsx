@@ -5,6 +5,7 @@ import "./assets/index.css";
 
 import {
   configure,
+  Toaster,
   ToasterComponent,
   ToasterProvider,
 } from "@gravity-ui/uikit";
@@ -38,12 +39,13 @@ setupAxiosInterceptors(({ reason } = {}) => {
 });
 
 configure({ lang: "ru" });
+const toaster = new Toaster();
 
 export function Root() {
   return (
     <BrowserRouter>
       <ThemePreferenceProvider>
-        <ToasterProvider>
+        <ToasterProvider toaster={toaster}>
           <PageDocumentProvider>
             <App />
           </PageDocumentProvider>

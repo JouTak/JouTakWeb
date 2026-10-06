@@ -85,11 +85,6 @@
     "vitest": "^5.0.1",
     "@eslint/compat": "^2.1.1"
   },
-  "overrides": {
-    "@gravity-ui/navigation": {
-      "jscodeshift": "17.4.0"
-    }
-  },
   "allowScripts": {
     "@parcel/watcher@2.6.0": true,
     "esbuild@0.25.9": true,
@@ -100,6 +95,9 @@
     "msw@2.15.0": true
   },
   "overrides": {
+    "@gravity-ui/navigation": {
+      "jscodeshift": "17.4.0"
+    },
     "eslint-plugin-react": {
       "eslint": "$eslint"
     },

@@ -160,11 +160,17 @@ test("route and viewport matrix has no horizontal overflow or header overlap", a
         )
         .toEqual({ body: false, document: false });
 
-      const header = await page.locator("header").boundingBox();
-      const main = await page.locator("main").boundingBox();
-      expect(header).not.toBeNull();
-      expect(main).not.toBeNull();
-      expect(main.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const header = document
+              .querySelector("header")
+              .getBoundingClientRect();
+            const main = document.querySelector("main").getBoundingClientRect();
+            return main.top - header.bottom;
+          }),
+        )
+        .toBeGreaterThanOrEqual(-1);
     }
   }
 });

@@ -2,14 +2,11 @@ import { Button, DropdownMenu, Label, Loader, Modal } from "@gravity-ui/uikit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import {
-  AUTH_STATE_EVENT,
-  hasStoredAuth,
-  logout,
-  me,
-} from "../../services/api";
+import { useAuthProfile } from "../../hooks/useAuthProfile";
+import { logout } from "../../services/api";
 import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
+  getPersonalizationNoticeKey,
   hasSeenPersonalizationNotice,
   markPersonalizationNoticeSeen,
 } from "../../utils/personalizationNotice";
@@ -99,55 +96,18 @@ export default function HeaderNew() {
   const location = useLocation();
 
   const [authOpen, setAuthOpen] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [personalizationModalOpen, setPersonalizationModalOpen] =
-    useState(false);
-
-  const loadProfileIfTokens = useCallback(async () => {
-    if (!hasStoredAuth()) {
-      setProfile(null);
-      return;
-    }
-    setLoadingProfile(true);
-    try {
-      const p = await me();
-      setProfile(p);
-    } catch {
-      setProfile(null);
-    } finally {
-      setLoadingProfile(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProfileIfTokens();
-  }, [loadProfileIfTokens]);
-
-  useEffect(() => {
-    if (!authOpen) loadProfileIfTokens();
-  }, [authOpen, loadProfileIfTokens]);
-
-  useEffect(() => {
-    const onAuthStateChanged = () => {
-      loadProfileIfTokens();
-    };
-    window.addEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
-    return () => {
-      window.removeEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
-    };
-  }, [loadProfileIfTokens]);
+  const { profile, loadingProfile } = useAuthProfile(authOpen);
+  const [dismissedNoticeKey, setDismissedNoticeKey] = useState(null);
+  const personalizationNoticeKey = getPersonalizationNoticeKey(profile);
 
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
 
   const onLogout = useCallback(async () => {
     setAuthOpen(false);
-    setPersonalizationModalOpen(false);
     try {
       await logout();
     } finally {
-      setProfile(null);
       navigate("/joutak", { replace: true });
     }
   }, [navigate]);
@@ -162,7 +122,7 @@ export default function HeaderNew() {
       if (markSeen) {
         markPersonalizationNoticeSeen(profile);
       }
-      setPersonalizationModalOpen(false);
+      setDismissedNoticeKey(getPersonalizationNoticeKey(profile));
     },
     [profile],
   );
@@ -172,16 +132,17 @@ export default function HeaderNew() {
     navigate("/account/complete-profile");
   }, [closePersonalizationModal, navigate]);
 
-  useEffect(() => {
-    if (!profile || authOpen) return;
-    if (location.pathname.startsWith("/account/complete-registration")) return;
-    if (location.pathname.startsWith("/account/complete-profile")) return;
-    if (location.pathname.startsWith("/account/onboarding")) return;
-    if (!needsPersonalization(profile)) return;
-    if (profile?.personalization_interstitial_enabled === false) return;
-    if (hasSeenPersonalizationNotice(profile)) return;
-    setPersonalizationModalOpen(true);
-  }, [authOpen, location.pathname, profile]);
+  const personalizationModalOpen = Boolean(
+    profile &&
+    !authOpen &&
+    !/^\/account\/(complete-registration|complete-profile|onboarding)/.test(
+      location.pathname,
+    ) &&
+    needsPersonalization(profile) &&
+    profile.personalization_interstitial_enabled !== false &&
+    dismissedNoticeKey !== personalizationNoticeKey &&
+    !hasSeenPersonalizationNotice(profile),
+  );
 
   const renderAccountSwitcher = (switcherProps) => (
     <button

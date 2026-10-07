@@ -142,53 +142,60 @@ export default function AccountOnboarding() {
     navigate(`/session-expired?${params.toString()}`, { replace: true });
   }, [navigate]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const profileData = await me();
-      setProfile(profileData);
-      setProfileComplete(profileData?.profile_complete === true);
-      setMissingFields(
-        Array.isArray(profileData?.missing_fields)
-          ? profileData.missing_fields
-          : [],
-      );
-      const missing = Array.isArray(profileData?.missing_fields)
-        ? profileData.missing_fields
-        : [];
-      if (
-        !missing.includes("minecraft_nick") &&
-        !missing.includes("minecraft_has_license") &&
-        (missing.includes("vk_username") ||
-          missing.includes("is_itmo_student") ||
-          missing.includes("itmo_isu"))
-      ) {
-        setActiveStep(2);
-      }
-      setVkUsername(profileData?.vk_username || "");
-      setMinecraftNick(profileData?.minecraft_nick || "");
-      setMinecraftHasLicense(boolToSelect(profileData?.minecraft_has_license));
-      setIsItmoStudent(boolToSelect(profileData?.is_itmo_student));
-      setItmoIsu(profileData?.itmo_isu || "");
-    } catch (error) {
-      if (error?.response?.status === 401) {
-        redirectToSessionExpired();
-        return;
-      }
-      add({
-        name: "onboarding-load-error",
-        title: "Ошибка",
-        content: "Не удалось загрузить данные аккаунта",
-        theme: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [add, redirectToSessionExpired]);
-
+  const [loadRevision, setLoadRevision] = useState(0);
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    async function load() {
+      try {
+        const profileData = await me();
+        if (cancelled) return;
+        setProfile(profileData);
+        setProfileComplete(profileData?.profile_complete === true);
+        setMissingFields(
+          Array.isArray(profileData?.missing_fields)
+            ? profileData.missing_fields
+            : [],
+        );
+        const missing = Array.isArray(profileData?.missing_fields)
+          ? profileData.missing_fields
+          : [];
+        if (
+          !missing.includes("minecraft_nick") &&
+          !missing.includes("minecraft_has_license") &&
+          (missing.includes("vk_username") ||
+            missing.includes("is_itmo_student") ||
+            missing.includes("itmo_isu"))
+        ) {
+          setActiveStep(2);
+        }
+        setVkUsername(profileData?.vk_username || "");
+        setMinecraftNick(profileData?.minecraft_nick || "");
+        setMinecraftHasLicense(
+          boolToSelect(profileData?.minecraft_has_license),
+        );
+        setIsItmoStudent(boolToSelect(profileData?.is_itmo_student));
+        setItmoIsu(profileData?.itmo_isu || "");
+      } catch (error) {
+        if (cancelled) return;
+        if (error?.response?.status === 401) {
+          redirectToSessionExpired();
+          return;
+        }
+        add({
+          name: "onboarding-load-error",
+          title: "Ошибка",
+          content: "Не удалось загрузить данные аккаунта",
+          theme: "danger",
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [add, redirectToSessionExpired, loadRevision]);
 
   async function saveStep(step) {
     const mc = minecraftNick.trim();
@@ -261,7 +268,8 @@ export default function AccountOnboarding() {
             : result?.message || "Профиль обновлён",
         theme: "success",
       });
-      await load();
+      setLoading(true);
+      setLoadRevision((value) => value + 1);
       if (step === 1) {
         setActiveStep(2);
       } else if (result?.profile_complete) {

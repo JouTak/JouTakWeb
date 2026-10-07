@@ -8,7 +8,7 @@ JouTakWeb - web-приложение для серверов комьюнити 
 ## Стек
 
 - Frontend: React 18, Vite, Gravity UI, legacy Bootstrap components, npm.
-- Backend: Python 3.12+, Django 5.2, Django Ninja, django-allauth, uv.
+- Backend: Python 3.14+, Django 5.2, Django Ninja, django-allauth, uv.
 - Database: PostgreSQL в Docker, SQLite для отдельных test runs.
 - Tooling: Ruff, Bandit, pip-audit, ESLint, Prettier, Stylelint, Vitest.
 
@@ -115,12 +115,12 @@ npm --prefix frontend run check
 
 ### Backend без Docker
 
-Нужны Python 3.12 и [uv](https://docs.astral.sh/uv/). Без `DATABASE_URL`
+Нужны Python 3.14 и [uv](https://docs.astral.sh/uv/). Без `DATABASE_URL`
 development settings используют SQLite, поэтому PostgreSQL для такого
 запуска не нужен.
 
 ```bash
-uv sync --locked --python 3.12 --group dev --group test
+uv sync --locked --python 3.14 --group dev --group test
 uv run python backend/manage.py migrate --settings backend.settings.dev
 uv run python backend/manage.py sync_feature_registry --settings backend.settings.dev
 uv run python backend/manage.py runserver 127.0.0.1:8000 --settings backend.settings.dev
@@ -208,3 +208,14 @@ scanning.
 - [Безопасность](docs/security.md)
 - [Frontend Conventions](docs/frontend-conventions.md)
 - [API Conventions](docs/api-conventions.md)
+
+### Existing PostgreSQL 16 deployments
+
+The manifests now use PostgreSQL 18. Existing persistent databases require the
+[verified volume migration procedure](docs/postgres18-upgrade.md) before deploying
+these manifests. The startup guard refuses an old volume; retain the migrated-volume
+override in subsequent deployments. Fresh development stacks need no migration.
+
+The frontend uses ESLint 10 and React Hooks 7. React/a11y rules run through the
+official `@eslint/compat` adapter until their upstream peer ranges include ESLint 10;
+`npm run lint` also checks that these rules still reject invalid code.

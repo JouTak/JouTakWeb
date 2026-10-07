@@ -1,3 +1,4 @@
+import { fixupPluginRules } from "@eslint/compat";
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier";
 import jsxA11y from "eslint-plugin-jsx-a11y";
@@ -35,8 +36,10 @@ export default [
     },
     settings: { react: { version: "detect" } },
     plugins: {
-      ...jsxA11y.flatConfigs.recommended.plugins,
-      react,
+      // Upstream peer ranges still stop at ESLint 9; preserve their checks
+      // through ESLint's compatibility adapter until both plugins migrate.
+      "jsx-a11y": fixupPluginRules(jsxA11y),
+      react: fixupPluginRules(react),
       "react-hooks": reactHooks,
       "react-refresh": reactRefresh,
       "simple-import-sort": simpleImportSort,

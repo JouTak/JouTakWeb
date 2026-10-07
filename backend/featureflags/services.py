@@ -380,7 +380,7 @@ def get_effective_default(feature: FeatureDefinition) -> bool | str:
     if not feature.active:
         try:
             return _coerce_value(feature.kind, get_default_value(feature.key))
-        except (KeyError, ValueError):
+        except KeyError, ValueError:
             return False
     return _safe_default(feature)
 
@@ -422,7 +422,7 @@ def _rule_matches(
             return False
         try:
             group_ids = [int(gid) for gid in rule.group_ids if gid]
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             logger.warning(
                 "featureflags.invalid_group_ids",
                 extra={"flag": rule.feature.key, "rule_id": rule.pk},
@@ -771,7 +771,7 @@ def from_openfeature_context(
                 pk=int(user_id),
                 is_staff=bool(attrs.get("is_staff", False)),
             )
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             user = None
 
     return RequestEvaluationContext(

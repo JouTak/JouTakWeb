@@ -1,4 +1,5 @@
 import ContactCategory from "../../components/ContactElements/ContactCategory";
+import PageLoading from "../../components/PageLoading";
 import { usePageDocument } from "../../features/pageDocument/pageDocumentContext";
 import styles from "./Contact.module.scss";
 
@@ -150,7 +151,7 @@ function ContactV2Page() {
 export default function Contact() {
   const { document, loading } = usePageDocument();
   if (loading && !document) {
-    return <div className="py-5 text-center text-secondary">Загрузка...</div>;
+    return <PageLoading />;
   }
 
   return document?.effective_page_variant === "v2" ? (

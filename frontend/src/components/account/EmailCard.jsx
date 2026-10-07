@@ -45,31 +45,42 @@ export default function EmailCard({ initialStatus }) {
     setNewEmail(status.email || "");
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const status = await getEmailStatus();
-      applyStatus(status);
-    } catch {
-      add({
-        name: "email-load-error",
-        title: "Ошибка",
-        content: "Не удалось загрузить статус email",
-        theme: "danger",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [add, applyStatus]);
-
-  useEffect(() => {
+  const [previousInput, setPreviousInput] = useState(initialStatus);
+  if (previousInput !== initialStatus) {
+    setPreviousInput(initialStatus);
     if (initialStatus !== undefined) {
       applyStatus(initialStatus);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
     }
-    load();
-  }, [applyStatus, initialStatus, load]);
+  }
+
+  useEffect(() => {
+    if (initialStatus !== undefined) return undefined;
+    let cancelled = false;
+    async function load() {
+      try {
+        const status = await getEmailStatus();
+        if (cancelled) return;
+        applyStatus(status);
+      } catch {
+        if (cancelled) return;
+        add({
+          name: "email-load-error",
+          title: "Ошибка",
+          content: "Не удалось загрузить статус email",
+          theme: "danger",
+        });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialStatus, add, applyStatus]);
 
   async function onResend() {
     setBusy(true);

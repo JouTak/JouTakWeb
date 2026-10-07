@@ -87,7 +87,7 @@ def parse_int_values(values: Iterable[object]) -> list[int]:
     for value in values:
         try:
             parsed_value = int(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             continue
         if parsed_value not in seen:
             seen.add(parsed_value)
@@ -150,7 +150,7 @@ def _selected_feature(form: forms.Form) -> FeatureDefinition | None:
         return None
     try:
         return FeatureDefinition.objects.get(pk=feature_pk)
-    except (TypeError, ValueError, FeatureDefinition.DoesNotExist):
+    except TypeError, ValueError, FeatureDefinition.DoesNotExist:
         return None
 
 
@@ -584,7 +584,7 @@ class FeatureOverrideAdminForm(forms.ModelForm):
                 self.fields["target_user"].initial = User.objects.get(
                     pk=int(self.instance.scope_value)
                 )
-            except (TypeError, ValueError, User.DoesNotExist):
+            except TypeError, ValueError, User.DoesNotExist:
                 self.fields["target_user"].initial = None
         elif self.instance.scope_type == FeatureOverrideScope.ANONYMOUS:
             self.fields["anonymous_scope"].initial = self.instance.scope_value

@@ -205,6 +205,7 @@ scanning.
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [Архитектура](docs/architecture.md)
+- [Фича-флаги: подключение и раскатка](docs/feature-flags-rollout.md)
 - [Безопасность](docs/security.md)
 - [Frontend Conventions](docs/frontend-conventions.md)
 - [API Conventions](docs/api-conventions.md)

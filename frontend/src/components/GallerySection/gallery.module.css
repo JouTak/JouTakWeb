@@ -4,30 +4,66 @@
   width: fit-content;
 }
 
-.gallery-image {
+.image {
   display: block;
   width: 100%;
   max-width: 1364px;
   height: auto;
 }
 
-.photo-viewer {
+.viewer {
   position: absolute;
   top: 64px;
   left: 459px;
   width: 786px;
 }
 
-.photo-viewer-image {
-  display: block;
+.box {
+  position: relative;
   width: 786px;
   height: 442px;
-  object-fit: cover;
   border: 4px solid #c6c6c6;
+  box-sizing: border-box;
+  background-color: #2b2b2b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.hidden {
+  opacity: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  font-family: MinecraftSeven, sans-serif;
+  font-size: 20px;
+  color: #c6c6c6;
+  width: 100%;
+  height: 100%;
   box-sizing: border-box;
 }
 
-.gallery-pagination {
+.error {
+  color: #ff6b6b;
+}
+
+.pagination {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,7 +71,7 @@
   margin-top: 22px;
 }
 
-.pagination-button {
+.control {
   background: transparent;
   border: none;
   padding: 0;
@@ -44,13 +80,18 @@
   line-height: 0;
 }
 
-.pagination-arrow {
+.control:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.arrow {
   display: block;
   width: auto;
   height: 30px;
 }
 
-.pagination-counter {
+.counter {
   text-align: center;
   font-family: MinecraftSeven, sans-serif;
   font-size: 24px;
@@ -58,7 +99,7 @@
   margin-bottom: 5px;
 }
 
-.gallery-button {
+.tab {
   position: absolute;
   display: inline-flex;
   align-items: center;
@@ -76,7 +117,7 @@
   white-space: nowrap;
 }
 
-.chosen-button {
+.chosen {
   font-size: 40px;
 }
 
@@ -85,27 +126,27 @@
     width: 100%;
   }
 
-  .gallery-image {
+  .image {
     display: none;
   }
 
-  .gallery-button {
+  .tab {
     position: static;
     padding: 10px 16px;
     font-size: 24px;
   }
 
-  .chosen-button {
+  .chosen {
     font-size: 28px;
   }
 
-  .photo-viewer {
+  .viewer {
     position: static;
     width: 100%;
     margin-top: 24px;
   }
 
-  .photo-viewer-image {
+  .box {
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;

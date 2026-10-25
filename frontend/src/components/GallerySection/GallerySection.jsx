@@ -20,7 +20,6 @@ export default function GallerySection({
     ? activeGallery.photos[activePhotoIndex]
     : null;
 
-  // Вычисляем невалидный URL прямо при рендере без синхронного setState в useEffect
   const isInvalidUrl =
     Boolean(totalPhotos) &&
     (!currentPhotoSrc ||
@@ -29,7 +28,7 @@ export default function GallerySection({
 
   const imageStatus = isInvalidUrl ? "error" : rawImageStatus;
 
-  // Таймаут долгой загрузки (5 секунд)
+  // Таймаут долгой загрузки (5 секунд), после выводим ошибку
   useEffect(() => {
     if (imageStatus !== "loading") {
       return;

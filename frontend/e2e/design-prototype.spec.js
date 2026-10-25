@@ -261,11 +261,19 @@ for (const variant of ["legacy", "v2"]) {
             )
             .toBeNull();
 
-          const header = await page.locator("header").boundingBox();
-          const main = await page.locator("main").boundingBox();
-          expect(header).not.toBeNull();
-          expect(main).not.toBeNull();
-          expect(main.y).toBeGreaterThanOrEqual(header.y + header.height - 1);
+          await expect
+            .poll(() =>
+              page.evaluate(() => {
+                const header = document
+                  .querySelector("header")
+                  .getBoundingClientRect();
+                const main = document
+                  .querySelector("main")
+                  .getBoundingClientRect();
+                return main.top - header.bottom;
+              }),
+            )
+            .toBeGreaterThanOrEqual(-1);
         });
       }
     });
@@ -475,3 +483,33 @@ for (const width of [320, 768, 1440, 2560]) {
     }
   });
 }
+
+test("pending page data has an accessible loading state", async ({ page }) => {
+  let release;
+  const pending = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route("http://127.0.0.1:8000/bff/pages/**", async (route) => {
+    await pending;
+    await route.fallback();
+  });
+  try {
+    await page.goto("/");
+    await expect(
+      page.getByRole("status", { name: "" }).filter({ hasText: "Загрузка..." }),
+    ).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .include('[role="status"]')
+      .analyze();
+    expect(
+      results.violations.filter(({ impact }) =>
+        ["serious", "critical"].includes(impact),
+      ),
+    ).toEqual([]);
+  } finally {
+    release();
+  }
+  await expect(
+    page.getByRole("link", { name: "Основное действие" }),
+  ).toBeVisible();
+});

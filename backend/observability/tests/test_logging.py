@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-from django.http import HttpResponse
-from django.test import SimpleTestCase
-
 from backend.middleware import (
     RequestContextMiddleware,
     is_admin_host,
     is_api_host,
 )
+from django.http import HttpResponse
+from django.test import SimpleTestCase
+
 from observability.logging import (
     RequestLogContextFilter,
     clear_request_log_context,

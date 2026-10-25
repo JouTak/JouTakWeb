@@ -33,6 +33,17 @@
   box-sizing: border-box;
 }
 
+.media-frame {
+  position: relative;
+}
+
+.hidden {
+  opacity: 0;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .design-placeholder {
   display: flex;
   flex-direction: column;

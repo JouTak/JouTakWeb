@@ -29,10 +29,6 @@ const MinigamesRoute = lazy(
   () => import("./pages/minigames/MinigamesRoute.jsx"),
 );
 
-function RouteFallback() {
-  return <LoadingPage />;
-}
-
 function LoginModalRoute() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,7 +72,7 @@ function AppRoutes() {
   const background = location.state && location.state.background;
 
   return (
-    <Suspense fallback={<RouteFallback />}>
+    <Suspense fallback={<LoadingPage />}>
       <Routes location={background || location}>
         <Route path="/" element={<ItmoCraftRoute />} />
         <Route path="/joutak" element={<JouTakRoute />} />

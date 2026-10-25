@@ -4,6 +4,7 @@ import json
 import time
 from unittest.mock import patch
 
+from backend.admin_site import SESSION_KEY_ADMIN_MFA_VERIFIED
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
@@ -11,7 +12,6 @@ from django.contrib.auth.models import Permission
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import Client, RequestFactory, TestCase, override_settings
 
-from backend.admin_site import SESSION_KEY_ADMIN_MFA_VERIFIED
 from featureflags.admin import (
     ExperimentAssignmentAdmin,
     FeatureOverrideAdmin,

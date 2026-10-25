@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import json
 
+from backend.ratelimiting import (
+    BFF_ACCOUNT_RATE,
+    bff_ratelimit,
+)
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_http_methods
 from featureflags.services import (
@@ -11,15 +15,20 @@ from featureflags.services import (
     set_override_cookie,
 )
 
-from backend.ratelimiting import (
-    BFF_ACCOUNT_RATE,
-    bff_ratelimit,
-)
 from bff.services import (
     build_account_summary_payload,
     build_bootstrap_payload,
     build_page_document,
 )
+
+_INVALID_FEATURE_OVERRIDE_DETAIL = "Invalid feature override request."
+
+
+def _invalid_feature_override_response() -> JsonResponse:
+    return JsonResponse(
+        {"detail": _INVALID_FEATURE_OVERRIDE_DETAIL},
+        status=400,
+    )
 
 
 def _build_bff_response(request, *, page, build_payload):
@@ -160,15 +169,22 @@ def feature_overrides(request):
 
     try:
         payload = json.loads(request.body or b"{}")
-        overrides = payload.get("overrides")
-        if not isinstance(overrides, dict):
-            raise ValueError("overrides must be an object")
+    except ValueError:
+        return _invalid_feature_override_response()
+    if not isinstance(payload, dict):
+        return _invalid_feature_override_response()
+
+    overrides = payload.get("overrides")
+    if not isinstance(overrides, dict):
+        return _invalid_feature_override_response()
+
+    try:
         validated = set_override_cookie(
             response,
             user=user,
             overrides=overrides,
         )
-    except (json.JSONDecodeError, ValueError) as exc:
-        return JsonResponse({"detail": str(exc)}, status=400)
+    except ValueError:
+        return _invalid_feature_override_response()
     response.content = JsonResponse({"overrides": validated}).content
     return response

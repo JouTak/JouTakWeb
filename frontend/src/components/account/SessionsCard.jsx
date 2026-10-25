@@ -254,35 +254,50 @@ export default function SessionsCard({ initialSessions }) {
     navigate(`/session-expired?${params.toString()}`, { replace: true });
   }, [navigate]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setMsg("");
-    try {
-      const raw = await listSessionsHeadless();
-      setAllSessions(normalizeSessionList(raw));
-    } catch (error) {
-      if (error?.response?.status === 401) {
-        redirectToSessionExpired();
-        return;
-      }
-      setMsg("Не удалось загрузить список сессий.");
-    } finally {
-      setLoading(false);
-    }
-  }, [redirectToSessionExpired]);
-
-  useEffect(() => {
+  const [previousInput, setPreviousInput] = useState(initialSessions);
+  if (previousInput !== initialSessions) {
+    setPreviousInput(initialSessions);
     if (initialSessions !== undefined) {
       setAllSessions(normalizeSessionList(initialSessions));
-      setLoading(false);
       setMsg("");
-      return;
+      setLoading(false);
+    } else {
+      setLoading(true);
     }
-    load();
-  }, [initialSessions, load]);
+  }
 
+  useEffect(() => {
+    if (initialSessions !== undefined) return undefined;
+    let cancelled = false;
+    async function load() {
+      try {
+        const raw = await listSessionsHeadless();
+        if (cancelled) return;
+        setAllSessions(normalizeSessionList(raw));
+      } catch (error) {
+        if (cancelled) return;
+        if (error?.response?.status === 401) {
+          redirectToSessionExpired();
+          return;
+        }
+        setMsg("Не удалось загрузить список сессий.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialSessions, redirectToSessionExpired]);
+
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const sessions = useMemo(() => {
-    const cutoff = Date.now() - WINDOW_HOURS * 3600 * 1000;
+    const cutoff = now - WINDOW_HOURS * 3600 * 1000;
     return allSessions
       .filter((session) => {
         const ts = sessionTimestamp(session.last_seen || session.created);
@@ -290,7 +305,7 @@ export default function SessionsCard({ initialSessions }) {
       })
       .filter((session) => showHistory || !session.revoked)
       .sort(compareSessions);
-  }, [allSessions, showHistory]);
+  }, [allSessions, now, showHistory]);
 
   function askRevokeOne(id) {
     setConfirmAction("revoke-one");

@@ -170,8 +170,8 @@ export default function PasswordCard({
   }, [busy, editing, onCancel]);
 
   function mapBackendErrors(data) {
-    let cur = "";
-    let n1 = "";
+    let cur;
+    let n1;
     const flatFields =
       data?.fields && typeof data.fields === "object" ? data.fields : {};
     const nestedErrors =

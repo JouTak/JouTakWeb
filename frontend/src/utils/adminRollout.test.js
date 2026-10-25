@@ -55,9 +55,7 @@ describe("guided rollout admin behavior", () => {
       },
     });
 
-    await import(
-      "../../../backend/featureflags/static/featureflags/admin_rollout.js"
-    );
+    await import("../../../backend/featureflags/static/featureflags/admin_rollout.js");
     document.dispatchEvent(new Event("DOMContentLoaded"));
 
     const groups = document.getElementById("id_target_groups");

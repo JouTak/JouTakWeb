@@ -195,7 +195,7 @@ def _parse_request_payload(
 def _response_payload(response: HttpResponse) -> dict | None:
     try:
         payload = json.loads(response.content.decode("utf-8"))
-    except (AttributeError, UnicodeDecodeError, json.JSONDecodeError):
+    except AttributeError, UnicodeDecodeError, json.JSONDecodeError:
         return None
     return payload if isinstance(payload, dict) else None
 

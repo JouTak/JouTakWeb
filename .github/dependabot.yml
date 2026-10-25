@@ -53,6 +53,10 @@ updates:
     directory: /
     patterns: ["*"]
     multi-ecosystem-group: weekly-dependencies
+    ignore:
+      # Major upgrades require migration of existing persistent databases.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
     groups:
       security-updates:
         applies-to: security-updates

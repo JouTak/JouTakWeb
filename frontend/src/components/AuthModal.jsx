@@ -22,11 +22,12 @@ import { markPostSignupPersonalizationSession } from "../utils/personalizationNo
 import { needsPersonalization } from "../utils/profileState";
 import styles from "./AuthModal.module.css";
 
-export default function AuthModal({
-  open = false,
-  onClose,
-  successRedirectTo = null,
-}) {
+export default function AuthModal({ open = false, ...props }) {
+  return open ? <AuthModalContent {...props} /> : null;
+}
+
+function AuthModalContent({ onClose, successRedirectTo = null }) {
+  const open = true;
   const navigate = useNavigate();
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
@@ -97,18 +98,8 @@ export default function AuthModal({
   }
 
   useEffect(() => {
-    if (!open) {
-      resetForms();
-      setMode("login");
-      setBusy(false);
-      setPasskeyLoginEnabled(false);
-    }
-  }, [open]);
-
-  useEffect(() => {
     let cancelled = false;
     if (!open || !passkeySupported) {
-      setPasskeyLoginEnabled(false);
       return undefined;
     }
 
@@ -671,3 +662,5 @@ AuthModal.propTypes = {
   onClose: PropTypes.func,
   successRedirectTo: PropTypes.string,
 };
+
+AuthModalContent.propTypes = AuthModal.propTypes;

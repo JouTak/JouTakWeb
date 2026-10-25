@@ -58,7 +58,7 @@ def _decode_base64url(value: object) -> bytes:
             altchars=b"-_",
             validate=True,
         )
-    except (binascii.Error, ValueError):
+    except binascii.Error, ValueError:
         _reject("invalid_client_data_encoding")
 
 
@@ -72,7 +72,7 @@ def _parse_client_data(credential: object) -> Mapping[str, object]:
     raw_client_data = _decode_base64url(response.get("clientDataJSON"))
     try:
         client_data = json.loads(raw_client_data.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except UnicodeDecodeError, json.JSONDecodeError:
         _reject("invalid_client_data_json")
     if not isinstance(client_data, Mapping):
         _reject("invalid_client_data_json")

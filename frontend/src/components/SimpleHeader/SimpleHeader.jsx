@@ -7,17 +7,12 @@ import {
   Modal,
   Select,
 } from "@gravity-ui/uikit";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import {
-  AUTH_STATE_EVENT,
-  hasStoredAuth,
-  logout,
-  me,
-  readStoredTokens,
-} from "../../services/api";
+import { useAuthProfile } from "../../hooks/useAuthProfile";
+import { logout } from "../../services/api";
 import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
   getPersonalizationNoticeKey,
@@ -79,76 +74,31 @@ const SimpleHeader = () => {
 
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [profile, setProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [personalizationModalOpen, setPersonalizationModalOpen] =
-    useState(false);
-  const [postSignupBannerDismissed, setPostSignupBannerDismissed] =
-    useState(false);
-
+  const { profile, loadingProfile } = useAuthProfile(authOpen);
+  const [dismissedNoticeKey, setDismissedNoticeKey] = useState(null);
+  const personalizationNoticeKey = getPersonalizationNoticeKey(profile);
+  const [menuPath, setMenuPath] = useState(location.pathname);
+  if (menuPath !== location.pathname) {
+    setMenuPath(location.pathname);
+    setMenuOpen(false);
+  }
   const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
-
   const openAuth = useCallback(() => {
     closeOffcanvas();
     setAuthOpen(true);
   }, [closeOffcanvas]);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    setPostSignupBannerDismissed(false);
-  }, [profile?.email, profile?.username]);
-
-  const loadProfileIfTokens = useCallback(async () => {
-    const tokens = readStoredTokens();
-    if (tokens?.pending_mfa) {
-      setProfile(null);
-      setLoadingProfile(false);
-      return;
-    }
-    if (!hasStoredAuth()) {
-      setProfile(null);
-      return;
-    }
-    setLoadingProfile(true);
-    try {
-      const p = await me();
-      setProfile(p);
-    } catch {
-      setProfile(null);
-    } finally {
-      setLoadingProfile(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProfileIfTokens();
-  }, [loadProfileIfTokens]);
-  useEffect(() => {
-    if (!authOpen) loadProfileIfTokens();
-  }, [authOpen, loadProfileIfTokens]);
-  useEffect(() => {
-    const onAuthStateChanged = () => {
-      loadProfileIfTokens();
-    };
-    window.addEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
-    return () => {
-      window.removeEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
-    };
-  }, [loadProfileIfTokens]);
+  const [dismissedBannerKey, setDismissedBannerKey] = useState(null);
+  const bannerKey = `${profile?.email || ""}:${profile?.username || ""}`;
+  const postSignupBannerDismissed = dismissedBannerKey === bannerKey;
 
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
   const onLogout = useCallback(async () => {
     closeOffcanvas();
     setAuthOpen(false);
-    setPersonalizationModalOpen(false);
     try {
       await logout();
     } finally {
-      setProfile(null);
       navigate("/joutak", { replace: true });
     }
   }, [closeOffcanvas, navigate]);
@@ -167,14 +117,10 @@ const SimpleHeader = () => {
     isNewRegistrationPersonalization(profile) &&
     isPostSignupPersonalizationSession();
 
-  const personalizationNoticeKey = useMemo(() => {
-    return getPersonalizationNoticeKey(profile);
-  }, [profile]);
-
   const closePersonalizationModal = useCallback(
     ({ markSeen = true } = {}) => {
       if (markSeen) markPersonalizationNoticeSeen(profile);
-      setPersonalizationModalOpen(false);
+      setDismissedNoticeKey(getPersonalizationNoticeKey(profile));
     },
     [profile],
   );
@@ -188,26 +134,16 @@ const SimpleHeader = () => {
     navigate("/account/complete-registration");
   }, [navigate]);
 
-  useEffect(() => {
-    if (!profile || authOpen) return;
-    if (isPersonalizationFlowPath(location.pathname)) return;
-    if (!needsPersonalization(profile)) return;
-    if (profile?.personalization_interstitial_enabled === false) return;
-    if (
-      !isLegacyPersonalization(profile) &&
-      isPostSignupPersonalizationSession()
-    ) {
-      return;
-    }
-    if (hasSeenPersonalizationNotice(profile)) return;
-    setPersonalizationModalOpen(true);
-  }, [authOpen, location.pathname, personalizationNoticeKey, profile]);
-
-  useEffect(() => {
-    if (isPersonalizationFlowPath(location.pathname)) {
-      setPersonalizationModalOpen(false);
-    }
-  }, [location.pathname]);
+  const personalizationModalOpen = Boolean(
+    profile &&
+    !authOpen &&
+    !isPersonalizationFlowPath(location.pathname) &&
+    needsPersonalization(profile) &&
+    profile.personalization_interstitial_enabled !== false &&
+    dismissedNoticeKey !== personalizationNoticeKey &&
+    !hasSeenPersonalizationNotice(profile) &&
+    (isLegacyPersonalization(profile) || !isPostSignupPersonalizationSession()),
+  );
 
   const renderAccountSwitcher = (switcherProps) => (
     <Button
@@ -327,7 +263,7 @@ const SimpleHeader = () => {
                 </Button>
                 <Button
                   view="flat"
-                  onClick={() => setPostSignupBannerDismissed(true)}
+                  onClick={() => setDismissedBannerKey(bannerKey)}
                 >
                   Позже
                 </Button>

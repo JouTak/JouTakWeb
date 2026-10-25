@@ -56,9 +56,8 @@ vi.mock("../../services/api", () => ({
   me: vi.fn(),
 }));
 
-const { getEmailStatus, listSessionsHeadless, me } = await import(
-  "../../services/api"
-);
+const { getEmailStatus, listSessionsHeadless, me } =
+  await import("../../services/api");
 
 function buildProfile(overrides = {}) {
   return {

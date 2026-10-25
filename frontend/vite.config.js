@@ -45,6 +45,11 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "jsdom",
+      server: {
+        deps: {
+          inline: [/@gravity-ui\//],
+        },
+      },
       setupFiles: ["./src/test/setup.js"],
       exclude: ["e2e/**", "node_modules/**", "dist/**"],
       restoreMocks: true,
@@ -52,11 +57,19 @@ export default defineConfig(({ mode }) => {
       pool: "threads",
     },
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         output: {
-          manualChunks: {
-            react: ["react", "react-dom", "react-router-dom"],
-            gravity: ["@gravity-ui/uikit", "@gravity-ui/icons"],
+          codeSplitting: {
+            groups: [
+              {
+                name: "react",
+                test: /node_modules\/(react|react-dom|react-router|react-router-dom)\//,
+              },
+              {
+                name: "gravity",
+                test: /node_modules\/@gravity-ui\/(uikit|icons)\//,
+              },
+            ],
           },
         },
       },

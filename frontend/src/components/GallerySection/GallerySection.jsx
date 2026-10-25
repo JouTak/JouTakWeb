@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { getMediaDescriptor } from "../../media/mediaResolver";
 import sectionStyles from "../shared/sectionLayout.module.css";
@@ -14,7 +14,20 @@ function mediaDescriptor(media) {
 
 function GalleryMedia({ media, alt, className }) {
   const descriptor = mediaDescriptor(media);
-  const [failedSource, setFailedSource] = useState(null);
+  const [imageStatus, setImageStatus] = useState("loading");
+
+  useEffect(() => {
+    if (
+      !descriptor?.src ||
+      descriptor.designPlaceholder ||
+      imageStatus !== "loading"
+    ) {
+      return;
+    }
+
+    const fallbackTimer = setTimeout(() => setImageStatus("error"), 5000);
+    return () => clearTimeout(fallbackTimer);
+  }, [descriptor?.src, descriptor?.designPlaceholder, imageStatus]);
 
   if (descriptor?.designPlaceholder) {
     return (
@@ -29,29 +42,41 @@ function GalleryMedia({ media, alt, className }) {
     );
   }
 
-  if (!descriptor?.src || failedSource === descriptor.src) {
-    return (
-      <div className={`${className} ${styles.designPlaceholder}`} role="status">
-        <span>Фото недоступно</span>
-        <small>Попробуй выбрать другой кадр.</small>
-      </div>
-    );
-  }
-
   return (
-    <img
-      className={className}
-      src={descriptor.src}
-      srcSet={
-        descriptor.sources
-          .map((source) => `${source.src} ${source.width}w`)
-          .join(", ") || undefined
-      }
-      sizes="(max-width: 760px) 100vw, (max-width: 1520px) 70vw, 1100px"
-      alt={media?.alt || alt}
-      loading="lazy"
-      onError={() => setFailedSource(descriptor.src)}
-    />
+    <div className={styles.mediaFrame}>
+      {imageStatus === "loading" && (
+        <div
+          className={`${className} ${styles.designPlaceholder}`}
+          role="status"
+          data-testid="loading-placeholder"
+        >
+          <span>Загрузка...</span>
+        </div>
+      )}
+      {imageStatus === "error" && (
+        <div
+          className={`${className} ${styles.designPlaceholder}`}
+          role="status"
+          data-testid="error-placeholder"
+        >
+          <span>Фото недоступно</span>
+          <small>Попробуй выбрать другой кадр.</small>
+        </div>
+      )}
+      <img
+        className={`${className} ${imageStatus === "loaded" ? "" : styles.hidden}`}
+        src={descriptor.src}
+        srcSet={
+          descriptor.sources
+            .map((source) => `${source.src} ${source.width}w`)
+            .join(", ") || undefined
+        }
+        sizes="(max-width: 760px) 100vw, (max-width: 1520px) 70vw, 1100px"
+        alt={media?.alt || alt}
+        onLoad={() => setImageStatus("loaded")}
+        onError={() => setImageStatus("error")}
+      />
+    </div>
   );
 }
 
@@ -69,7 +94,11 @@ export default function GallerySection({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const activeGallery = galleryItems[activeIndex] ?? galleryItems[0];
+  const galleryIndex = Math.min(
+    activeIndex,
+    Math.max(0, galleryItems.length - 1),
+  );
+  const activeGallery = galleryItems[galleryIndex];
 
   if (!activeGallery) {
     return (
@@ -82,7 +111,7 @@ export default function GallerySection({
     );
   }
 
-  const photos = activeGallery.photos.filter((photo) => {
+  const photos = (activeGallery.photos ?? []).filter((photo) => {
     const descriptor = mediaDescriptor(photo);
     return (
       descriptor?.designPlaceholder ||
@@ -93,12 +122,15 @@ export default function GallerySection({
   const photoIndex = Math.min(activePhotoIndex, Math.max(0, totalPhotos - 1));
 
   const handleProjectChange = (nextIndex) => {
+    if (nextIndex === galleryIndex) {
+      return;
+    }
     setActiveIndex(nextIndex);
     setActivePhotoIndex(0);
   };
 
   const handlePhotoChange = (direction) => {
-    if (!totalPhotos) {
+    if (totalPhotos <= 1) {
       return;
     }
 
@@ -119,11 +151,11 @@ export default function GallerySection({
               <button
                 key={item.label}
                 className={`${styles.galleryButton} ${
-                  activeIndex === index ? styles.chosenButton : ""
+                  galleryIndex === index ? styles.chosenButton : ""
                 }`}
                 onClick={() => handleProjectChange(index)}
                 type="button"
-                aria-pressed={activeIndex === index}
+                aria-pressed={galleryIndex === index}
               >
                 {item.label}
               </button>
@@ -133,6 +165,7 @@ export default function GallerySection({
             <div aria-live="polite">
               {totalPhotos ? (
                 <GalleryMedia
+                  key={mediaDescriptor(photos[photoIndex]).src}
                   className={styles.photoViewerImage}
                   media={photos[photoIndex]}
                   alt={`${activeGallery.label} screenshot ${photoIndex + 1}`}

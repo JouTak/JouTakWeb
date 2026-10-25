@@ -25,7 +25,7 @@ HMR. Для проверки frontend→backend integration открывайте
 
 - frontend: Node.js `24.18.0`, npm `11.16.0`, затем
   `cd frontend && npm ci && npm run dev`;
-- backend: Python 3.12, `uv sync --locked --python 3.12 --group dev --group test`,
+- backend: Python 3.14, `uv sync --locked --python 3.14 --group dev --group test`,
   migrations, `sync_feature_registry` и `runserver` с
   `backend.settings.dev`.
 

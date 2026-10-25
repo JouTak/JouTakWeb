@@ -28,10 +28,8 @@ const baseTestData = {
 };
 
 describe("GallerySection", () => {
-  // Гарантированно очищаем DOM после каждого теста
   afterEach(() => {
     cleanup();
-    document.body.innerHTML = "";
   });
 
   it("cycles through gallery images", async () => {
@@ -78,6 +76,18 @@ describe("GallerySection", () => {
     expect(screen.queryByTestId("loading-placeholder")).not.toBeInTheDocument();
   });
 
+  it("does not reset loaded status on repeated click of the active section", async () => {
+    const user = userEvent.setup();
+    render(<GallerySection {...baseTestData} />);
+
+    const img = screen.getByRole("img", { name: /first screenshot 1/i });
+    fireEvent.load(img);
+    expect(screen.queryByTestId("loading-placeholder")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /first/i }));
+    expect(screen.queryByTestId("loading-placeholder")).not.toBeInTheDocument();
+  });
+
   it("shows error placeholder when image fails to load", () => {
     render(<GallerySection {...baseTestData} />);
 
@@ -86,12 +96,27 @@ describe("GallerySection", () => {
 
     expect(screen.getByTestId("error-placeholder")).toBeInTheDocument();
     expect(screen.queryByTestId("loading-placeholder")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("img", { name: /first screenshot 1/i }),
-    ).not.toBeInTheDocument();
   });
 
-  it("allows switching to another photo even if current photo failed", async () => {
+  it("immediately shows error placeholder when image URL is empty string", () => {
+    const emptyUrlData = {
+      ...baseTestData,
+      galleryItems: [
+        {
+          label: "with-empty-url",
+          image: "/main.jpg",
+          photos: [""],
+        },
+      ],
+    };
+
+    render(<GallerySection {...emptyUrlData} />);
+
+    expect(screen.getByTestId("error-placeholder")).toBeInTheDocument();
+    expect(screen.queryByTestId("loading-placeholder")).not.toBeInTheDocument();
+  });
+
+  it("allows switching to another photo even if current photo failed and loads next", async () => {
     const user = userEvent.setup();
     render(<GallerySection {...baseTestData} />);
 
@@ -107,6 +132,12 @@ describe("GallerySection", () => {
     expect(screen.queryByTestId("error-placeholder")).not.toBeInTheDocument();
     expect(screen.getByTestId("loading-placeholder")).toBeInTheDocument();
     expect(screen.getByText("2/2")).toBeInTheDocument();
+
+    const img2 = screen.getByRole("img", { name: /first screenshot 2/i });
+    expect(img2).toHaveAttribute("src", "/first-two.jpg");
+    fireEvent.load(img2);
+
+    expect(screen.queryByTestId("loading-placeholder")).not.toBeInTheDocument();
   });
 
   it("handles empty gallery section and disables navigation buttons", async () => {

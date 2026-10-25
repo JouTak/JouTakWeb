@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import sectionStyles from "../shared/sectionLayout.module.css";
 import styles from "./gallery.module.css";
@@ -11,9 +11,36 @@ export default function GallerySection({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const [imageStatus, setImageStatus] = useState("loading");
+  const [rawImageStatus, setRawImageStatus] = useState("loading");
 
   const activeGallery = galleryItems[activeIndex] ?? galleryItems[0];
+
+  const totalPhotos = activeGallery?.photos?.length ?? 0;
+  const currentPhotoSrc = totalPhotos
+    ? activeGallery.photos[activePhotoIndex]
+    : null;
+
+  // Вычисляем невалидный URL прямо при рендере без синхронного setState в useEffect
+  const isInvalidUrl =
+    Boolean(totalPhotos) &&
+    (!currentPhotoSrc ||
+      typeof currentPhotoSrc !== "string" ||
+      !currentPhotoSrc.trim());
+
+  const imageStatus = isInvalidUrl ? "error" : rawImageStatus;
+
+  // Таймаут долгой загрузки (5 секунд)
+  useEffect(() => {
+    if (imageStatus !== "loading") {
+      return;
+    }
+
+    const fallbackTimer = setTimeout(() => {
+      setRawImageStatus("error");
+    }, 5000);
+
+    return () => clearTimeout(fallbackTimer);
+  }, [imageStatus, currentPhotoSrc]);
 
   if (!activeGallery) {
     return (
@@ -26,26 +53,28 @@ export default function GallerySection({
     );
   }
 
-  const totalPhotos = activeGallery.photos?.length ?? 0;
-  const currentPhotoSrc = totalPhotos
-    ? activeGallery.photos[activePhotoIndex]
-    : null;
-
   const handleProjectChange = (nextIndex) => {
+    if (nextIndex === activeIndex) {
+      return;
+    }
     setActiveIndex(nextIndex);
     setActivePhotoIndex(0);
-    setImageStatus("loading");
+    setRawImageStatus("loading");
   };
 
   const handlePhotoChange = (direction) => {
-    if (!totalPhotos) {
+    if (totalPhotos <= 1) {
       return;
     }
 
-    setActivePhotoIndex(
-      (prev) => (prev + direction + totalPhotos) % totalPhotos,
-    );
-    setImageStatus("loading");
+    const nextPhotoIndex =
+      (activePhotoIndex + direction + totalPhotos) % totalPhotos;
+    const nextPhotoSrc = activeGallery.photos[nextPhotoIndex];
+
+    if (nextPhotoSrc !== currentPhotoSrc) {
+      setRawImageStatus("loading");
+    }
+    setActivePhotoIndex(nextPhotoIndex);
   };
 
   return (
@@ -60,7 +89,7 @@ export default function GallerySection({
           />
           {galleryItems.map((item, index) => (
             <button
-              key={item.label || index}
+              key={item.label}
               className={`${styles.tab} ${
                 activeIndex === index ? styles.chosen : ""
               }`}
@@ -101,7 +130,7 @@ export default function GallerySection({
                     </div>
                   )}
 
-                  {imageStatus !== "error" && currentPhotoSrc && (
+                  {Boolean(currentPhotoSrc) && !isInvalidUrl && (
                     <img
                       key={currentPhotoSrc}
                       className={`${styles.photo} ${
@@ -109,8 +138,8 @@ export default function GallerySection({
                       }`}
                       src={currentPhotoSrc}
                       alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
-                      onLoad={() => setImageStatus("loaded")}
-                      onError={() => setImageStatus("error")}
+                      onLoad={() => setRawImageStatus("loaded")}
+                      onError={() => setRawImageStatus("error")}
                     />
                   )}
                 </>

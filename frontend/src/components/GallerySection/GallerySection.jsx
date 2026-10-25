@@ -56,9 +56,12 @@ export default function GallerySection({
     if (nextIndex === activeIndex) {
       return;
     }
+    const nextPhotoSrc = galleryItems[nextIndex]?.photos?.[0];
+    if (nextPhotoSrc !== currentPhotoSrc) {
+      setRawImageStatus("loading");
+    }
     setActiveIndex(nextIndex);
     setActivePhotoIndex(0);
-    setRawImageStatus("loading");
   };
 
   const handlePhotoChange = (direction) => {

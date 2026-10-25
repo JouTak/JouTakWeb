@@ -90,7 +90,7 @@ jobs:
             command: npm run check:assets
           - name: Generated media
             command: npm run generate:media && git diff --exit-code -- src/assets/media/generated src/media/generatedMedia.js
-          - name: Production audit
+          - name: Dependency audit
             command: npm run check:audit
     defaults:
       run:
@@ -179,8 +179,8 @@ jobs:
         with:
           python-version: "3.14"
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-      - run: uv sync --locked --python 3.14 --group dev
-      - run: uv run pip-audit --local
+      - run: uv sync --locked --python 3.14 --all-groups
+      - run: uv run --locked --all-groups pip-audit --local
 
   backend_test:
     name: Backend tests

@@ -12,6 +12,10 @@ function emitAuthStateChanged() {
   window.dispatchEvent(new Event(AUTH_STATE_EVENT));
 }
 
+export function notifyAuthStateChanged() {
+  emitAuthStateChanged();
+}
+
 function browserStorage(name) {
   if (typeof window === "undefined") {
     return null;
@@ -117,20 +121,20 @@ export function mergeStoredTokens(partial, { emit = true } = {}) {
   writeStoredTokens(nextTokens, { emit });
 }
 
-export function markPendingMfaSession(pending = true) {
+export function markPendingMfaSession(pending = true, { emit = true } = {}) {
   const currentTokens = readStoredTokens();
   if (!pending) {
     if (!currentTokens.pending_mfa) return;
     const { pending_mfa: _pendingMfa, ...rest } = currentTokens;
     void _pendingMfa;
     writeStoredTokens(rest, { emit: false });
-    emitAuthStateChanged();
+    if (emit) emitAuthStateChanged();
     return;
   }
   if (!currentTokens.session_token) return;
   if (currentTokens.pending_mfa) return;
   writeStoredTokens({ ...currentTokens, pending_mfa: true }, { emit: false });
-  emitAuthStateChanged();
+  if (emit) emitAuthStateChanged();
 }
 
 export function clearAuthStorage({ emit = true } = {}) {

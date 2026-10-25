@@ -2,12 +2,13 @@ import { Button } from "@gravity-ui/uikit";
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-function safeInternalPath(path) {
-  if (typeof path !== "string") return "/joutak";
-  if (!path.startsWith("/")) return "/joutak";
-  if (path.startsWith("//")) return "/joutak";
-  return path;
-}
+import {
+  PageActions,
+  PageNotice,
+  PagePanel,
+  PageShell,
+} from "../components/ui/PageShell.jsx";
+import { isSafeInternalPath } from "../services/urlSafety";
 
 const reasonText = {
   auth_required:
@@ -28,7 +29,8 @@ export default function SessionExpired() {
 
   const { nextPath, reason } = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    const next = safeInternalPath(params.get("next") || "/joutak");
+    const requestedPath = params.get("next");
+    const next = isSafeInternalPath(requestedPath) ? requestedPath : "/";
     const r = params.get("reason") || "SESSION_UNAUTHORIZED";
     return {
       nextPath: next,
@@ -39,32 +41,34 @@ export default function SessionExpired() {
   const message = reasonText[reason] || reasonText.SESSION_UNAUTHORIZED;
 
   return (
-    <section
-      style={{
-        maxWidth: 760,
-        margin: "0 auto",
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 12,
-        padding: 20,
-        display: "grid",
-        gap: 12,
-      }}
+    <PageShell
+      narrow
+      eyebrow="Безопасность аккаунта"
+      title="Сессия завершена"
+      description="Мы остановили текущую сессию, чтобы сохранить аккаунт в безопасности."
     >
-      <h2 style={{ margin: 0 }}>Сессия завершена</h2>
-      <p style={{ margin: 0, opacity: 0.9 }}>{message}</p>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <Button
-          view="action"
-          onClick={() =>
-            navigate(`/login?next=${encodeURIComponent(nextPath)}`)
-          }
-        >
-          Войти снова
-        </Button>
-        <Button view="outlined" onClick={() => navigate("/joutak")}>
-          На главную
-        </Button>
-      </div>
-    </section>
+      <PagePanel>
+        <PageNotice tone="warning">{message}</PageNotice>
+        <p>
+          После входа мы вернём тебя на страницу, с которой был начат сценарий.
+          Если завершение сессии оказалось неожиданным, проверь активные сеансы
+          и включи двухфакторную аутентификацию в настройках аккаунта.
+        </p>
+        <PageActions>
+          <Button
+            view="action"
+            size="l"
+            onClick={() =>
+              navigate(`/login?next=${encodeURIComponent(nextPath)}`)
+            }
+          >
+            Войти снова
+          </Button>
+          <Button view="outlined" size="l" onClick={() => navigate("/")}>
+            На главную ITMOcraft
+          </Button>
+        </PageActions>
+      </PagePanel>
+    </PageShell>
   );
 }

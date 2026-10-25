@@ -109,6 +109,11 @@
           ],
           "title": "Action"
         },
+        "action_label": {
+          "default": "Регистрация",
+          "title": "Action Label",
+          "type": "string"
+        },
         "description": {
           "title": "Description",
           "type": "string"
@@ -548,6 +553,7 @@
           "items": {
             "discriminator": {
               "mapping": {
+                "actions": "#/$defs/ProductActionsSection",
                 "events": "#/$defs/EventsSection",
                 "faq": "#/$defs/FAQSection",
                 "gallery": "#/$defs/GallerySection",
@@ -565,6 +571,9 @@
               },
               {
                 "$ref": "#/$defs/EventsSection"
+              },
+              {
+                "$ref": "#/$defs/ProductActionsSection"
               },
               {
                 "$ref": "#/$defs/GallerySection"
@@ -591,6 +600,134 @@
         "sections"
       ],
       "title": "PageContent",
+      "type": "object"
+    },
+    "ProductActionItem": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "discriminator": {
+            "mapping": {
+              "design_placeholder": "#/$defs/DesignPlaceholderAction",
+              "external": "#/$defs/ExternalAction",
+              "internal": "#/$defs/InternalAction"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/InternalAction"
+            },
+            {
+              "$ref": "#/$defs/ExternalAction"
+            },
+            {
+              "$ref": "#/$defs/DesignPlaceholderAction"
+            }
+          ],
+          "title": "Action"
+        },
+        "emphasis": {
+          "default": "secondary",
+          "enum": [
+            "primary",
+            "secondary",
+            "tertiary"
+          ],
+          "title": "Emphasis",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "action"
+      ],
+      "title": "ProductActionItem",
+      "type": "object"
+    },
+    "ProductActionsSection": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "eyebrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Eyebrow"
+        },
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/ProductFact"
+          },
+          "title": "Facts",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProductActionItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "actions",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "title",
+        "description",
+        "items"
+      ],
+      "title": "ProductActionsSection",
+      "type": "object"
+    },
+    "ProductFact": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "value"
+      ],
+      "title": "ProductFact",
       "type": "object"
     },
     "ProductInfo": {

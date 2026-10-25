@@ -10,4 +10,22 @@ describe("EventSection", () => {
     screen.logTestingPlaygroundURL();
     expect(screen.getByRole("heading", { name: "Бункер" })).toBeInTheDocument();
   });
+
+  it("renders an unfinished registration as disabled", () => {
+    render(
+      <EventsSection
+        events={[
+          {
+            ...events[0],
+            actionLabel: "Регистрация скоро",
+            actionDisabled: true,
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Регистрация скоро" }),
+    ).toBeDisabled();
+  });
 });

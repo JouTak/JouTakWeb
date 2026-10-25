@@ -1,0 +1,64 @@
+.page {
+  overflow: clip;
+}
+
+.content {
+  max-width: 1200px;
+}
+
+.page h1 {
+  max-width: none;
+  font-family: GeologicaFont, sans-serif;
+  font-size: clamp(22px, 3.5vw, 48px);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: normal;
+  text-shadow: none;
+}
+
+.metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+  margin: 0;
+  color: var(--g-color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.metadata dt {
+  margin-bottom: 4px;
+  color: var(--g-color-text-secondary);
+  font-weight: 400;
+}
+
+.metadata dd {
+  margin: 0;
+}
+
+.panel {
+  display: grid;
+  gap: 32px;
+  font-size: clamp(16px, 1.4vw, 18px);
+  line-height: 1.7;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--g-color-line-generic);
+}
+
+.version {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.version label {
+  color: var(--g-color-text-secondary);
+}

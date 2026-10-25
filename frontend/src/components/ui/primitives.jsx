@@ -1,6 +1,8 @@
 import { Button, Modal } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 
+import { PagePanel } from "./PageShell.jsx";
+
 export function Page({ children, style = null }) {
   return (
     <main
@@ -24,19 +26,16 @@ Page.propTypes = {
 
 export function SectionCard({ children, style = null, ...sectionProps }) {
   return (
-    <section
+    <PagePanel
       {...sectionProps}
       style={{
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 8,
-        padding: 16,
         display: "grid",
         gap: 12,
         ...style,
       }}
     >
       {children}
-    </section>
+    </PagePanel>
   );
 }
 
@@ -49,8 +48,9 @@ export function DangerCard({ children, style = null }) {
   return (
     <SectionCard
       style={{
-        borderColor: "rgba(255, 77, 79, 0.42)",
-        background: "rgba(255, 77, 79, 0.06)",
+        borderColor: "rgba(255, 113, 113, 0.62)",
+        background:
+          "color-mix(in srgb, var(--g-color-base-float) 88%, #5c1515)",
         ...style,
       }}
     >

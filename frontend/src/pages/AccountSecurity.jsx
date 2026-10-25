@@ -10,31 +10,30 @@ import MfaCard from "../components/account/MfaCard";
 import PasswordCard from "../components/account/PasswordCard";
 import ProfileCard from "../components/account/ProfileCard";
 import SessionsCard from "../components/account/SessionsCard";
+import {
+  PageActions,
+  PageNotice,
+  PagePanel,
+  PageShell,
+  StatePage,
+} from "../components/ui/PageShell.jsx";
 import { getEmailStatus, listSessionsHeadless, me } from "../services/api";
 import { needsPersonalization } from "../utils/profileState";
-
-const pageStyle = {
-  maxWidth: 960,
-  display: "grid",
-  gap: 24,
-};
+import styles from "./AccountSecurity.module.css";
 
 function SkeletonCard({ children, minHeight = 160 }) {
   return (
-    <div
+    <PagePanel
       className="skeleton-block"
       style={{
         minHeight,
-        borderRadius: 12,
-        border: "1px solid rgba(255,255,255,0.08)",
-        padding: 16,
         display: "grid",
         gap: 12,
       }}
       aria-hidden="true"
     >
       {children}
-    </div>
+    </PagePanel>
   );
 }
 
@@ -64,147 +63,182 @@ SkeletonLine.propTypes = {
 
 function AccountSecuritySkeleton() {
   return (
-    <div
-      className="container py-4"
-      style={pageStyle}
-      aria-busy="true"
-      aria-live="polite"
+    <PageShell
+      eyebrow="Аккаунт"
+      title="Настройки и безопасность"
+      description="Загружаем профиль, способы входа и активные сессии."
+      contentClassName={styles.accountGrid}
     >
-      <SkeletonCard minHeight={120}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(96px, 120px) 1fr",
-            gap: 16,
-            alignItems: "center",
-          }}
-        >
+      <div className={styles.accountGrid} aria-busy="true" aria-live="polite">
+        <SkeletonCard minHeight={120}>
           <div
-            className="skeleton-line"
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              justifySelf: "center",
-            }}
-          />
-          <div style={{ display: "grid", gap: 10 }}>
-            <div
-              className="skeleton-line"
-              style={{ width: "32%", height: 22 }}
-            />
-            <div className="skeleton-line" style={{ width: "44%" }} />
-          </div>
-        </div>
-      </SkeletonCard>
-
-      <SkeletonCard minHeight={220}>
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <div className="skeleton-line" style={{ width: 118, height: 20 }} />
-          <div className="skeleton-line" style={{ width: 96, height: 32 }} />
-        </div>
-        <div
-          className="skeleton-line"
-          style={{ width: 92, height: 32, borderRadius: 999 }}
-        />
-        <SkeletonLine width="26%" />
-        <SkeletonLine width="18%" />
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <SkeletonLine width="24%" />
-          <div className="skeleton-line" style={{ width: 18, height: 18 }} />
-        </div>
-      </SkeletonCard>
-
-      <SkeletonCard minHeight={140}>
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <div className="skeleton-line" style={{ width: 82, height: 20 }} />
-          <div className="skeleton-line" style={{ width: 108, height: 24 }} />
-        </div>
-        <SkeletonLine width="24%" />
-        <div className="skeleton-line" style={{ width: 120, height: 32 }} />
-      </SkeletonCard>
-
-      <SkeletonCard minHeight={140}>
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <div className="skeleton-line" style={{ width: 94, height: 20 }} />
-          <div className="skeleton-line" style={{ width: 148, height: 32 }} />
-        </div>
-        <SkeletonLine width="46%" />
-      </SkeletonCard>
-
-      <SkeletonCard minHeight={220}>
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <div style={{ display: "grid", gap: 10, flex: "1 1 auto" }}>
-            <div className="skeleton-line" style={{ width: 108, height: 20 }} />
-            <SkeletonLine width="42%" />
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <div className="skeleton-line" style={{ width: 180, height: 28 }} />
-            <div className="skeleton-line" style={{ width: 210, height: 28 }} />
-          </div>
-        </div>
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div
-            key={index}
-            style={{
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 10,
-              padding: 12,
               display: "grid",
-              gap: 10,
+              gridTemplateColumns: "minmax(96px, 120px) 1fr",
+              gap: 16,
+              alignItems: "center",
             }}
           >
             <div
+              className="skeleton-line"
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 12,
+                width: 72,
+                height: 72,
+                borderRadius: "50%",
+                justifySelf: "center",
               }}
-            >
-              <div style={{ display: "grid", gap: 8, flex: "1 1 auto" }}>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <div
-                    className="skeleton-line"
-                    style={{ width: 126, height: 18 }}
-                  />
-                  <div
-                    className="skeleton-line"
-                    style={{ width: 68, height: 20 }}
-                  />
-                </div>
-                <SkeletonLine width="76%" />
-                <SkeletonLine width="60%" />
-                <SkeletonLine width="34%" />
-              </div>
+            />
+            <div style={{ display: "grid", gap: 10 }}>
               <div
                 className="skeleton-line"
-                style={{ width: 96, height: 32 }}
+                style={{ width: "32%", height: 22 }}
+              />
+              <div className="skeleton-line" style={{ width: "44%" }} />
+            </div>
+          </div>
+        </SkeletonCard>
+
+        <SkeletonCard minHeight={220}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div className="skeleton-line" style={{ width: 118, height: 20 }} />
+            <div className="skeleton-line" style={{ width: 96, height: 32 }} />
+          </div>
+          <div
+            className="skeleton-line"
+            style={{ width: 92, height: 32, borderRadius: 999 }}
+          />
+          <SkeletonLine width="26%" />
+          <SkeletonLine width="18%" />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <SkeletonLine width="24%" />
+            <div className="skeleton-line" style={{ width: 18, height: 18 }} />
+          </div>
+        </SkeletonCard>
+
+        <SkeletonCard minHeight={140}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div className="skeleton-line" style={{ width: 82, height: 20 }} />
+            <div className="skeleton-line" style={{ width: 108, height: 24 }} />
+          </div>
+          <SkeletonLine width="24%" />
+          <div className="skeleton-line" style={{ width: 120, height: 32 }} />
+        </SkeletonCard>
+
+        <SkeletonCard minHeight={140}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div className="skeleton-line" style={{ width: 94, height: 20 }} />
+            <div className="skeleton-line" style={{ width: 148, height: 32 }} />
+          </div>
+          <SkeletonLine width="46%" />
+        </SkeletonCard>
+
+        <SkeletonCard minHeight={220}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "grid", gap: 10, flex: "1 1 auto" }}>
+              <div
+                className="skeleton-line"
+                style={{ width: 108, height: 20 }}
+              />
+              <SkeletonLine width="42%" />
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <div
+                className="skeleton-line"
+                style={{ width: 180, height: 28 }}
+              />
+              <div
+                className="skeleton-line"
+                style={{ width: 210, height: 28 }}
               />
             </div>
           </div>
-        ))}
-      </SkeletonCard>
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              style={{
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 10,
+                padding: 12,
+                display: "grid",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "grid", gap: 8, flex: "1 1 auto" }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div
+                      className="skeleton-line"
+                      style={{ width: 126, height: 18 }}
+                    />
+                    <div
+                      className="skeleton-line"
+                      style={{ width: 68, height: 20 }}
+                    />
+                  </div>
+                  <SkeletonLine width="76%" />
+                  <SkeletonLine width="60%" />
+                  <SkeletonLine width="34%" />
+                </div>
+                <div
+                  className="skeleton-line"
+                  style={{ width: 96, height: 32 }}
+                />
+              </div>
+            </div>
+          ))}
+        </SkeletonCard>
 
-      <SkeletonCard minHeight={140}>
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <div className="skeleton-line" style={{ width: 180, height: 20 }} />
-          <div className="skeleton-line" style={{ width: 136, height: 32 }} />
-        </div>
-        <SkeletonLine width="58%" />
-      </SkeletonCard>
-    </div>
+        <SkeletonCard minHeight={140}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div className="skeleton-line" style={{ width: 180, height: 20 }} />
+            <div className="skeleton-line" style={{ width: 136, height: 32 }} />
+          </div>
+          <SkeletonLine width="58%" />
+        </SkeletonCard>
+      </div>
+    </PageShell>
   );
 }
 
@@ -341,73 +375,100 @@ export default function AccountSecurity() {
   if (loading) return <AccountSecuritySkeleton />;
   if (loadError) {
     return (
-      <div
-        className="container py-4"
-        style={{ maxWidth: 960, display: "grid", gap: 16 }}
-        role="alert"
+      <PageShell
+        narrow
+        eyebrow="Аккаунт"
+        title="Настройки недоступны"
+        description="Сессия сохранена, но данные аккаунта сейчас не загрузились."
       >
-        <h2 style={{ margin: 0 }}>Не удалось загрузить настройки аккаунта</h2>
-        <p style={{ margin: 0, opacity: 0.8 }}>
-          Проверь подключение и попробуй ещё раз. Если ошибка повторяется,
-          сообщи нам.
-        </p>
-        <div>
-          <Button view="action" onClick={() => loadAccountData()}>
-            Повторить
-          </Button>
-        </div>
-      </div>
+        <PagePanel className={styles.panelStack} role="alert">
+          <PageNotice tone="danger">
+            Не удалось загрузить настройки аккаунта.
+          </PageNotice>
+          <p className={styles.muted}>
+            Проверь подключение и попробуй ещё раз. Мы не завершаем сессию из-за
+            временной ошибки сети или сервера.
+          </p>
+          <PageActions>
+            <Button view="action" size="l" onClick={() => loadAccountData()}>
+              Повторить
+            </Button>
+            <Button view="outlined" size="l" onClick={() => navigate("/")}>
+              На главную
+            </Button>
+          </PageActions>
+        </PagePanel>
+      </PageShell>
     );
   }
-  if (!profile) return null;
+  if (!profile) {
+    return (
+      <StatePage
+        eyebrow="Аккаунт"
+        icon="!"
+        title="Профиль не найден"
+        description="Сессия активна, но данные профиля не вернулись. Попробуй войти заново или вернуться на главную."
+        actions={
+          <>
+            <Button
+              view="action"
+              size="l"
+              onClick={() => navigate("/login?next=/account/security")}
+            >
+              Войти заново
+            </Button>
+            <Button view="outlined" size="l" onClick={() => navigate("/")}>
+              На главную
+            </Button>
+          </>
+        }
+      />
+    );
+  }
 
   if (needsPersonalization(profile)) {
     return (
-      <div
-        className="container py-4"
-        style={{ maxWidth: 960, display: "grid", gap: 16 }}
+      <PageShell
+        eyebrow="Аккаунт"
+        title="Заверши профиль"
+        description="Базовый аккаунт уже работает, но персональные настройки откроются после двух коротких шагов."
+        contentClassName={styles.accountGrid}
       >
-        <section
-          style={{
-            border: "1px solid rgba(255, 163, 0, 0.45)",
-            borderRadius: 12,
-            padding: 20,
-            background: "rgba(255, 163, 0, 0.12)",
-            display: "grid",
-            gap: 12,
-          }}
-        >
-          <h2 style={{ margin: 0 }}>
+        <PagePanel className={styles.panelStack}>
+          <PageNotice tone="warning">
             Для доступа к аккаунту нужен завершённый профиль
-          </h2>
-          <p style={{ margin: 0, opacity: 0.85 }}>
+          </PageNotice>
+          <p className={styles.muted}>
             Публичные разделы доступны. Профиль, привязки аккаунтов и
             персональные действия откроются после персонализации.
           </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <PageActions>
             <Button
               view="action"
+              size="l"
               onClick={() => navigate("/account/complete-profile")}
             >
               Завершить персонализацию
             </Button>
-            <Button view="outlined" onClick={() => navigate("/joutak")}>
+            <Button view="outlined" size="l" onClick={() => navigate("/")}>
               Перейти на сайт
             </Button>
-          </div>
-        </section>
+          </PageActions>
+        </PagePanel>
         <EmailCard
           initialStatus={emailStatus || fallbackEmailStatus(profile)}
         />
         <MfaCard profile={profile} />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div
-      className="container py-4"
-      style={{ maxWidth: 960, display: "grid", gap: 24 }}
+    <PageShell
+      eyebrow="Аккаунт"
+      title="Настройки и безопасность"
+      description="Управляй профилем, email, паролем, двухфакторной защитой и активными сессиями в одном месте."
+      contentClassName={styles.accountGrid}
     >
       <AccountHero profile={profile} />
       <ProfileCard profile={profile} onUpdated={handleProfileUpdated} />
@@ -416,6 +477,6 @@ export default function AccountSecurity() {
       <MfaCard profile={profile} />
       <SessionsCard initialSessions={sessionsPayload || { sessions: [] }} />
       <DeleteAccountCard />
-    </div>
+    </PageShell>
   );
 }

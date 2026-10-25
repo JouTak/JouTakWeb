@@ -1,0 +1,50 @@
+.hero {
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) 1fr;
+  gap: 20px;
+  align-items: center;
+  background:
+    linear-gradient(105deg, rgb(60 155 249 / 12%), transparent 58%),
+    color-mix(in srgb, var(--g-color-base-float) 94%, #0e3857);
+}
+
+.avatar {
+  justify-self: center;
+}
+
+.details {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.name {
+  font-size: 24px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.email {
+  display: flex;
+  color: var(--g-color-text-secondary);
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 520px) {
+  .hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .email,
+  .labels {
+    justify-content: center;
+  }
+}

@@ -27,7 +27,7 @@ const SimpleMinigamesPage = () => {
           <img
             src="/img/logo_minigames.png"
             alt="MiniGames Logo"
-            style={{ height: "100px" }}
+            style={{ maxWidth: "100%", height: "auto", maxHeight: "100px" }}
           />
         </div>
         <br />
@@ -58,9 +58,9 @@ const SimpleMinigamesPage = () => {
           !
         </p>
 
-        <div className="my-4 d-flex justify-content-center">
+        <div className="my-4 d-flex flex-wrap gap-2 justify-content-center">
           <a
-            className="btn btn-secondary btn-lg mx-2"
+            className="btn btn-secondary btn-lg"
             href="https://vk.me/join/WDyZMd4pF8Xhu/egqaDnrHmbajAmm0cZ2og="
             target="_blank"
             rel="noopener noreferrer"
@@ -68,7 +68,7 @@ const SimpleMinigamesPage = () => {
             Вступить в беседу
           </a>
           <a
-            className="btn btn-primary btn-lg mx-2"
+            className="btn btn-primary btn-lg"
             href="https://docs.google.com/forms/d/e/1FAIpQLSfX7C2f1WII6Ak_me3onbRAcb71MSEap51MS-Hic4XYg915MA/viewform"
             target="_blank"
             rel="noopener noreferrer"

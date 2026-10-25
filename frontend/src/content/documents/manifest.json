@@ -1,0 +1,28 @@
+{
+  "privacy": {
+    "title": "Политика конфиденциальности",
+    "currentVersion": "2026-09-21",
+    "versions": [
+      {
+        "id": "2026-09-21",
+        "author": "Команда JouTak",
+        "publishedAt": "2026-09-21",
+        "updatedAt": "2026-09-21",
+        "file": "./privacy/2026-09-21.md"
+      }
+    ]
+  },
+  "terms": {
+    "title": "Условия использования",
+    "currentVersion": "2026-09-21",
+    "versions": [
+      {
+        "id": "2026-09-21",
+        "author": "Команда JouTak",
+        "publishedAt": "2026-09-21",
+        "updatedAt": "2026-09-21",
+        "file": "./terms/2026-09-21.md"
+      }
+    ]
+  }
+}

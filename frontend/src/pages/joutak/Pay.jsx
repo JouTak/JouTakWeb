@@ -1,7 +1,7 @@
 import "./pay.css";
 
 import { Button, Loader } from "@gravity-ui/uikit";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -18,7 +18,6 @@ export default function Pay() {
   const navigate = useNavigate();
   const { theme } = useThemePreference();
   const [loadedFrameUrl, setLoadedFrameUrl] = useState("");
-  const isFirstFrameLoad = useRef(true);
   const iframeUrl = useMemo(
     () => `${PAYMENT_FORM_URL}?iframe=1&theme=${theme}`,
     [theme],
@@ -27,12 +26,6 @@ export default function Pay() {
 
   function handleFrameLoad() {
     setLoadedFrameUrl(iframeUrl);
-    if (isFirstFrameLoad.current) {
-      isFirstFrameLoad.current = false;
-      requestAnimationFrame(() =>
-        window.scrollTo({ top: 0, behavior: "auto" }),
-      );
-    }
   }
 
   return (

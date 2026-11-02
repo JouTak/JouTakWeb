@@ -110,3 +110,22 @@ references и факты, а не просто присутствие ссыло
 - [Вход](screenshots/v2-auth-login.jpg)
 - [Account security](screenshots/v2-account-security.jpg)
 - [Оплата](screenshots/v2-payment.jpg)
+
+## Проверка после переноса на main — 2026-11-02
+
+Итоговый diff PR перенесён одним коммитом поверх `604b3a3`, без повторного
+воспроизведения старых merge-конфликтов. Админка и feature flags сохранены из main.
+Frontend lockfile обновлён в пределах объявленных совместимых диапазонов.
+Backend использует актуальный lockfile main.
+
+Признак pending MFA теперь снимается при публикации успешной авторизации после
+загрузки профиля, а не сразу после обмена JWT. Добавлен регрессионный тест.
+
+Проверки: frontend check (31 файл, 111 тестов, сборка, линтеры и форматирование),
+backend pytest (437 тестов и 164 subtests), Ruff, Bandit, OpenAPI contracts и
+asset budgets прошли. Playwright: 38 тестов прошли.
+
+npm update устранил high-severity предупреждение follow-redirects. Остались
+11 moderate предупреждений в цепочке ESLint/minimatch; принудительные
+несовместимые обновления tooling не применялись. Живые MFA/passkey и платежи
+этими автоматическими проверками не покрываются.

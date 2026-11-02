@@ -96,7 +96,7 @@
     "fsevents@2.3.2": false,
     "fsevents@2.3.3": false,
     "sharp@0.35.5": true,
-    "@swc/core@1.16.1": true,
+    "@swc/core@1.16.21": true,
     "msw@2.15.0": true
   },
   "overrides": {

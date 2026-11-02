@@ -108,6 +108,17 @@ describe("session bootstrap failures", () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps MFA pending until the loaded profile is announced", async () => {
+    tokenStore.set({ session_token: "mfa-session", pending_mfa: true });
+    vi.spyOn(bareClient, "request").mockResolvedValue({
+      data: { access: "jwt" },
+    });
+    await finalizeSessionAuthentication();
+    expect(tokenStore.get().pending_mfa).toBe(true);
+    announceAuthenticatedSession();
+    expect(tokenStore.get().pending_mfa).toBeUndefined();
+  });
+
   it("rejects an exchange without an access token", async () => {
     vi.spyOn(bareClient, "request").mockResolvedValue({ data: {} });
     await expect(finalizeSessionAuthentication()).rejects.toThrow(

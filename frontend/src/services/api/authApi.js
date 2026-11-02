@@ -142,12 +142,12 @@ export async function doSignupAndLogin({ email, password }) {
 }
 
 export function announceAuthenticatedSession() {
+  markPendingMfaSession(false, { emit: false });
   notifyAuthStateChanged();
 }
 
 export async function finalizeSessionAuthentication() {
   await jwtFromSession();
-  markPendingMfaSession(false, { emit: false });
   return tokenStore.get();
 }
 

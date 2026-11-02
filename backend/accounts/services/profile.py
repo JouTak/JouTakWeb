@@ -15,9 +15,11 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
 from django.core.files.utils import validate_file_name
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 from ninja.errors import HttpError
 from PIL import Image, UnidentifiedImageError
+from profiles.models import CommunityProfile
 
 User = get_user_model()
 VK_USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,64}$")
@@ -175,12 +177,18 @@ class ProfileService:
         is_itmo_student: bool | None = None,
         itmo_isu: str | None = None,
     ) -> UserProfile:
+        user = User.objects.select_for_update().get(pk=user.pk)
         ProfileService.update_name(user, first=first_name, last=last_name)
         profile = ProfileService.get_or_create_extended_profile(user)
         to_update: list[str] = []
 
         if vk_username is not None:
+            old_vk = profile.vk_username
             ProfileService._apply_vk_username(profile, vk_username, to_update)
+            if old_vk != profile.vk_username:
+                CommunityProfile.objects.filter(
+                    user=user, legacy_vk_enabled=True
+                ).update(contacts_version=F("contacts_version") + 1)
 
         if minecraft_nick is not None:
             ProfileService._apply_minecraft_nick(

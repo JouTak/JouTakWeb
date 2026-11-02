@@ -1,0 +1,17 @@
+.navigation {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.project-select {
+  margin-inline: auto;
+}
+
+@media (max-width: 575px) {
+  .project-select {
+    order: 1;
+    flex-basis: 100%;
+    display: flex;
+    justify-content: center;
+  }
+}

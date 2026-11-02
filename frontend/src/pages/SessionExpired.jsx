@@ -2,14 +2,10 @@ import { Button } from "@gravity-ui/uikit";
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-function safeInternalPath(path) {
-  if (typeof path !== "string") return "/joutak";
-  if (!path.startsWith("/")) return "/joutak";
-  if (path.startsWith("//")) return "/joutak";
-  return path;
-}
+import { safeInternalPath } from "../services/urlSafety";
 
 const reasonText = {
+  mfa_required: "Завершите проверку входа, чтобы открыть этот раздел.",
   auth_required:
     "Эта страница доступна только после авторизации. Войдите, чтобы продолжить.",
   MISSING_REFRESH:
@@ -50,7 +46,13 @@ export default function SessionExpired() {
         gap: 12,
       }}
     >
-      <h2 style={{ margin: 0 }}>Сессия завершена</h2>
+      <h1 style={{ margin: 0 }}>
+        {reason === "auth_required"
+          ? "Войдите, чтобы продолжить"
+          : reason === "mfa_required"
+            ? "Подтвердите вход"
+            : "Войдите снова"}
+      </h1>
       <p style={{ margin: 0, opacity: 0.9 }}>{message}</p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Button
@@ -59,7 +61,11 @@ export default function SessionExpired() {
             navigate(`/login?next=${encodeURIComponent(nextPath)}`)
           }
         >
-          Войти снова
+          {reason === "auth_required"
+            ? "Войти"
+            : reason === "mfa_required"
+              ? "Продолжить проверку"
+              : "Войти снова"}
         </Button>
         <Button view="outlined" onClick={() => navigate("/joutak")}>
           На главную

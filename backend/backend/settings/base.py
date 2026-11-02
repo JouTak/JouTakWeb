@@ -64,6 +64,10 @@ CSRF_TRUSTED_ORIGINS = config(
 INTERNAL_IPS = config("DJANGO_INTERNAL_IPS", default="127.0.0.1", cast=Csv())
 
 INSTALLED_APPS = [
+    "communities",
+    "profiles",
+    "cities",
+    "playergroups",
     "backend.admin.JouTakAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -95,6 +99,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "profiles.middleware.HubPrivacyMiddleware",
     "backend.middleware.RequestContextMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "backend.middleware.HostRoutingMiddleware",
@@ -477,3 +482,20 @@ FF_PROFILE_PERSONALIZATION_ENFORCE = config(
 
 def as_public_settings() -> dict[str, object]:
     return {name: value for name, value in globals().items() if name.isupper()}
+
+
+# Community portal and BlueMap integration.
+ITMOCRAFT_MAP_BASE_URL = config(
+    "ITMOCRAFT_MAP_BASE_URL", default="https://map.joutak.ru"
+)
+ITMOCRAFT_MAP_IDS = config("ITMOCRAFT_MAP_IDS", default="joutak", cast=Csv())
+GROUPS_CREATE_PER_DAY = config("GROUPS_CREATE_PER_DAY", default=5, cast=int)
+GROUPS_REQUESTS_PER_DAY = config(
+    "GROUPS_REQUESTS_PER_DAY", default=20, cast=int
+)
+GROUPS_INVITES_PER_DAY = config("GROUPS_INVITES_PER_DAY", default=50, cast=int)
+GROUPS_INVITE_DAYS = config("GROUPS_INVITE_DAYS", default=14, cast=int)
+GROUPS_REQUEST_DAYS = config("GROUPS_REQUEST_DAYS", default=30, cast=int)
+GROUPS_INVITE_COOLDOWN_DAYS = config(
+    "GROUPS_INVITE_COOLDOWN_DAYS", default=7, cast=int
+)

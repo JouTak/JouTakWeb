@@ -90,7 +90,13 @@ def account_status(request: HttpRequest) -> AccountStatusOut:
 
 @account_router.post(
     "/delete",
-    response={200: OkOut, 400: ErrorOut, 401: ErrorOut, 422: ErrorOut},
+    response={
+        200: OkOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        409: ErrorOut,
+        422: ErrorOut,
+    },
     summary="Delete current account",
     operation_id="account_delete_current",
 )

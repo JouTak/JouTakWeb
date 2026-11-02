@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, Loader, useToaster } from "@gravity-ui/uikit";
+import { Button, Loader, useToaster } from "@gravity-ui/uikit";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getOAuthLink, getOAuthProviders } from "../../services/api";
@@ -28,7 +28,7 @@ function readCsrfToken() {
   return "";
 }
 
-export default function OauthCard() {
+export default function OauthCard({ embedded = false, linkedProviders = [] }) {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
@@ -138,63 +138,47 @@ export default function OauthCard() {
   }
 
   return (
-    <SectionCard>
-      <h3 style={{ margin: 0, fontSize: 18 }}>Связанные аккаунты</h3>
+    <SectionCard plain={embedded}>
+      {!embedded && (
+        <h3 style={{ margin: 0, fontSize: 18 }}>Связанные аккаунты</h3>
+      )}
+      {linkedProviders.length > 0 && (
+        <p>Подключены: {linkedProviders.join(", ")}</p>
+      )}
       {loading || !ready ? (
         <Loader size="m" />
       ) : loadError ? (
-        <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ opacity: 0.8 }}>
-            Не удалось загрузить список провайдеров.
-          </div>
+        <div role="alert">
+          <p>Не удалось загрузить список провайдеров.</p>
           <Button view="outlined" onClick={() => void loadProviders()}>
             Повторить
           </Button>
-          {providers?.length ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              {providers.map((p) => (
-                <div key={p.id} style={row}>
-                  <div style={{ textTransform: "capitalize" }}>{p.name}</div>
-                  <DropdownMenu
-                    size="m"
-                    renderSwitcher={(props) => (
-                      <Button {...props} view="outlined">
-                        Действия
-                      </Button>
-                    )}
-                    items={[
-                      {
-                        text: "Связать",
-                        action: () => connectProvider(p.id),
-                      },
-                    ]}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
         </div>
-      ) : providers?.length ? (
-        <div style={{ display: "grid", gap: 8 }}>
-          {providers.map((p) => (
-            <div key={p.id} style={row}>
-              <div style={{ textTransform: "capitalize" }}>{p.name}</div>
-              <DropdownMenu
-                size="m"
-                renderSwitcher={(props) => (
-                  <Button {...props} view="outlined">
-                    Действия
-                  </Button>
-                )}
-                items={[
-                  { text: "Связать", action: () => connectProvider(p.id) },
-                ]}
-              />
+      ) : providers.length ? (
+        <div className="security-session-list">
+          {providers.map((provider) => (
+            <div key={provider.id} style={{ ...row, flexWrap: "wrap" }}>
+              <span style={{ textTransform: "capitalize" }}>
+                {provider.name}
+              </span>
+              {linkedProviders.includes(provider.id) ? (
+                <span className="security-muted">Подключён</span>
+              ) : (
+                <Button
+                  view="outlined"
+                  onClick={() => connectProvider(provider.id)}
+                  extraProps={{ "aria-label": `Подключить ${provider.name}` }}
+                >
+                  Подключить
+                </Button>
+              )}
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ opacity: 0.8 }}>Доступных провайдеров нет.</div>
+        <p className="security-muted">
+          Другие способы входа пока не настроены.
+        </p>
       )}
     </SectionCard>
   );

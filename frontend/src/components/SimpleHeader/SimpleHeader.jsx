@@ -7,10 +7,11 @@ import {
   Modal,
   Select,
 } from "@gravity-ui/uikit";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Offcanvas from "react-bootstrap/Offcanvas";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import { useHub } from "../../features/hub/context";
+import { PROFILE_CHANGED_EVENT } from "../../features/hub/profileEvents";
 import {
   AUTH_STATE_EVENT,
   hasStoredAuth,
@@ -18,6 +19,7 @@ import {
   me,
   readStoredTokens,
 } from "../../services/api";
+import { safeHubImageUrl } from "../../services/urlSafety";
 import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
   getPersonalizationNoticeKey,
@@ -31,9 +33,14 @@ import {
   isPersonalizedProfile,
   needsPersonalization,
 } from "../../utils/profileState";
-import { getPathByProject, getProjectByPath } from "../../utils/projectUtils";
+import {
+  getPathByProject,
+  getProjectByPath,
+  isProjectLandingPath,
+} from "../../utils/projectUtils";
 import AuthModal from "../AuthModal";
 import DynamicMenu from "../DynamicMenu";
+import styles from "./SimpleHeader.module.css";
 
 function isPersonalizationFlowPath(pathname) {
   return (
@@ -46,6 +53,7 @@ function isPersonalizationFlowPath(pathname) {
 function ProjectSelect() {
   const navigate = useNavigate();
   const location = useLocation();
+  const selectId = useId();
 
   const options = useMemo(
     () => [
@@ -67,8 +75,14 @@ function ProjectSelect() {
 
   return (
     <div>
-      сервер /&nbsp;
-      <Select options={options} value={selectedValue} onUpdate={handleUpdate} />
+      <label htmlFor={selectId}>сервер /&nbsp;</label>
+      <Select
+        id={selectId}
+        title="Выбор сервера"
+        options={options}
+        value={selectedValue}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }
@@ -78,7 +92,6 @@ const SimpleHeader = () => {
   const location = useLocation();
 
   const [authOpen, setAuthOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [personalizationModalOpen, setPersonalizationModalOpen] =
@@ -86,16 +99,9 @@ const SimpleHeader = () => {
   const [postSignupBannerDismissed, setPostSignupBannerDismissed] =
     useState(false);
 
-  const closeOffcanvas = useCallback(() => setMenuOpen(false), []);
-
   const openAuth = useCallback(() => {
-    closeOffcanvas();
     setAuthOpen(true);
-  }, [closeOffcanvas]);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
+  }, []);
 
   useEffect(() => {
     setPostSignupBannerDismissed(false);
@@ -134,15 +140,17 @@ const SimpleHeader = () => {
       loadProfileIfTokens();
     };
     window.addEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+    window.addEventListener(PROFILE_CHANGED_EVENT, onAuthStateChanged);
     return () => {
       window.removeEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+      window.removeEventListener(PROFILE_CHANGED_EVENT, onAuthStateChanged);
     };
   }, [loadProfileIfTokens]);
 
+  const { flags: hubFlags } = useHub();
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
   const onLogout = useCallback(async () => {
-    closeOffcanvas();
     setAuthOpen(false);
     setPersonalizationModalOpen(false);
     try {
@@ -151,7 +159,7 @@ const SimpleHeader = () => {
       setProfile(null);
       navigate("/joutak", { replace: true });
     }
-  }, [closeOffcanvas, navigate]);
+  }, [navigate]);
 
   const registrationCompleted = useMemo(
     () => isPersonalizedProfile(profile),
@@ -222,7 +230,7 @@ const SimpleHeader = () => {
       <Avatar
         size="m"
         text={getProfileDisplayName(profile)}
-        imgUrl={profile?.avatar_url}
+        imgUrl={safeHubImageUrl(profile?.avatar_url)}
         view="outlined"
         title={getProfileDisplayName(profile)}
       />
@@ -232,23 +240,31 @@ const SimpleHeader = () => {
   return (
     <>
       <header>
-        <nav className="navbar navbar-dark bg-dark">
-          <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
-            <a className="navbar-brand" href="https://joutak.ru">
+        <nav
+          className="navbar navbar-dark bg-dark"
+          aria-label="Основная навигация"
+        >
+          <div
+            className={`container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4 ${styles.navigation}`}
+          >
+            <Link className="navbar-brand" to="/" aria-label="На главную">
               <img
                 src="/img/icons/logo.png"
-                alt="Logo"
+                alt="JouTak"
                 width="30"
                 height="30"
                 className="d-inline-block align-text-top"
               />
-            </a>
+            </Link>
 
-            <div className="mx-auto">
-              <ProjectSelect />
-            </div>
+            {isProjectLandingPath(location.pathname) && (
+              <div className={styles.projectSelect}>
+                <ProjectSelect />
+              </div>
+            )}
 
             <div className="d-flex align-items-center">
+              <DynamicMenu />
               {loadingProfile ? (
                 <Loader size="m" className="ms-2" />
               ) : profile ? (
@@ -266,7 +282,38 @@ const SimpleHeader = () => {
                           ],
                         ]
                       : []),
-                    [{ text: "Аккаунт и безопасность", action: goSecurity }],
+                    ...(hubFlags.community_profiles_ui
+                      ? [
+                          [
+                            {
+                              text: "Личный кабинет",
+                              action: () => navigate("/account"),
+                            },
+                            {
+                              text: "Игроки",
+                              action: () => navigate("/players"),
+                            },
+                            {
+                              text: "Профиль",
+                              action: () =>
+                                navigate(
+                                  `/u/${encodeURIComponent(profile.username)}`,
+                                ),
+                            },
+                          ],
+                        ]
+                      : []),
+                    ...(hubFlags.communities_ui
+                      ? [
+                          [
+                            {
+                              text: "Сообщества",
+                              action: () => navigate("/account/communities"),
+                            },
+                          ],
+                        ]
+                      : []),
+                    [{ text: "Безопасность", action: goSecurity }],
                     { text: "Выйти", action: onLogout, theme: "danger" },
                   ]}
                 />
@@ -283,16 +330,6 @@ const SimpleHeader = () => {
                   <Avatar size="m" text="?" view="outlined" title="Гость" />
                 </Button>
               )}
-
-              <button
-                className="navbar-toggler ms-2"
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                aria-controls="offcanvasDarkNavbar"
-                aria-label="Toggle navigation"
-              >
-                <span className="navbar-toggler-icon"></span>
-              </button>
             </div>
           </div>
         </nav>
@@ -336,24 +373,6 @@ const SimpleHeader = () => {
           </div>
         )}
       </header>
-
-      <Offcanvas
-        show={menuOpen}
-        onHide={closeOffcanvas}
-        placement="start"
-        scroll
-        id="offcanvasDarkNavbar"
-        className="text-bg-dark"
-      >
-        <Offcanvas.Header closeButton closeVariant="white">
-          <Offcanvas.Title id="offcanvasDarkNavbarLabel">Меню</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body>
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <DynamicMenu />
-          </ul>
-        </Offcanvas.Body>
-      </Offcanvas>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 

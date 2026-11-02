@@ -22,7 +22,11 @@ const headerStyle = {
   gap: 12,
 };
 
-export default function EmailCard({ initialStatus }) {
+export default function EmailCard({
+  initialStatus,
+  embedded = false,
+  onStatusChange,
+}) {
   const [email, setEmail] = useState(() => initialStatus?.email || "");
   const [verified, setVerified] = useState(() => !!initialStatus?.verified);
   const [pendingEmail, setPendingEmail] = useState(
@@ -123,6 +127,15 @@ export default function EmailCard({ initialStatus }) {
       setResendTarget(
         result.resend_target || result.pending_email || String(newEmail).trim(),
       );
+      onStatusChange?.({
+        email: result.email || email,
+        verified: !!result.verified,
+        pending_email: result.pending_email || String(newEmail).trim(),
+        resend_target:
+          result.resend_target ||
+          result.pending_email ||
+          String(newEmail).trim(),
+      });
       setEditMode(false);
     } catch (err) {
       const errors = err?.response?.data?.errors;
@@ -156,17 +169,19 @@ export default function EmailCard({ initialStatus }) {
   );
 
   return (
-    <SectionCard>
-      <div style={headerStyle}>
-        <h3 style={{ margin: 0, fontSize: 18 }}>Email</h3>
-        {email ? (
-          verified ? (
-            <Label theme="success">Подтверждён</Label>
-          ) : (
-            <Label theme="danger">Не подтверждён</Label>
-          )
-        ) : null}
-      </div>
+    <SectionCard plain={embedded}>
+      {!embedded && (
+        <div style={headerStyle}>
+          <h3 style={{ margin: 0, fontSize: 18 }}>Email</h3>
+          {email ? (
+            verified ? (
+              <Label theme="success">Подтверждён</Label>
+            ) : (
+              <Label theme="danger">Не подтверждён</Label>
+            )
+          ) : null}
+        </div>
+      )}
 
       {loading ? (
         <Loader size="m" />
@@ -234,6 +249,8 @@ export default function EmailCard({ initialStatus }) {
 }
 
 EmailCard.propTypes = {
+  embedded: PropTypes.bool,
+  onStatusChange: PropTypes.func,
   initialStatus: PropTypes.shape({
     email: PropTypes.string,
     verified: PropTypes.bool,

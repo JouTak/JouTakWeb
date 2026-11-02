@@ -199,3 +199,6 @@ node_modules/
 # context (secrets, internal URLs) and must not be committed.
 session-ses_*.md
 session-*.md
+
+# Isolated local Community Hub demo database
+/.local/

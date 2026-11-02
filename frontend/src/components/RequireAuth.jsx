@@ -1,4 +1,4 @@
-import { Loader } from "@gravity-ui/uikit";
+import { Button, Loader } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
@@ -9,19 +9,29 @@ export default function RequireAuth({ children }) {
   const location = useLocation();
   const [status, setStatus] = useState("checking");
 
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    setStatus("checking");
     let cancelled = false;
 
     async function verify() {
       if (!hasStoredAuth() || readStoredTokens()?.pending_mfa) {
-        if (!cancelled) setStatus("denied");
+        if (!cancelled)
+          setStatus(
+            readStoredTokens()?.pending_mfa ? "mfa_required" : "auth_required",
+          );
         return;
       }
       try {
         await me();
         if (!cancelled) setStatus("ok");
-      } catch {
-        if (!cancelled) setStatus("denied");
+      } catch (error) {
+        if (!cancelled)
+          setStatus(
+            [401, 410].includes(error?.response?.status)
+              ? "SESSION_UNAUTHORIZED"
+              : "error",
+          );
       }
     }
 
@@ -29,7 +39,7 @@ export default function RequireAuth({ children }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   if (status === "ok") {
     return children;
@@ -49,9 +59,19 @@ export default function RequireAuth({ children }) {
     );
   }
 
-  const next = location.pathname;
+  if (status === "error")
+    return (
+      <section className="hub-panel" role="alert">
+        <h1>Не удалось проверить вход</h1>
+        <p>Проверьте соединение и повторите попытку.</p>
+        <Button onClick={() => setAttempt((value) => value + 1)}>
+          Повторить
+        </Button>
+      </section>
+    );
+  const next = location.pathname + location.search + location.hash;
   const params = new URLSearchParams({
-    reason: "auth_required",
+    reason: status,
     next,
   });
 

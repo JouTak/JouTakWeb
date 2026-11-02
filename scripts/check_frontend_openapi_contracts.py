@@ -98,7 +98,12 @@ def normalize_frontend_path(path: str) -> str:
         return "/api/oauth/link/{provider}"
     if path.startswith("/account/sessions/${"):
         return "/api/account/sessions/{sid}"
-    return f"/api{path}"
+    normalized = re.sub(
+        r"\$\{(?:encodeURIComponent\()?([A-Za-z_]\w*)\)?\}",
+        r"{\1}",
+        path,
+    )
+    return f"/api{normalized}"
 
 
 def discover_frontend_calls() -> set[FrontendCall]:
@@ -138,6 +143,67 @@ def load_openapi_schema() -> dict[str, Any]:
 def build_body_contracts() -> tuple[BodyContract, ...]:
     return (
         BodyContract("post", "/api/account/delete", "DeleteAccountIn"),
+        BodyContract("patch", "/api/profiles/me", "ProfileUpdate"),
+        BodyContract("patch", "/api/profiles/me/game-data", "GameDataUpdate"),
+        BodyContract("post", "/api/groups", "GroupCreate"),
+        BodyContract("patch", "/api/groups/{slug}", "GroupUpdate"),
+        BodyContract("post", "/api/groups/{slug}/lifecycle", "LifecycleIn"),
+        BodyContract("post", "/api/groups/{slug}/join", "JoinIn"),
+        BodyContract("patch", "/api/groups/{slug}/membership", "JoinIn"),
+        BodyContract(
+            "patch", "/api/groups/{slug}/members/{member_id}", "RoleIn"
+        ),
+        BodyContract(
+            "post", "/api/groups/{slug}/members/{member_id}/remove", "RemoveIn"
+        ),
+        BodyContract(
+            "post",
+            "/api/groups/{slug}/members/{member_id}/restriction",
+            "RestrictionIn",
+        ),
+        BodyContract("post", "/api/groups/{slug}/requests", "ApplyIn"),
+        BodyContract(
+            "post",
+            "/api/groups/{slug}/requests/{process_id}/decision",
+            "ReviewIn",
+        ),
+        BodyContract("post", "/api/groups/{slug}/invitations", "InviteIn"),
+        BodyContract("post", "/api/groups/{slug}/leadership", "OfferIn"),
+        BodyContract(
+            "post", "/api/account/group-invitations/{process_id}", "RespondIn"
+        ),
+        BodyContract(
+            "post", "/api/account/group-leadership/{process_id}", "RespondIn"
+        ),
+        BodyContract(
+            "post", "/api/moderation/groups/{slug}/restriction", "ModerationIn"
+        ),
+        BodyContract(
+            "post", "/api/moderation/groups/{slug}/recovery", "RecoveryIn"
+        ),
+        BodyContract("patch", "/api/profiles/me/contacts", "ContactsUpdate"),
+        BodyContract(
+            "post", "/api/profiles/public/{username}/follow", "FollowInput"
+        ),
+        BodyContract("patch", "/api/cities/{slug}", "CityUpdate"),
+        BodyContract("post", "/api/cities/{slug}/invitations", "InvitationIn"),
+        BodyContract(
+            "post",
+            "/api/account/city-invitations/{invitation_id}",
+            "InvitationResponse",
+        ),
+        BodyContract("post", "/api/cities/{slug}/map-location", "MapLinkIn"),
+        BodyContract(
+            "patch",
+            "/api/cities/{slug}/members/{membership_id}",
+            "MemberUpdate",
+        ),
+        BodyContract(
+            "patch",
+            "/api/cities/{slug}/membership",
+            "MembershipVisibilityUpdate",
+        ),
+        BodyContract("post", "/api/moderation/cities", "CityCreate"),
         BodyContract("patch", "/api/account/profile", "ProfileUpdateIn"),
         BodyContract(
             "post",

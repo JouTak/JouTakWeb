@@ -2,7 +2,7 @@ import {
   create as createWebAuthnCredential,
   get as getWebAuthnCredential,
 } from "@github/webauthn-json";
-import { Label, Loader, useToaster } from "@gravity-ui/uikit";
+import { Button, Label, Loader, useToaster } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useState } from "react";
@@ -106,9 +106,15 @@ function isUnverifiedEmailError(error) {
 
 // ─── MfaCard (orchestrator) ────────────────────────────────────────────────
 
-export default function MfaCard({ profile = null }) {
+export default function MfaCard({
+  profile = null,
+  embedded = false,
+  onStatusChange,
+}) {
   const { add } = useToaster();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
   const [authenticators, setAuthenticators] = useState([]);
   const [totpStatus, setTotpStatus] = useState(null);
   const [totpCode, setTotpCode] = useState("");
@@ -138,10 +144,14 @@ export default function MfaCard({ profile = null }) {
     [authenticators],
   );
   const hasMfa =
-    profile?.has_2fa === true ||
+    totpStatus?.enabled === true ||
     authenticators.some(
       (auth) => auth.type === "totp" || auth.type === "webauthn",
     );
+
+  useEffect(() => {
+    if (!loading) onStatusChange?.(loadError ? undefined : hasMfa);
+  }, [loading, loadError, hasMfa, onStatusChange]);
 
   // ── Initial load ──────────────────────────────────────────────────────
 
@@ -149,6 +159,7 @@ export default function MfaCard({ profile = null }) {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setLoadError(null);
       try {
         const [nextAuthenticators, nextTotp] = await Promise.all([
           listAuthenticatorsSafe(),
@@ -174,6 +185,7 @@ export default function MfaCard({ profile = null }) {
             content: extractErrorMessage(error, "Не удалось загрузить MFA."),
             theme: "danger",
           });
+          setLoadError(error);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -183,7 +195,7 @@ export default function MfaCard({ profile = null }) {
     return () => {
       cancelled = true;
     };
-  }, [add]);
+  }, [add, attempt]);
 
   // ── QR code generation ────────────────────────────────────────────────
 
@@ -448,7 +460,7 @@ export default function MfaCard({ profile = null }) {
 
   if (loading) {
     return (
-      <SectionCard id="mfa">
+      <SectionCard plain={embedded} id={embedded ? undefined : "mfa"}>
         <div style={rowBetweenStyle}>
           <h3 style={{ margin: 0, fontSize: 18 }}>Многофакторная защита</h3>
           <Loader size="m" />
@@ -457,15 +469,29 @@ export default function MfaCard({ profile = null }) {
     );
   }
 
+  if (loadError)
+    return (
+      <SectionCard plain={embedded}>
+        <p role="alert">
+          Не удалось проверить дополнительную защиту. Настройки не изменены.
+        </p>
+        <Button onClick={() => setAttempt((n) => n + 1)}>
+          Повторить проверку защиты
+        </Button>
+      </SectionCard>
+    );
+
   return (
     <>
-      <SectionCard id="mfa">
-        <div style={rowBetweenStyle}>
-          <h3 style={{ margin: 0, fontSize: 18 }}>Многофакторная защита</h3>
-          <Label theme={hasMfa ? "success" : "normal"} size="m">
-            {hasMfa ? "Включена" : "Выключена"}
-          </Label>
-        </div>
+      <SectionCard plain={embedded} id={embedded ? undefined : "mfa"}>
+        {!embedded && (
+          <div style={rowBetweenStyle}>
+            <h3 style={{ margin: 0, fontSize: 18 }}>Многофакторная защита</h3>
+            <Label theme={hasMfa ? "success" : "normal"} size="m">
+              {hasMfa ? "Включена" : "Выключена"}
+            </Label>
+          </div>
+        )}
 
         <div style={{ opacity: 0.84 }}>
           Двухфакторная аутентификация добавляет дополнительный уровень защиты
@@ -599,6 +625,8 @@ export default function MfaCard({ profile = null }) {
 }
 
 MfaCard.propTypes = {
+  embedded: PropTypes.bool,
+  onStatusChange: PropTypes.func,
   profile: PropTypes.shape({
     has_2fa: PropTypes.bool,
     email_verified: PropTypes.bool,

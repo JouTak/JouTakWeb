@@ -1,48 +1,58 @@
-import { Link, useLocation } from "react-router-dom";
+import { Button, DropdownMenu } from "@gravity-ui/uikit";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import { getProjectByPath } from "../utils/projectUtils";
+import { useHub } from "../features/hub/context";
+import { normalizeRoutePath } from "../routing/pageRegistry";
 
-const DynamicMenu = () => {
+function NavigationDropdown({ items }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <DropdownMenu
+      items={items}
+      open={open}
+      onOpenToggle={setOpen}
+      renderSwitcher={(switcherProps) => (
+        <Button
+          {...switcherProps}
+          view="flat"
+          size="m"
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          Разделы
+        </Button>
+      )}
+    />
+  );
+}
+
+export default function DynamicMenu() {
+  const { flags } = useHub();
   const location = useLocation();
-  const currentProject = getProjectByPath(location.pathname);
+  const navigate = useNavigate();
+  const items = [];
 
-  if (currentProject === "jou_tak") {
-    return (
-      <>
-        <li className="nav-item">
-          <Link className="nav-link" to="#server-info">
-            О сервере
-          </Link>
-        </li>
-        <li className="nav-item">
-          <a
-            className="nav-link"
-            href="https://map.joutak.ru"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Онлайн карта
-          </a>
-        </li>
-      </>
-    );
-  } else if (currentProject === "mini_games" || currentProject === "legacy") {
-    return (
-      <>
-        <li className="nav-item">
-          <Link className="nav-link" to="#server-info">
-            О сервере
-          </Link>
-        </li>
-        <li className="nav-item">
-          <Link className="nav-link" to="#server-load">
-            Нагрузка сервера
-          </Link>
-        </li>
-      </>
-    );
+  if (flags.cities_ui) {
+    items.push({ text: "Города", action: () => navigate("/cities") });
   }
-  return null;
-};
+  if (flags.community_profiles_ui) {
+    items.push({ text: "Игроки", action: () => navigate("/players") });
+  }
+  if (flags.communities_ui) {
+    items.push({ text: "Сообщества", action: () => navigate("/communities") });
+  }
+  if (normalizeRoutePath(location.pathname) === "/joutak") {
+    items.push({
+      text: "Онлайн-карта JouTak",
+      href: "https://map.joutak.ru",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    });
+  }
 
-export default DynamicMenu;
+  if (!items.length) return null;
+
+  return <NavigationDropdown key={location.pathname} items={items} />;
+}

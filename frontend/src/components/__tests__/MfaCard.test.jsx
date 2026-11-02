@@ -80,6 +80,31 @@ describe("MfaCard", () => {
     addToast.mockClear();
   });
 
+  it("does not offer setup as though protection were off after a failed read", async () => {
+    const { listAuthenticators } = await import("../../services/api");
+    listAuthenticators.mockRejectedValueOnce(new Error("offline"));
+    const onStatusChange = vi.fn();
+    render(
+      <MfaCard
+        embedded
+        profile={{ has_2fa: true }}
+        onStatusChange={onStatusChange}
+      />,
+    );
+    await screen.findByRole("alert");
+    expect(
+      screen.queryByRole("button", { name: "Настроить", exact: true }),
+    ).toBeNull();
+    await waitFor(() =>
+      expect(onStatusChange).toHaveBeenLastCalledWith(undefined),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Повторить проверку защиты" }),
+    );
+    await screen.findByRole("button", { name: "Настроить", exact: true });
+    await waitFor(() => expect(onStatusChange).toHaveBeenLastCalledWith(false));
+  });
+
   it("shows a blocked state when email is not verified", async () => {
     const { findByText } = render(
       <MfaCard

@@ -210,6 +210,29 @@ def _derived_guarded_keys() -> tuple[str, ...]:
 DESIGN_FLAG_KEYS = _derived_guarded_keys()
 
 
+HUB_FLAG_KEYS = (
+    "community_profiles_ui",
+    "communities_ui",
+    "player_groups_ui",
+    "player_groups_write",
+    "cities_ui",
+    "cities_management_ui",
+    "cities_moderation_ui",
+    "cities_map_integration",
+)
+for _key in HUB_FLAG_KEYS:
+    FEATURE_REGISTRY[_key] = {
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": (True, False),
+        "pages": ["*"],
+        "sticky": False,
+        "description": f"Community Hub rollout: {_key}",
+        "visual_impact": "Enables the corresponding community hub surface.",
+    }
+
+
 def get_default_value(key: str) -> bool | str:
     """Resolve a registered default, optionally from an explicit setting."""
     spec = FEATURE_REGISTRY.get(key)

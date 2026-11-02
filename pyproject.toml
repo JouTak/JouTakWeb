@@ -37,6 +37,7 @@ dependencies = [
     "opentelemetry-instrumentation-django>=0.62b1",
     "opentelemetry-instrumentation-requests>=0.62b1",
     "opentelemetry-instrumentation-logging>=0.62b1",
+    "pymorphy3>=2.0.6",
 ]
 
 [dependency-groups]

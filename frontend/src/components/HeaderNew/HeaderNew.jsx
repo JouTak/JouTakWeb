@@ -2,6 +2,8 @@ import { Button, DropdownMenu, Label, Loader, Modal } from "@gravity-ui/uikit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useHub } from "../../features/hub/context";
+import { PROFILE_CHANGED_EVENT } from "../../features/hub/profileEvents";
 import {
   AUTH_STATE_EVENT,
   hasStoredAuth,
@@ -17,8 +19,12 @@ import {
   isPersonalizedProfile,
   needsPersonalization,
 } from "../../utils/profileState";
-import { getPathByProject } from "../../utils/projectUtils";
+import {
+  getPathByProject,
+  isProjectLandingPath,
+} from "../../utils/projectUtils";
 import AuthModal from "../AuthModal";
+import DynamicMenu from "../DynamicMenu";
 import ThemeSwitcher from "../ThemeSwitcher/ThemeSwitcher";
 import styles from "./HeaderNew.module.scss";
 
@@ -33,7 +39,7 @@ function ProjectSelect() {
       { value: "jou_tak", content: "JouTak" },
       { value: "mini_games", content: "miniGAMES" },
       { value: "legacy", content: "Legacy" },
-      { value: "modex", content: "Modex" },
+      { value: "itmo_craft", content: "ITMOcraft" },
     ],
     [],
   );
@@ -133,11 +139,14 @@ export default function HeaderNew() {
       loadProfileIfTokens();
     };
     window.addEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+    window.addEventListener(PROFILE_CHANGED_EVENT, onAuthStateChanged);
     return () => {
       window.removeEventListener(AUTH_STATE_EVENT, onAuthStateChanged);
+      window.removeEventListener(PROFILE_CHANGED_EVENT, onAuthStateChanged);
     };
   }, [loadProfileIfTokens]);
 
+  const { flags: hubFlags } = useHub();
   const goSecurity = () => navigate("/account/security");
   const goOnboarding = () => navigate("/account/complete-profile");
 
@@ -218,7 +227,7 @@ export default function HeaderNew() {
                   ITMOcraft
                 </button>
 
-                <ProjectSelect />
+                {isProjectLandingPath(location.pathname) && <ProjectSelect />}
               </div>
 
               <button
@@ -242,6 +251,7 @@ export default function HeaderNew() {
 
             <div className={styles.sideRight}>
               <div className={styles.accountArea}>
+                <DynamicMenu />
                 {loadingProfile ? (
                   <Loader size="m" />
                 ) : profile ? (
@@ -259,7 +269,38 @@ export default function HeaderNew() {
                             ],
                           ]
                         : []),
-                      [{ text: "Аккаунт и безопасность", action: goSecurity }],
+                      ...(hubFlags.community_profiles_ui
+                        ? [
+                            [
+                              {
+                                text: "Личный кабинет",
+                                action: () => navigate("/account"),
+                              },
+                              {
+                                text: "Игроки",
+                                action: () => navigate("/players"),
+                              },
+                              {
+                                text: "Профиль",
+                                action: () =>
+                                  navigate(
+                                    `/u/${encodeURIComponent(profile.username)}`,
+                                  ),
+                              },
+                            ],
+                          ]
+                        : []),
+                      ...(hubFlags.communities_ui
+                        ? [
+                            [
+                              {
+                                text: "Сообщества",
+                                action: () => navigate("/account/communities"),
+                              },
+                            ],
+                          ]
+                        : []),
+                      [{ text: "Безопасность", action: goSecurity }],
                       { text: "Выйти", action: onLogout, theme: "danger" },
                     ]}
                   />

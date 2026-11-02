@@ -2,12 +2,14 @@ import { Button, Loader } from "@gravity-ui/uikit";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useHub } from "../features/hub/context";
 import {
   confirmEmailVerification,
   hasStoredAuth,
   inspectEmailVerification,
 } from "../services/api";
 import { extractErrorMessage } from "../services/errors";
+import { safeInternalPath } from "../services/urlSafety";
 
 const cardStyle = {
   maxWidth: 760,
@@ -21,6 +23,7 @@ const cardStyle = {
 
 export default function ConfirmEmail() {
   const location = useLocation();
+  const { flags } = useHub();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -33,7 +36,13 @@ export default function ConfirmEmail() {
     return (params.get("key") || "").trim();
   }, [location.search]);
   const isAuthenticated = hasStoredAuth();
-  const accountPath = isAuthenticated ? "/account/security" : "/login";
+  const destination = safeInternalPath(
+    new URLSearchParams(location.search).get("next"),
+    flags.community_profiles_ui ? "/account" : "/account/security",
+  );
+  const accountPath = isAuthenticated
+    ? destination
+    : `/login?next=${encodeURIComponent(destination)}`;
 
   useEffect(() => {
     let active = true;

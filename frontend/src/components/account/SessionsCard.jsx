@@ -1,12 +1,4 @@
-import {
-  Button,
-  DropdownMenu,
-  Label,
-  Modal,
-  Switch,
-  Text,
-  Tooltip,
-} from "@gravity-ui/uikit";
+import { Button, Loader, Switch } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -17,21 +9,10 @@ import {
   logout,
   revokeSessionHeadless,
 } from "../../services/api";
-import { SectionCard } from "../ui/primitives";
-
-const rowBetween = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
-};
+import { ConfirmDialog, SectionCard } from "../ui/primitives";
+import SessionList from "./SessionList";
 
 const WINDOW_HOURS = 48;
-
-function shortUA(ua = "") {
-  if (!ua) return "Неизвестное устройство";
-  return ua.length > 96 ? `${ua.slice(0, 96)}…` : ua;
-}
 
 function sessionTimestamp(value) {
   const parsed = Date.parse(value || "");
@@ -60,132 +41,6 @@ function compareSessions(left, right) {
   }
 
   return String(left.id || "").localeCompare(String(right.id || ""), "ru");
-}
-
-function SessionsCardSkeleton() {
-  return (
-    <div
-      className="skeleton-block"
-      style={{
-        borderRadius: 12,
-        border: "1px solid rgba(255,255,255,0.08)",
-        padding: 16,
-        display: "grid",
-        gap: 14,
-      }}
-      aria-hidden="true"
-    >
-      <div
-        style={{ ...rowBetween, alignItems: "flex-start", flexWrap: "wrap" }}
-      >
-        <div
-          style={{ display: "grid", gap: 10, minWidth: 220, flex: "1 1 280px" }}
-        >
-          <div className="skeleton-line" style={{ width: 110, height: 18 }} />
-          <div className="skeleton-line" style={{ width: "70%" }} />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-            justifyContent: "flex-end",
-          }}
-        >
-          <div className="skeleton-line" style={{ width: 190, height: 28 }} />
-          <div className="skeleton-line" style={{ width: 210, height: 28 }} />
-        </div>
-      </div>
-
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div
-          key={index}
-          style={{
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 10,
-            padding: 12,
-            display: "grid",
-            gap: 10,
-          }}
-        >
-          <div
-            style={{
-              ...rowBetween,
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gap: 8,
-                minWidth: 240,
-                flex: "1 1 320px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
-                <div
-                  className="skeleton-line"
-                  style={{ width: 118, height: 16 }}
-                />
-                <div
-                  className="skeleton-line"
-                  style={{ width: 72, height: 20 }}
-                />
-              </div>
-              <div className="skeleton-line" style={{ width: "84%" }} />
-              <div className="skeleton-line" style={{ width: "62%" }} />
-              <div className="skeleton-line" style={{ width: "48%" }} />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-              }}
-            >
-              <div
-                className="skeleton-line"
-                style={{ width: 108, height: 32 }}
-              />
-              <div
-                className="skeleton-line"
-                style={{ width: 100, height: 32 }}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function reasonBadge(reason) {
-  if (!reason) return null;
-  const map = {
-    manual: { text: "Ручное отключение", theme: "warning" },
-    signout: { text: "Выход", theme: "info" },
-    logged_out: { text: "Вышел", theme: "info" },
-    expired: { text: "Истекла", theme: "utility" },
-    revoked: { text: "Отозвана", theme: "danger" },
-    bulk_except_current: { text: "Массово (кроме текущей)", theme: "info" },
-  };
-  const key = String(reason).toLowerCase();
-  const r = map[key] || { text: String(reason), theme: "normal" };
-  return (
-    <Label size="s" theme={r.theme}>
-      {r.text}
-    </Label>
-  );
 }
 
 function normalizeSession(raw) {
@@ -234,13 +89,14 @@ function normalizeSessionList(payload) {
   return source.map(normalizeSession);
 }
 
-export default function SessionsCard({ initialSessions }) {
+export default function SessionsCard({ initialSessions, embedded = false }) {
   const navigate = useNavigate();
   const [allSessions, setAllSessions] = useState(() =>
     initialSessions === undefined ? [] : normalizeSessionList(initialSessions),
   );
   const [loading, setLoading] = useState(initialSessions === undefined);
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -322,7 +178,8 @@ export default function SessionsCard({ initialSessions }) {
   }
 
   async function runConfirmed() {
-    setConfirmOpen(false);
+    if (busy) return;
+    setBusy(true);
     try {
       if (confirmAction === "revoke-one" && targetSessionId) {
         const r = await revokeSessionHeadless(targetSessionId, "manual");
@@ -349,187 +206,81 @@ export default function SessionsCard({ initialSessions }) {
     } catch {
       setMsg("Операция не выполнена.");
     } finally {
+      setBusy(false);
+      setConfirmOpen(false);
       setConfirmAction(null);
       setTargetSessionId(null);
     }
   }
 
   return (
-    <SectionCard>
-      <div style={rowBetween}>
-        <h3 style={{ margin: 0, fontSize: 18 }}>Сессии</h3>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <Tooltip content="Показывать завершённые за последние 48 часов">
-            <Switch
-              size="m"
-              checked={showHistory}
-              onUpdate={setShowHistory}
-              content="Отобразить завершенные"
-            />
-          </Tooltip>
-          <Button view="flat-danger" onClick={askRevokeAllExceptCurrent}>
-            Завершить все (кроме текущей)
-          </Button>
-        </div>
-      </div>
-
-      <div style={{ opacity: 0.8 }}>
-        Отображаем{" "}
-        {showHistory
-          ? "сессии за последние 48 часов (включая завершённые)"
-          : "активные сессии за последние 48 часов"}
-        .
-      </div>
-
-      {loading ? (
-        <SessionsCardSkeleton />
-      ) : sessions.length ? (
-        <div style={{ display: "grid", gap: 8 }}>
-          {sessions.map((s) => {
-            const actions = [];
-            if (s.current && !s.revoked) {
-              actions.push({
-                text: "Выйти здесь",
-                theme: "danger",
-                action: askSignoutCurrent,
-              });
-            }
-            if (!s.current && !s.revoked) {
-              actions.push({
-                text: "Завершить",
-                theme: "danger",
-                action: () => askRevokeOne(s.id),
-              });
-            }
-            return (
-              <div
-                key={s.id}
-                style={{
-                  ...rowBetween,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 10,
-                  padding: 12,
-                  background: s.current
-                    ? "rgba(13,148,16,0.08)"
-                    : s.revoked
-                      ? "rgba(239,68,68,0.08)"
-                      : "transparent",
-                }}
-              >
-                <div style={{ display: "grid", gap: 4 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <b>{s.current ? "Это устройство" : "Устройство"}</b>
-                    {s.current && (
-                      <Label size="s" theme="success">
-                        Текущая
-                      </Label>
-                    )}
-                    {s.revoked && (
-                      <Label size="s" theme="danger">
-                        Завершена
-                      </Label>
-                    )}
-                    {s.revoked && reasonBadge(s.revoked_reason)}
-                  </div>
-                  <div style={{ opacity: 0.7, fontSize: 12 }}>
-                    {shortUA(s.user_agent)}
-                  </div>
-                  <div style={{ opacity: 0.7, fontSize: 12 }}>
-                    Последняя активность:{" "}
-                    {s.last_seen
-                      ? new Date(s.last_seen).toLocaleString()
-                      : s.created
-                        ? new Date(s.created).toLocaleString()
-                        : "—"}
-                    {s.ip ? ` · IP: ${s.ip}` : ""}
-                  </div>
-                  <div style={{ opacity: 0.7, fontSize: 12 }}>
-                    Истекает:{" "}
-                    {s.expires ? new Date(s.expires).toLocaleString() : "—"}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: 8 }}>
-                  {!s.current && !s.revoked && (
-                    <Button
-                      view="outlined-danger"
-                      onClick={() => askRevokeOne(s.id)}
-                    >
-                      Завершить
-                    </Button>
-                  )}
-                  <DropdownMenu
-                    size="m"
-                    renderSwitcher={(props) => (
-                      <Button {...props} view="outlined">
-                        Действия
-                      </Button>
-                    )}
-                    items={
-                      actions.length
-                        ? actions
-                        : [{ text: "Нет доступных действий", disabled: true }]
-                    }
-                    onItemClick={(item) => item.action?.()}
-                  />
-                </div>
-              </div>
-            );
-          })}
-          {msg && <div style={{ opacity: 0.8 }}>{msg}</div>}
-        </div>
-      ) : (
-        <div style={{ opacity: 0.8 }}>
-          {showHistory
-            ? "Сессий за 48 часов не найдено."
-            : "Активных сессий не найдено."}
-        </div>
+    <SectionCard plain={embedded}>
+      {!embedded && (
+        <h3 style={{ margin: 0, fontSize: 18 }}>Устройства и сеансы</h3>
       )}
-
-      <Modal
+      <div className="security-session-controls">
+        <Switch
+          checked={showHistory}
+          onUpdate={setShowHistory}
+          content="Показать завершённые за 48 часов"
+        />
+        <Button
+          view="outlined"
+          disabled={busy || !allSessions.some((s) => !s.current && !s.revoked)}
+          onClick={askRevokeAllExceptCurrent}
+        >
+          Выйти на других устройствах
+        </Button>
+      </div>
+      <p className="security-muted">
+        Сеансы с активностью за последние 48 часов.
+      </p>
+      {loading ? (
+        <Loader />
+      ) : sessions.length ? (
+        <SessionList
+          sessions={sessions}
+          busy={busy}
+          onRevoke={askRevokeOne}
+          onSignout={askSignoutCurrent}
+        />
+      ) : (
+        <p className="security-muted">
+          {showHistory
+            ? "Сеансов за 48 часов не найдено."
+            : "Активных сеансов за 48 часов не найдено."}
+        </p>
+      )}
+      {msg && <p role="status">{msg}</p>}
+      <ConfirmDialog
         open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        disableBodyScrollLock
-        size="s"
+        title={
+          confirmAction === "signout-current"
+            ? "Выйти на этом устройстве?"
+            : confirmAction === "revoke-one"
+              ? "Завершить этот сеанс?"
+              : "Выйти на других устройствах?"
+        }
+        confirmText="Подтвердить"
+        cancelText="Отмена"
+        loading={busy}
+        onCancel={() => {
+          if (!busy) setConfirmOpen(false);
+        }}
+        onConfirm={runConfirmed}
       >
-        <div style={{ padding: 16, display: "grid", gap: 12 }}>
-          <h4 style={{ margin: 0 }}>Подтвердите действие</h4>
-          <Text>
-            {confirmAction === "revoke-one" && "Завершить выбранную сессию?"}
-            {confirmAction === "signout-current" &&
-              "Выйти из аккаунта на этом устройстве?"}
-            {confirmAction === "revoke-all-except-current" &&
-              "Завершить все сессии, кроме текущей?"}
-          </Text>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <Button view="flat" onClick={() => setConfirmOpen(false)}>
-              Отмена
-            </Button>
-            <Button view="action" onClick={runConfirmed}>
-              Подтвердить
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        <p>
+          {confirmAction === "signout-current"
+            ? "Для продолжения потребуется снова войти в аккаунт."
+            : "На отключённых устройствах потребуется войти заново. Текущий сеанс сохранится."}
+        </p>
+      </ConfirmDialog>
     </SectionCard>
   );
 }
 
 SessionsCard.propTypes = {
+  embedded: PropTypes.bool,
   initialSessions: PropTypes.oneOfType([
     PropTypes.arrayOf(PropTypes.object),
     PropTypes.shape({

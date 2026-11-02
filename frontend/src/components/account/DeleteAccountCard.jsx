@@ -3,13 +3,16 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { clearAuthState, deleteCurrentAccount } from "../../services/api";
-import { DangerCard } from "../ui/primitives";
+import { DangerCard, SectionCard } from "../ui/primitives";
 
-export default function DeleteAccountCard() {
+export default function DeleteAccountCard({
+  embedded = false,
+  defaultOpen = false,
+}) {
   const navigate = useNavigate();
   const { add } = useToaster();
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
@@ -47,27 +50,30 @@ export default function DeleteAccountCard() {
     }
   }
 
+  const Container = embedded ? SectionCard : DangerCard;
   return (
-    <DangerCard>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 18 }}>Удаление аккаунта</h3>
-        {!open && (
-          <Button view="outlined" onClick={() => setOpen(true)}>
-            Удалить аккаунт
-          </Button>
-        )}
-      </div>
+    <Container {...(embedded ? { plain: true } : {})}>
+      {!embedded && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 18 }}>Удаление аккаунта</h3>
+          {!open && (
+            <Button view="outlined" onClick={() => setOpen(true)}>
+              Удалить аккаунт
+            </Button>
+          )}
+        </div>
+      )}
 
       <div style={{ opacity: 0.9 }}>
-        Вы можете запросить удаление аккаунта. При удалении ваш профиль
-        пропадает из системы,
+        Перед удалением передайте управление городами и объединениями другому
+        участнику. Пароль и подтверждение ниже нужны для удаления аккаунта.
       </div>
 
       {open && (
@@ -106,7 +112,7 @@ export default function DeleteAccountCard() {
               view="flat"
               type="button"
               onClick={() => {
-                setOpen(false);
+                if (!embedded) setOpen(false);
                 setPassword("");
                 setConfirmText("");
               }}
@@ -125,6 +131,6 @@ export default function DeleteAccountCard() {
           </div>
         </form>
       )}
-    </DangerCard>
+    </Container>
   );
 }

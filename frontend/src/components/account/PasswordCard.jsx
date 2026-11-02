@@ -88,6 +88,7 @@ export default function PasswordCard({
   minLength = 8,
   defaultOpen = false,
   autoCloseOnSuccess = true,
+  embedded = false,
 }) {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(!!defaultOpen);
@@ -155,8 +156,8 @@ export default function PasswordCard({
 
   const onCancel = useCallback(() => {
     resetForm();
-    setEditing(false);
-  }, [resetForm]);
+    if (!embedded) setEditing(false);
+  }, [resetForm, embedded]);
 
   useEffect(() => {
     if (!editing || busy) return undefined;
@@ -310,8 +311,8 @@ export default function PasswordCard({
   }
 
   return (
-    <SectionCard>
-      <h3 style={{ margin: 0, fontSize: 18 }}>Пароль</h3>
+    <SectionCard plain={embedded}>
+      {!embedded && <h3 style={{ margin: 0, fontSize: 18 }}>Пароль</h3>}
 
       {!editing ? (
         <div
@@ -462,6 +463,7 @@ export default function PasswordCard({
 }
 
 PasswordCard.propTypes = {
+  embedded: PropTypes.bool,
   identityHint: PropTypes.string,
   minLength: PropTypes.number,
   defaultOpen: PropTypes.bool,

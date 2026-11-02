@@ -208,3 +208,12 @@ scanning.
 - [Безопасность](docs/security.md)
 - [Frontend Conventions](docs/frontend-conventions.md)
 - [API Conventions](docs/api-conventions.md)
+
+## Community Portal
+
+Локальная проверка профилей, городов и сообществ описана в
+[руководстве по запуску](docs/cities/rollout.md).
+[Архитектура](docs/cities/architecture.md),
+[система групп](docs/communities/implementation.md) и
+[редактирование профиля](docs/profiles/adr-001-safe-editing-and-preview.md)
+описывают границы модулей и правила доступа.

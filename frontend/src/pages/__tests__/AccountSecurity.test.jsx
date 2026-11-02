@@ -16,6 +16,7 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("@gravity-ui/uikit", async () => {
   return {
+    Skeleton: () => <span aria-hidden="true" />,
     Button: ({ children, onClick, disabled, loading, ...props }) => (
       <button
         type="button"
@@ -51,6 +52,7 @@ vi.mock("../../components/account/SessionsCard.jsx", () => ({
   default: () => <div>sessions-card</div>,
 }));
 vi.mock("../../services/api", () => ({
+  AUTH_STATE_EVENT: "test-auth-state",
   getEmailStatus: vi.fn(),
   listSessionsHeadless: vi.fn(),
   me: vi.fn(),
@@ -93,6 +95,32 @@ describe("AccountSecurity feature flag rendering", () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it("keeps a backend outage separate from an expired session", async () => {
+    me.mockRejectedValue({ response: { status: 503 } });
+    render(
+      <MemoryRouter>
+        <AccountSecurity />
+      </MemoryRouter>,
+    );
+    await screen.findByRole("alert");
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("redirects an expired session with a return to security", async () => {
+    me.mockRejectedValue({ response: { status: 401 } });
+    render(
+      <MemoryRouter>
+        <AccountSecurity />
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        expect.stringContaining("next=%2Faccount%2Fsecurity"),
+        { replace: true },
+      ),
+    );
   });
 
   it("shows the personalization gate for an account with the UI flag enabled", async () => {

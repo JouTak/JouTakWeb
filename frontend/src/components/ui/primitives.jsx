@@ -22,14 +22,19 @@ Page.propTypes = {
   style: PropTypes.object,
 };
 
-export function SectionCard({ children, style = null, ...sectionProps }) {
+export function SectionCard({
+  children,
+  style = null,
+  plain = false,
+  ...sectionProps
+}) {
   return (
     <section
       {...sectionProps}
       style={{
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderRadius: 8,
-        padding: 16,
+        border: plain ? 0 : "1px solid rgba(255,255,255,0.12)",
+        borderRadius: plain ? 0 : 8,
+        padding: plain ? 0 : 16,
         display: "grid",
         gap: 12,
         ...style,
@@ -42,6 +47,7 @@ export function SectionCard({ children, style = null, ...sectionProps }) {
 
 SectionCard.propTypes = {
   children: PropTypes.node.isRequired,
+  plain: PropTypes.bool,
   style: PropTypes.object,
 };
 
@@ -135,9 +141,15 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   loading = false,
+  disabled = false,
 }) {
   return (
-    <Modal open={open} onClose={onCancel}>
+    <Modal
+      open={open}
+      onClose={() => {
+        if (!loading) onCancel();
+      }}
+    >
       <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 420 }}>
         <h3 style={{ margin: 0 }}>{title}</h3>
         <div>{children}</div>
@@ -145,7 +157,12 @@ export function ConfirmDialog({
           <Button view="flat" onClick={onCancel} disabled={loading}>
             {cancelText}
           </Button>
-          <Button view="action" onClick={onConfirm} loading={loading}>
+          <Button
+            view="action"
+            onClick={onConfirm}
+            loading={loading}
+            disabled={disabled}
+          >
             {confirmText}
           </Button>
         </FormActions>
@@ -163,4 +180,5 @@ ConfirmDialog.propTypes = {
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool,
+  disabled: PropTypes.bool,
 };

@@ -9,7 +9,9 @@ import PropTypes from "prop-types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useHub } from "../features/hub/context";
 import { me, updateProfile } from "../services/api";
+import { safeInternalPath } from "../services/urlSafety";
 import {
   boolToSelect,
   PROFILE_FIELD_LABELS,
@@ -89,6 +91,7 @@ MissingFields.propTypes = {
 };
 
 export default function AccountOnboarding() {
+  const { flags } = useHub();
   const navigate = useNavigate();
   const location = useLocation();
   const { add } = useToaster();
@@ -310,15 +313,27 @@ export default function AccountOnboarding() {
       <section style={shellStyle}>
         <div style={panelStyle}>
           <Label size="m" theme="success">
-            Профиль персонализирован
+            Игровые данные сохранены
           </Label>
           <h2 style={{ margin: 0 }}>Регистрация завершена</h2>
           <p style={{ margin: 0, opacity: 0.85 }}>
             Теперь доступны профиль, привязки аккаунтов и персональные функции.
           </p>
           <div>
-            <Button view="action" onClick={() => navigate("/account/security")}>
-              Перейти в аккаунт
+            <Button
+              view="action"
+              onClick={() =>
+                navigate(
+                  safeInternalPath(
+                    new URLSearchParams(location.search).get("next"),
+                    flags.community_profiles_ui
+                      ? "/account"
+                      : "/account/security",
+                  ),
+                )
+              }
+            >
+              Продолжить
             </Button>
           </div>
         </div>

@@ -37,6 +37,7 @@ from ninja.errors import HttpError
 from ninja_jwt.exceptions import TokenError
 from ninja_jwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from ninja_jwt.tokens import RefreshToken
+from profiles.models import CommunityProfile
 
 User = get_user_model()
 
@@ -203,7 +204,10 @@ class AuthService:
             oauth_providers=providers,
             first_name=getattr(user, "first_name", None) or None,
             last_name=getattr(user, "last_name", None) or None,
-            avatar_url=None,
+            avatar_url=CommunityProfile.objects.filter(user=user)
+            .values_list("avatar_url", flat=True)
+            .first()
+            or None,
             email_verified=status["email_verified"],
             profile_complete=status["profile_complete"],
             account_active=status["account_active"],

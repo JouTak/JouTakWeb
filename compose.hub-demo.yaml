@@ -1,0 +1,50 @@
+# Isolated local review. Reuses the existing demo DB and container Dockerfiles.
+# Does not start, migrate or seed the normal/production PostgreSQL stack.
+name: joutak-hub
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    user: "${HUB_DEMO_UID:-1000}:${HUB_DEMO_GID:-1000}"
+    restart: unless-stopped
+    init: true
+    entrypoint: []
+    working_dir: /app/backend
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        python manage.py migrate --noinput
+        exec python manage.py runserver 0.0.0.0:8000 --noreload
+    environment:
+      DJANGO_SETTINGS_MODULE: backend.settings.hub_demo
+    volumes:
+      - ./.local:/app/.local
+    ports:
+      - "127.0.0.1:8011:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      REACT_APP_API_URL: http://127.0.0.1:8011
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5174:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12

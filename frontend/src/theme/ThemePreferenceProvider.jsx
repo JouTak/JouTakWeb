@@ -18,6 +18,7 @@ function readTheme() {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  document.documentElement.dataset.bsTheme = theme;
   document.documentElement.style.colorScheme = theme;
 }
 

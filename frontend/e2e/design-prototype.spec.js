@@ -513,3 +513,134 @@ test("pending page data has an accessible loading state", async ({ page }) => {
     page.getByRole("link", { name: "Основное действие" }),
   ).toBeVisible();
 });
+
+for (const theme of ["light", "dark"]) {
+  for (const width of [320, 1440]) {
+    test(`theme readability ${theme} at ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      await page.addInitScript(
+        (value) => localStorage.setItem("joutak_theme_v1", value),
+        theme,
+      );
+      await page.setViewportSize({ width, height: 1000 });
+      await page.route("https://forms.yandex.ru/**", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: "<!doctype html><title>Payment fixture</title><p>Payment form</p>",
+        }),
+      );
+      for (const path of [
+        "/",
+        "/joutak",
+        "/joutak/pay",
+        "/itmocraft",
+        "/legacy",
+        "/minigames",
+        "/contact",
+        "/privacy-policy",
+        "/session-expired",
+        "/confirm-email",
+        "/reset-password",
+        "/terms-of-use",
+        "/missing",
+        "/login",
+      ]) {
+        await page.goto(path, { waitUntil: "networkidle" });
+        await page.evaluate(() => document.fonts.ready);
+        expect(
+          await page.evaluate(
+            () =>
+              document.documentElement.scrollWidth <=
+              document.documentElement.clientWidth,
+          ),
+        ).toBe(true);
+        const { violations } = await new AxeBuilder({ page })
+          .withRules(["color-contrast"])
+          .analyze();
+        expect(violations, `${theme} ${width}px ${path}`).toEqual([]);
+        if (["/joutak", "/contact", "/privacy-policy"].includes(path)) {
+          await page.screenshot({
+            path: testInfo.outputPath(`${theme}-${path.slice(1)}.png`),
+            fullPage: true,
+          });
+        }
+      }
+    });
+  }
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`account forms readable in ${theme}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width: 320, height: 1000 });
+    await page.addInitScript((value) => {
+      localStorage.setItem("joutak_theme_v1", value);
+      sessionStorage.setItem(
+        "joutak_auth",
+        JSON.stringify({ session_token: "visual-fixture" }),
+      );
+    }, theme);
+    let accountComplete = true;
+    await page.route("http://127.0.0.1:8000/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.startsWith("/bff/")) return route.fallback();
+      let body = { data: [] };
+      if (path.endsWith("/auth/me"))
+        body = {
+          username: "design-tester",
+          email: "tester@example.com",
+          email_verified: true,
+          profile_state: accountComplete ? "personalized" : "basic",
+          profile_complete: accountComplete,
+          registration_completed: accountComplete,
+          personalization_interstitial_enabled: false,
+          personalization_ui_enabled: true,
+          personalization_context: "new_registration",
+          missing_fields: ["minecraft_nick", "vk_username"],
+          has_2fa: false,
+        };
+      if (path.endsWith("/account/sessions")) body = [];
+      if (path.endsWith("/account/email"))
+        body = {
+          data: [
+            { email: "tester@example.com", primary: true, verified: true },
+          ],
+        };
+      if (path.endsWith("/authenticators/totp"))
+        body = { data: { enabled: false } };
+      await route.fulfill({
+        status: route.request().method() === "OPTIONS" ? 204 : 200,
+        headers: {
+          "access-control-allow-origin": "http://127.0.0.1:4173",
+          "access-control-allow-credentials": "true",
+          "access-control-allow-headers": "*",
+        },
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+    for (const [path, title] of [
+      ["/account/security", "Настройки и безопасность"],
+      ["/account/complete-registration", "Заверши регистрацию"],
+    ]) {
+      accountComplete = path === "/account/security";
+      await page.goto(path, { waitUntil: "networkidle" });
+      await expect(
+        page.getByRole("heading", { name: title, exact: true }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(true);
+      const { violations } = await new AxeBuilder({ page })
+        .withRules(["color-contrast"])
+        .analyze();
+      expect(violations).toEqual([]);
+    }
+  });
+}

@@ -5,9 +5,8 @@
   padding: clamp(48px, 7vw, 96px) 20px;
   overflow: hidden;
   font-family: GeologicaFont, sans-serif;
-  background:
-    linear-gradient(135deg, rgb(3 13 23 / 92%), rgb(7 24 38 / 76%)),
-    url("/img/bg-itmocraft-joutak.png") center / cover;
+  color: var(--site-text);
+  background: var(--site-background);
 }
 
 .page::before {
@@ -54,32 +53,32 @@
 .eyebrow {
   width: fit-content;
   padding: 6px 10px;
-  color: #d8efff;
+  color: var(--site-accent);
   font-family: MinecraftSeven, monospace;
   font-size: 14px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: rgb(8 49 78 / 78%);
-  border: 2px solid rgb(130 202 255 / 70%);
-  box-shadow: 3px 3px 0 rgb(0 0 0 / 35%);
+  background: var(--site-surface-soft);
+  border: 1px solid var(--site-border);
+  box-shadow: none;
 }
 
 .title {
   max-width: 18ch;
   margin: 0;
-  color: #f4fbff;
+  color: var(--site-text);
   font-family: MinecraftSeven, GeologicaFont, sans-serif;
-  font-size: clamp(36px, 6vw, 72px);
+  font-size: clamp(30px, 4vw, 52px);
   font-weight: 400;
   line-height: 1.3;
   overflow-wrap: anywhere;
-  text-shadow: 4px 4px 0 rgb(0 49 92 / 72%);
+  text-shadow: none;
 }
 
 .description {
   max-width: 68ch;
   margin: 0;
-  color: rgb(235 247 255 / 82%);
+  color: var(--site-text-muted);
   font-size: clamp(16px, 2vw, 20px);
   line-height: 1.5;
 }
@@ -88,12 +87,10 @@
   min-width: 0;
   padding: clamp(20px, 3vw, 32px);
   color: var(--g-color-text-primary);
-  background: color-mix(in srgb, var(--g-color-base-float) 94%, #0e3857 6%);
-  border: 2px solid color-mix(in srgb, var(--g-color-line-generic) 70%, #77c6ff);
-  border-radius: 2px;
-  box-shadow:
-    6px 6px 0 rgb(0 0 0 / 32%),
-    inset 0 0 0 2px rgb(255 255 255 / 3%);
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 12px;
+  box-shadow: var(--site-shadow);
 }
 
 .actions {

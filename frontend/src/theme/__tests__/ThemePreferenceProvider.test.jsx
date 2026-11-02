@@ -35,12 +35,14 @@ describe("ThemePreferenceProvider", () => {
 
     expect(screen.getByRole("button")).toHaveTextContent("dark");
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.dataset.bsTheme).toBe("dark");
 
     fireEvent.click(screen.getByRole("button"));
 
     expect(screen.getByRole("button")).toHaveTextContent("light");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
     expect(document.documentElement.style.colorScheme).toBe("light");
+    expect(document.documentElement.dataset.bsTheme).toBe("light");
   });
 
   it("falls back from corrupt storage and synchronizes tabs", () => {

@@ -8,8 +8,9 @@
   background:
     linear-gradient(145deg, rgb(17 43 62 / 14%), transparent 56%),
     var(--g-color-base-modal);
-  border: 2px solid color-mix(in srgb, var(--g-color-line-generic) 70%, #75c5ff);
-  box-shadow: 8px 8px 0 rgb(0 0 0 / 36%);
+  border: 1px solid var(--site-border);
+  border-radius: 12px;
+  box-shadow: var(--site-shadow);
 }
 
 .header {

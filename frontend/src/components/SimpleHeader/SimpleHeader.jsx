@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthProfile } from "../../hooks/useAuthProfile";
 import { logout } from "../../services/api";
+import { useThemePreference } from "../../theme/themeContext";
 import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
   getPersonalizationNoticeKey,
@@ -69,6 +70,7 @@ function ProjectSelect() {
 }
 
 const SimpleHeader = () => {
+  const { theme, toggleTheme } = useThemePreference();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -168,7 +170,7 @@ const SimpleHeader = () => {
   return (
     <>
       <header>
-        <nav className="navbar navbar-dark bg-dark">
+        <nav className="navbar bg-body-tertiary">
           <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
             <a className="navbar-brand" href="https://joutak.ru">
               <img
@@ -185,6 +187,18 @@ const SimpleHeader = () => {
             </div>
 
             <div className="d-flex align-items-center">
+              <Button
+                view="flat"
+                size="l"
+                onClick={toggleTheme}
+                aria-label={
+                  theme === "dark"
+                    ? "Включить светлую тему"
+                    : "Включить тёмную тему"
+                }
+              >
+                <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+              </Button>
               {loadingProfile ? (
                 <Loader size="m" className="ms-2" />
               ) : profile ? (
@@ -279,7 +293,7 @@ const SimpleHeader = () => {
         placement="start"
         scroll
         id="offcanvasDarkNavbar"
-        className="text-bg-dark"
+        className="bg-body-tertiary"
       >
         <Offcanvas.Header closeButton closeVariant="white">
           <Offcanvas.Title id="offcanvasDarkNavbarLabel">Меню</Offcanvas.Title>

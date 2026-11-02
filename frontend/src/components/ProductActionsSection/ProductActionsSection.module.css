@@ -2,18 +2,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.6fr);
   gap: 28px 44px;
-  padding: clamp(22px, 4vw, 56px);
-  border: 3px solid color-mix(in srgb, var(--site-accent) 58%, #c6c6c6);
-  background:
-    linear-gradient(135deg, rgb(23 32 47 / 94%), rgb(6 14 23 / 96%)),
-    repeating-linear-gradient(
-      -45deg,
-      rgb(255 255 255 / 4%) 0,
-      rgb(255 255 255 / 4%) 10px,
-      transparent 10px,
-      transparent 20px
-    );
-  box-shadow: 10px 10px 0 rgb(0 0 0 / 32%);
+  padding: clamp(24px, 3vw, 40px);
+  border: 1px solid var(--site-border);
+  color: var(--site-text);
+  background: var(--site-surface);
+  border-radius: 12px;
+  box-shadow: var(--site-shadow);
 }
 
 .copy {
@@ -34,7 +28,7 @@
 .title {
   margin: 0;
   font-family: MinecraftTenFont, sans-serif;
-  font-size: clamp(22px, 4vw, 56px);
+  font-size: clamp(24px, 3vw, 40px);
   font-weight: 400;
   line-height: 1.4;
   text-wrap: balance;
@@ -48,7 +42,7 @@
   font-family: GeologicaFont, sans-serif;
   font-size: clamp(17px, 1.8vw, 22px);
   line-height: 1.45;
-  color: color-mix(in srgb, var(--site-text) 82%, transparent);
+  color: var(--site-text-muted);
 }
 
 .facts {
@@ -60,15 +54,15 @@
 
 .fact {
   padding: 18px 20px;
-  border: 2px solid rgb(255 255 255 / 24%);
-  background: rgb(0 0 0 / 28%);
+  border: 1px solid var(--site-border);
+  background: var(--site-surface-soft);
 }
 
 .fact dt {
   margin-bottom: 8px;
   font-family: GeologicaFont, sans-serif;
   font-size: 14px;
-  color: color-mix(in srgb, var(--site-text) 65%, transparent);
+  color: var(--site-text-muted);
   text-transform: uppercase;
 }
 
@@ -115,7 +109,7 @@
 }
 
 .primary {
-  color: #111820;
+  color: var(--site-on-accent);
   background: var(--site-accent);
 }
 

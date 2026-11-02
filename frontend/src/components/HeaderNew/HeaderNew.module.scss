@@ -5,10 +5,8 @@
   flex: 0 0 auto;
   z-index: 1000;
 
-  background-image: url("/img/header-bg.svg");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  background-position: center;
+  background: var(--site-surface);
+  border-bottom: 1px solid var(--site-border);
 
   font-family: $font-minecraft-seven;
   font-size: 14px;
@@ -64,7 +62,7 @@
 .logo-button {
   border: none;
   background: transparent;
-  color: #fff;
+  color: var(--site-text);
   border-radius: 8px;
   padding: 6px 12px;
   white-space: nowrap;
@@ -84,7 +82,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #fff;
+  color: var(--site-text);
   justify-content: center;
 }
 
@@ -95,8 +93,8 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   cursor: pointer;
 
   img {
@@ -122,10 +120,10 @@
   width: 140px;
   height: 140px;
 
-  background-image: url("/img/dropdown.svg");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  box-shadow: var(--site-shadow);
 
   display: flex;
   flex-direction: column;
@@ -150,7 +148,7 @@
 .server-option {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--site-text);
   text-align: left;
   font-family: $font-minecraft-seven;
   padding-bottom: 8px;
@@ -188,7 +186,7 @@
 .avatar-outer {
   width: 70px;
   height: 70px;
-  border: 3px solid #fff;
+  border: 2px solid var(--site-border);
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -199,8 +197,8 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: #2f669e;
-  color: #fff;
+  background: var(--site-surface-soft);
+  color: var(--site-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;

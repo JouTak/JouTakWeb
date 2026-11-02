@@ -3,7 +3,7 @@
   width: 100%;
   height: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
   font-family: $font-geologica;
   color: #3c9bf9;
   justify-items: center;
@@ -12,6 +12,8 @@
     grid-column: 1 / -1;
     font-family: $font-minecraft;
     font-size: 30px;
+    line-height: 1.4;
+    text-align: center;
     margin-top: 20px;
   }
 }

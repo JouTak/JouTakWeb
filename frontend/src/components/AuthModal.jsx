@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
+  announceAuthenticatedSession,
   authenticateMfaCode,
   authenticateWithWebAuthnCredential,
   doLogin,
@@ -15,27 +16,11 @@ import {
   me,
   requestPasswordReset,
 } from "../services/api";
-import { markPendingMfaSession } from "../services/auth/tokenStore";
 import { extractErrorMessage } from "../services/errors";
+import { isSafeInternalPath } from "../services/urlSafety";
 import { markPostSignupPersonalizationSession } from "../utils/personalizationNotice";
 import { needsPersonalization } from "../utils/profileState";
-
-const fieldBlockStyle = {
-  display: "grid",
-  gap: 6,
-};
-
-const fieldLabelStyle = {
-  fontSize: 13,
-  lineHeight: 1.25,
-  opacity: 0.85,
-};
-
-function isSafeInternalPath(path) {
-  return (
-    typeof path === "string" && path.startsWith("/") && !path.startsWith("//")
-  );
-}
+import styles from "./AuthModal.module.css";
 
 export default function AuthModal({ open = false, ...props }) {
   return open ? <AuthModalContent {...props} /> : null;
@@ -80,6 +65,13 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
     return "Регистрация";
   }, [isLogin, isMfa, isResetPassword]);
 
+  const subtitle = useMemo(() => {
+    if (isResetPassword) return "Отправим одноразовую ссылку на ваш email.";
+    if (isMfa) return "Завершаем защищённый вход в аккаунт.";
+    if (isLogin) return "Продолжайте с того места, где остановились.";
+    return "Один аккаунт для проектов и событий ITMOcraft.";
+  }, [isLogin, isMfa, isResetPassword]);
+
   const safeSuccessRedirectTo = useMemo(() => {
     if (isSafeInternalPath(successRedirectTo)) return successRedirectTo;
     return null;
@@ -100,7 +92,6 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
   }
 
   function close({ notifyParent = true } = {}) {
-    markPendingMfaSession(false);
     resetForms();
     setBusy(false);
     if (notifyParent) onClose?.();
@@ -170,6 +161,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
   async function completeAuthenticatedFlow(successMessage) {
     await finalizeSessionAuthentication();
     const profile = await me();
+    announceAuthenticatedSession();
     toaster.add({
       title: "Готово!",
       content: successMessage,
@@ -328,12 +320,13 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
         email: suEmail.trim(),
         password: suPassword,
       });
+      const profile = await me();
+      announceAuthenticatedSession();
       toaster.add({
         title: "Аккаунт создан",
         content: "Аккаунт создан. Теперь можно продолжить настройку профиля.",
         theme: "success",
       });
-      const profile = await me();
       if (needsPersonalization(profile)) {
         markPostSignupPersonalizationSession();
         close({ notifyParent: !safeSuccessRedirectTo });
@@ -365,15 +358,22 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
       disableBodyScrollLock
       style={{ "--g-modal-width": "520px" }}
     >
-      <div style={{ padding: 24, display: "grid", gap: 16 }}>
-        <h3 id="auth-modal-title" style={{ margin: 0 }}>
-          {title}
-        </h3>
+      <div className={styles.shell}>
+        <div className={styles.header}>
+          <img src="/img/logo-mini.svg" alt="" />
+          <div>
+            <span className={styles.kicker}>Аккаунт ITMOcraft</span>
+            <h3 id="auth-modal-title" className={styles.title}>
+              {title}
+            </h3>
+            <p className={styles.subtitle}>{subtitle}</p>
+          </div>
+        </div>
 
         {isLogin ? (
-          <form onSubmit={onLoginSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Email или старый логин</span>
+          <form onSubmit={onLoginSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <span className={styles.label}>Email или старый логин</span>
               <TextInput
                 size="l"
                 value={login}
@@ -385,8 +385,8 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 aria-label="Email или старый логин"
               />
             </div>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Пароль</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Пароль</span>
               <TextInput
                 size="l"
                 type="password"
@@ -445,28 +445,22 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
               Забыли пароль?
             </Button>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>
             </div>
           </form>
         ) : isMfa ? (
-          <form onSubmit={onMfaSubmit} style={{ display: "grid", gap: 12 }}>
-            <p style={{ margin: 0, opacity: 0.9 }}>
+          <form onSubmit={onMfaSubmit} className={styles.form}>
+            <p className={styles.copy}>
               Пароль принят. Подтвердите вход кодом из
               приложения-аутентификатора, recovery code
               {mfaTypes.includes("webauthn") ? " или passkey" : ""}.
             </p>
 
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Код подтверждения</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Код подтверждения</span>
               <TextInput
                 size="l"
                 value={mfaCode}
@@ -479,9 +473,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
               />
             </div>
 
-            {mfaError ? (
-              <p style={{ margin: 0, color: "#ff8e8e" }}>{mfaError}</p>
-            ) : null}
+            {mfaError ? <p className={styles.error}>{mfaError}</p> : null}
 
             <Button
               view="action"
@@ -521,27 +513,21 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
               Назад ко входу
             </Button>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>
             </div>
           </form>
         ) : isResetPassword ? (
-          <div style={{ display: "grid", gap: 12 }}>
-            <p style={{ margin: 0, opacity: 0.9 }}>
+          <div className={styles.form}>
+            <p className={styles.copy}>
               Укажите email, и мы отправим письмо со ссылкой для сброса пароля.
             </p>
 
             {resetSuccess ? (
               <>
-                <p style={{ margin: 0, opacity: 0.9 }}>{resetSuccess}</p>
+                <p className={styles.success}>{resetSuccess}</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Button view="action" onClick={() => setMode("login")}>
                     Вернуться ко входу
@@ -559,12 +545,9 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 </div>
               </>
             ) : (
-              <form
-                onSubmit={onResetRequestSubmit}
-                style={{ display: "grid", gap: 12 }}
-              >
-                <div style={fieldBlockStyle}>
-                  <span style={fieldLabelStyle}>Email</span>
+              <form onSubmit={onResetRequestSubmit} className={styles.form}>
+                <div className={styles.field}>
+                  <span className={styles.label}>Email</span>
                   <TextInput
                     size="l"
                     type="email"
@@ -577,7 +560,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                   />
                 </div>
                 {resetError ? (
-                  <p style={{ margin: 0, color: "#ff8e8e" }}>{resetError}</p>
+                  <p className={styles.error}>{resetError}</p>
                 ) : null}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Button view="action" type="submit" loading={busy}>
@@ -597,22 +580,16 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
               </form>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>
             </div>
           </div>
         ) : (
-          <form onSubmit={onSignupSubmit} style={{ display: "grid", gap: 12 }}>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Email</span>
+          <form onSubmit={onSignupSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <span className={styles.label}>Email</span>
               <TextInput
                 size="l"
                 type="email"
@@ -625,8 +602,8 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 aria-label="Email"
               />
             </div>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Пароль</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Пароль</span>
               <TextInput
                 size="l"
                 type="password"
@@ -638,8 +615,8 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 aria-label="Пароль"
               />
             </div>
-            <div style={fieldBlockStyle}>
-              <span style={fieldLabelStyle}>Повторите пароль</span>
+            <div className={styles.field}>
+              <span className={styles.label}>Повторите пароль</span>
               <TextInput
                 size="l"
                 type="password"
@@ -668,13 +645,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
             >
               У меня уже есть аккаунт
             </Button>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 4,
-              }}
-            >
+            <div className={styles.closeRow}>
               <Button view="flat" onClick={close}>
                 Закрыть
               </Button>

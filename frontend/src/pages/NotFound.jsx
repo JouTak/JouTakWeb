@@ -1,16 +1,27 @@
-import { Button, Container } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { Button } from "@gravity-ui/uikit";
+import { useNavigate } from "react-router-dom";
 
-const NotFound = () => {
+import { StatePage } from "../components/ui/PageShell.jsx";
+
+export default function NotFound() {
+  const navigate = useNavigate();
+
   return (
-    <Container className="text-center my-5">
-      <h1 className="display-4">404</h1>
-      <p className="lead">Страница не найдена</p>
-      <Button as={Link} to="/" variant="primary">
-        Вернуться на главную
-      </Button>
-    </Container>
+    <StatePage
+      eyebrow="Ошибка 404"
+      icon="404"
+      title="Такой страницы нет"
+      description="Возможно, адрес устарел или в нём есть опечатка. Вернись в ITMOcraft или выбери нужный проект."
+      actions={
+        <>
+          <Button view="action" size="l" onClick={() => navigate("/")}>
+            На главную ITMOcraft
+          </Button>
+          <Button view="outlined" size="l" onClick={() => navigate("/joutak")}>
+            Перейти к JouTak
+          </Button>
+        </>
+      }
+    />
   );
-};
-
-export default NotFound;
+}

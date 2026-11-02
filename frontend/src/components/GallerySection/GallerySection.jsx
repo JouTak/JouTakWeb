@@ -1,7 +1,90 @@
+import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 
+import { getMediaDescriptor } from "../../media/mediaResolver";
 import sectionStyles from "../shared/sectionLayout.module.css";
 import styles from "./gallery.module.css";
+
+function mediaDescriptor(media) {
+  if (typeof media === "string") {
+    return { src: media.trim() === "#" ? "" : media.trim(), sources: [] };
+  }
+  return getMediaDescriptor(media);
+}
+
+function GalleryMedia({ media, alt, className }) {
+  const descriptor = mediaDescriptor(media);
+  const [imageStatus, setImageStatus] = useState("loading");
+
+  useEffect(() => {
+    if (
+      !descriptor?.src ||
+      descriptor.designPlaceholder ||
+      imageStatus !== "loading"
+    ) {
+      return;
+    }
+
+    const fallbackTimer = setTimeout(() => setImageStatus("error"), 5000);
+    return () => clearTimeout(fallbackTimer);
+  }, [descriptor?.src, descriptor?.designPlaceholder, imageStatus]);
+
+  if (descriptor?.designPlaceholder) {
+    return (
+      <div
+        className={`${className} ${styles.designPlaceholder}`}
+        data-design-placeholder={descriptor.designPlaceholder}
+        role="status"
+      >
+        <span>Скриншот готовится</span>
+        <small>Здесь появится игровой кадр после передачи ассета.</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.mediaFrame}>
+      {imageStatus === "loading" && (
+        <div
+          className={`${className} ${styles.designPlaceholder}`}
+          role="status"
+          data-testid="loading-placeholder"
+        >
+          <span>Загрузка...</span>
+        </div>
+      )}
+      {imageStatus === "error" && (
+        <div
+          className={`${className} ${styles.designPlaceholder}`}
+          role="status"
+          data-testid="error-placeholder"
+        >
+          <span>Фото недоступно</span>
+          <small>Попробуй выбрать другой кадр.</small>
+        </div>
+      )}
+      <img
+        className={`${className} ${imageStatus === "loaded" ? "" : styles.hidden}`}
+        src={descriptor.src}
+        srcSet={
+          descriptor.sources
+            .map((source) => `${source.src} ${source.width}w`)
+            .join(", ") || undefined
+        }
+        sizes="(max-width: 760px) 100vw, (max-width: 1520px) 70vw, 1100px"
+        alt={media?.alt || alt}
+        onLoad={() => setImageStatus("loaded")}
+        onError={() => setImageStatus("error")}
+      />
+    </div>
+  );
+}
+
+GalleryMedia.propTypes = {
+  media: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  alt: PropTypes.string.isRequired,
+  className: PropTypes.string.isRequired,
+};
 
 export default function GallerySection({
   title = "Галерея",
@@ -11,35 +94,11 @@ export default function GallerySection({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const [rawImageStatus, setRawImageStatus] = useState("loading");
-
-  const activeGallery = galleryItems[activeIndex] ?? galleryItems[0];
-
-  const totalPhotos = activeGallery?.photos?.length ?? 0;
-  const currentPhotoSrc = totalPhotos
-    ? activeGallery.photos[activePhotoIndex]
-    : null;
-
-  const isInvalidUrl =
-    Boolean(totalPhotos) &&
-    (!currentPhotoSrc ||
-      typeof currentPhotoSrc !== "string" ||
-      !currentPhotoSrc.trim());
-
-  const imageStatus = isInvalidUrl ? "error" : rawImageStatus;
-
-  // Таймаут долгой загрузки (5 секунд), после выводим ошибку
-  useEffect(() => {
-    if (imageStatus !== "loading") {
-      return;
-    }
-
-    const fallbackTimer = setTimeout(() => {
-      setRawImageStatus("error");
-    }, 5000);
-
-    return () => clearTimeout(fallbackTimer);
-  }, [imageStatus, currentPhotoSrc]);
+  const galleryIndex = Math.min(
+    activeIndex,
+    Math.max(0, galleryItems.length - 1),
+  );
+  const activeGallery = galleryItems[galleryIndex];
 
   if (!activeGallery) {
     return (
@@ -52,13 +111,19 @@ export default function GallerySection({
     );
   }
 
+  const photos = (activeGallery.photos ?? []).filter((photo) => {
+    const descriptor = mediaDescriptor(photo);
+    return (
+      descriptor?.designPlaceholder ||
+      (descriptor?.src && descriptor.src !== "#")
+    );
+  });
+  const totalPhotos = photos.length;
+  const photoIndex = Math.min(activePhotoIndex, Math.max(0, totalPhotos - 1));
+
   const handleProjectChange = (nextIndex) => {
-    if (nextIndex === activeIndex) {
+    if (nextIndex === galleryIndex) {
       return;
-    }
-    const nextPhotoSrc = galleryItems[nextIndex]?.photos?.[0];
-    if (nextPhotoSrc !== currentPhotoSrc) {
-      setRawImageStatus("loading");
     }
     setActiveIndex(nextIndex);
     setActivePhotoIndex(0);
@@ -69,14 +134,7 @@ export default function GallerySection({
       return;
     }
 
-    const nextPhotoIndex =
-      (activePhotoIndex + direction + totalPhotos) % totalPhotos;
-    const nextPhotoSrc = activeGallery.photos[nextPhotoIndex];
-
-    if (nextPhotoSrc !== currentPhotoSrc) {
-      setRawImageStatus("loading");
-    }
-    setActivePhotoIndex(nextPhotoIndex);
+    setActivePhotoIndex((photoIndex + direction + totalPhotos) % totalPhotos);
   };
 
   return (
@@ -84,91 +142,67 @@ export default function GallerySection({
       <div className={sectionStyles.inner}>
         <h2 className={sectionStyles.title}>{title}</h2>
         <div className={styles.gallery}>
-          <img
-            className={styles.image}
-            src={activeGallery.image}
-            alt="Gallery main view"
-          />
-          {galleryItems.map((item, index) => (
-            <button
-              key={item.label}
-              className={`${styles.tab} ${
-                activeIndex === index ? styles.chosen : ""
-              }`}
-              style={{ top: `${46 + index * 100}px` }}
-              onClick={() => handleProjectChange(index)}
-              type="button"
-              aria-pressed={activeIndex === index}
-            >
-              {item.label}
-            </button>
-          ))}
-
-          <div className={styles.viewer}>
-            <div aria-live="polite" className={styles.box}>
-              {!totalPhotos ? (
-                <p role="status" className={styles.placeholder}>
-                  Для этого раздела пока нет фотографий.
-                </p>
+          <div
+            className={styles.galleryTabs}
+            role="group"
+            aria-label="Разделы галереи"
+          >
+            {galleryItems.map((item, index) => (
+              <button
+                key={item.label}
+                className={`${styles.galleryButton} ${
+                  galleryIndex === index ? styles.chosenButton : ""
+                }`}
+                onClick={() => handleProjectChange(index)}
+                type="button"
+                aria-pressed={galleryIndex === index}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className={styles.photoViewer}>
+            <div aria-live="polite">
+              {totalPhotos ? (
+                <GalleryMedia
+                  key={mediaDescriptor(photos[photoIndex]).src}
+                  className={styles.photoViewerImage}
+                  media={photos[photoIndex]}
+                  alt={`${activeGallery.label} screenshot ${photoIndex + 1}`}
+                />
               ) : (
-                <>
-                  {imageStatus === "loading" && (
-                    <div
-                      role="status"
-                      className={styles.placeholder}
-                      data-testid="loading-placeholder"
-                    >
-                      Загрузка...
-                    </div>
-                  )}
-
-                  {imageStatus === "error" && (
-                    <div
-                      role="status"
-                      className={`${styles.placeholder} ${styles.error}`}
-                      data-testid="error-placeholder"
-                    >
-                      Не удалось загрузить изображение
-                    </div>
-                  )}
-
-                  {Boolean(currentPhotoSrc) && !isInvalidUrl && (
-                    <img
-                      key={currentPhotoSrc}
-                      className={`${styles.photo} ${
-                        imageStatus === "loaded" ? "" : styles.hidden
-                      }`}
-                      src={currentPhotoSrc}
-                      alt={`${activeGallery.label} screenshot ${activePhotoIndex + 1}`}
-                      onLoad={() => setRawImageStatus("loaded")}
-                      onError={() => setRawImageStatus("error")}
-                    />
-                  )}
-                </>
+                <p role="status">Для этого раздела пока нет фотографий.</p>
               )}
             </div>
-
-            <div className={styles.pagination}>
+            <div className={styles.galleryPagination}>
               <button
-                className={styles.control}
+                className={styles.paginationButton}
                 onClick={() => handlePhotoChange(-1)}
                 type="button"
                 aria-label="Previous photo"
                 disabled={totalPhotos <= 1}
               >
-                <img className={styles.arrow} src={leftArrowSrc} alt="" />
+                <img
+                  className={styles.paginationArrow}
+                  src={leftArrowSrc}
+                  alt=""
+                />
               </button>
-              <span className={styles.counter}>
-                {totalPhotos ? activePhotoIndex + 1 : 0}/{totalPhotos}
+              <span className={styles.paginationCounter}>
+                {totalPhotos ? photoIndex + 1 : 0}/{totalPhotos}
               </span>
               <button
-                className={styles.control}
+                className={styles.paginationButton}
                 onClick={() => handlePhotoChange(1)}
                 type="button"
                 aria-label="Next photo"
                 disabled={totalPhotos <= 1}
               >
-                <img className={styles.arrow} src={rightArrowSrc} alt="" />
+                <img
+                  className={styles.paginationArrow}
+                  src={rightArrowSrc}
+                  alt=""
+                />
               </button>
             </div>
           </div>

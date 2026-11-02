@@ -3,9 +3,14 @@ import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import AuthModal from "./components/AuthModal.jsx";
 import Layout from "./components/Layout";
-import PageLoading from "./components/PageLoading";
 import RequireAuth from "./components/RequireAuth.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
+import {
+  LoadingPage,
+  PagePanel,
+  PageShell,
+} from "./components/ui/PageShell.jsx";
+import { isSafeInternalPath } from "./services/urlSafety";
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
 const Contact = lazy(() => import("./pages/Contact/Contact.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
@@ -14,6 +19,7 @@ const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
 const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail.jsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.jsx"));
+const LegalDocument = lazy(() => import("./pages/LegalDocument.jsx"));
 const Pay = lazy(() => import("./pages/joutak/Pay.jsx"));
 const ItmoCraftRoute = lazy(
   () => import("./pages/itmocraft/ItmoCraftRoute.jsx"),
@@ -23,29 +29,41 @@ const MinigamesRoute = lazy(
   () => import("./pages/minigames/MinigamesRoute.jsx"),
 );
 
-function safeInternalPath(path) {
-  if (typeof path !== "string") return "/joutak";
-  if (!path.startsWith("/")) return "/joutak";
-  if (path.startsWith("//")) return "/joutak";
-  return path;
-}
-
 function LoginModalRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const nextFromQuery = params.get("next");
   const nextFromState = location.state?.next;
-  const successRedirectTo = safeInternalPath(
-    nextFromQuery || nextFromState || "/joutak",
-  );
+  const requestedPath = nextFromQuery || nextFromState;
+  const successRedirectTo = isSafeInternalPath(requestedPath)
+    ? requestedPath
+    : "/";
+  const hasBackground = Boolean(location.state?.background);
 
   return (
-    <AuthModal
-      open
-      onClose={() => navigate(-1)}
-      successRedirectTo={successRedirectTo}
-    />
+    <>
+      {!hasBackground && (
+        <PageShell
+          narrow
+          eyebrow="Аккаунт"
+          title="Вход в ITMOcraft"
+          description="Безопасный доступ к профилю, игровым привязкам и настройкам аккаунта."
+        >
+          <PagePanel>
+            Окно входа открыто поверх страницы. После авторизации мы вернём тебя
+            к выбранному сценарию.
+          </PagePanel>
+        </PageShell>
+      )}
+      <AuthModal
+        open
+        onClose={() =>
+          hasBackground ? navigate(-1) : navigate("/", { replace: true })
+        }
+        successRedirectTo={successRedirectTo}
+      />
+    </>
   );
 }
 
@@ -54,7 +72,7 @@ function AppRoutes() {
   const background = location.state && location.state.background;
 
   return (
-    <Suspense fallback={<PageLoading />}>
+    <Suspense fallback={<LoadingPage />}>
       <Routes location={background || location}>
         <Route path="/" element={<ItmoCraftRoute />} />
         <Route path="/joutak" element={<JouTakRoute />} />
@@ -98,6 +116,14 @@ function AppRoutes() {
         <Route path="/session-expired" element={<SessionExpired />} />
         <Route path="/confirm-email" element={<ConfirmEmail />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/privacy-policy"
+          element={<LegalDocument documentType="privacy" />}
+        />
+        <Route
+          path="/terms-of-use"
+          element={<LegalDocument documentType="terms" />}
+        />
 
         <Route path="/login" element={<LoginModalRoute />} />
         <Route path="*" element={<NotFound />} />

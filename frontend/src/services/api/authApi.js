@@ -9,6 +9,7 @@ import {
   clearAuthStorage,
   markPendingMfaSession,
   mergeStoredTokens,
+  notifyAuthStateChanged,
   tokenStore,
 } from "../auth/tokenStore";
 
@@ -48,6 +49,7 @@ export async function loginApp({ login, password }) {
         username: String(login || "").trim(),
         password,
       },
+      emitSession: false,
     });
 
     const sessionToken =
@@ -58,7 +60,7 @@ export async function loginApp({ login, password }) {
       throw new Error("No session token returned on login");
     }
 
-    setSessionToken(sessionToken, { emit: true });
+    setSessionToken(sessionToken, { emit: false });
     return {
       status: "authenticated",
       session_token: sessionToken,
@@ -84,6 +86,7 @@ export async function signupApp({ email, password }) {
       email: String(email || "").trim(),
       password,
     },
+    emitSession: false,
   });
 
   const sessionToken =
@@ -94,7 +97,7 @@ export async function signupApp({ email, password }) {
     throw new Error("No session token returned on signup");
   }
 
-  setSessionToken(sessionToken, { emit: true });
+  setSessionToken(sessionToken, { emit: false });
   return sessionToken;
 }
 
@@ -105,6 +108,9 @@ export async function jwtFromSession() {
   });
 
   const pair = response.data;
+  if (!pair?.access) {
+    throw new Error("Access token is missing in session exchange response");
+  }
   mergeStoredTokens(
     {
       access: pair?.access || null,
@@ -120,11 +126,6 @@ export async function doLogin({ login, password }) {
   if (result?.status === "pending_mfa") {
     return result;
   }
-  try {
-    await jwtFromSession();
-  } catch {
-    // Session can still be valid for headless endpoints even if JWT exchange fails.
-  }
   return {
     status: "authenticated",
     tokens: tokenStore.get(),
@@ -133,24 +134,20 @@ export async function doLogin({ login, password }) {
 
 export async function doSignupAndLogin({ email, password }) {
   await signupApp({ email, password });
-  try {
-    await jwtFromSession();
-  } catch {
-    // Session can still be valid for headless endpoints even if JWT exchange fails.
-  }
+  await finalizeSessionAuthentication();
   return {
     status: "authenticated",
     tokens: tokenStore.get(),
   };
 }
 
+export function announceAuthenticatedSession() {
+  notifyAuthStateChanged();
+}
+
 export async function finalizeSessionAuthentication() {
-  try {
-    await jwtFromSession();
-  } catch {
-    // Headless session may still be usable for app endpoints.
-  }
-  markPendingMfaSession(false);
+  await jwtFromSession();
+  markPendingMfaSession(false, { emit: false });
   return tokenStore.get();
 }
 

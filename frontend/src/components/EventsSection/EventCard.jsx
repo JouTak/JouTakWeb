@@ -13,6 +13,8 @@ export default function EventCard({
   imageMedia,
   date,
   to,
+  actionLabel = "регистрация",
+  actionDisabled = false,
   imageWidth,
   alt = "Описание картинки",
 }) {
@@ -39,11 +41,12 @@ export default function EventCard({
         </p>
         <p className={styles.description}>{description}</p>
         <MinecraftButton
+          disabled={actionDisabled}
           onClick={() => {
-            if (to) window.location.assign(to);
+            if (!actionDisabled && to) window.location.assign(to);
           }}
         >
-          регистрация
+          {actionLabel}
         </MinecraftButton>
       </div>
       {imageMedia ? (

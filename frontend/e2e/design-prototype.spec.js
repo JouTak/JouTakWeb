@@ -61,9 +61,9 @@ function pageDocument({ path, product, legacyAlias }, variant = "v2") {
                   `${product} background`,
                 ),
                 logo: asset(`${product}.logo`, `${product} logo`),
-                eyebrow: "Design prototype",
+                eyebrow: "Комьюнити",
                 title: product,
-                description: "Tester-only page",
+                description: "Больше, чем просто сервер!",
                 primary_action: null,
               },
               {
@@ -224,6 +224,30 @@ for (const variant of ["legacy", "v2"]) {
             ).toBeVisible();
           }
           await page.evaluate(() => document.fonts.ready);
+          if (variant === "legacy") {
+            await expect(
+              page.getByRole("button", { name: "Toggle navigation" }),
+            ).toHaveCount(
+              ["/joutak", "/minigames"].includes(route.path) ? 1 : 0,
+            );
+            const offset = await page
+              .getByTestId("header-server-selector")
+              .evaluate((element) => {
+                const selector = element.getBoundingClientRect();
+                const header = element.closest("nav").getBoundingClientRect();
+                return Math.abs(
+                  selector.left +
+                    selector.width / 2 -
+                    header.left -
+                    header.width / 2,
+                );
+              });
+            expect(
+              offset,
+              `${width}px ${route.path} server selector center`,
+            ).toBeLessThanOrEqual(1);
+          }
+
           await expect
             .poll(
               () =>
@@ -642,5 +666,78 @@ for (const theme of ["light", "dark"]) {
         .analyze();
       expect(violations).toEqual([]);
     }
+  });
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`legacy login dialog centered in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.unroute("http://127.0.0.1:8000/bff/pages/**");
+    await mockPageDocuments(page, { variant: "legacy" });
+    await page.addInitScript(
+      (value) => localStorage.setItem("joutak_theme_v1", value),
+      theme,
+    );
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-site-design",
+      "legacy",
+    );
+    await page.getByRole("button", { name: "Войти", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("textbox", { name: "Email", exact: true }),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const bounds = await dialog.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: document.documentElement.clientWidth - box.right,
+        overflow: element.scrollWidth > element.clientWidth,
+      };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(15);
+    expect(Math.abs(bounds.left - bounds.right)).toBeLessThanOrEqual(2);
+    expect(bounds.overflow).toBe(false);
+    const { violations } = await new AxeBuilder({ page })
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`legacy-login-${theme}.png`),
+    });
+  });
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`V2 notification and legacy header remain readable in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(
+      (value) => localStorage.setItem("joutak_theme_v1", value),
+      theme,
+    );
+    await page.goto("/");
+    const title = page.getByText("Комьюнити", { exact: true });
+    await expect(title).toBeVisible();
+    await expect(title).toHaveCSS("color", "rgb(23, 19, 10)");
+    await expect(title).toHaveCSS("text-shadow", "none");
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: testInfo.outputPath(`v2-${theme}.png`) });
+    await page.getByRole("button", { name: "Открыть список серверов" }).click();
+    await page.getByRole("button", { name: "Legacy", exact: true }).click();
+    await expect(page).toHaveURL(/\/legacy$/);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-site-design",
+      "legacy",
+    );
+    const { violations } = await new AxeBuilder({ page })
+      .include("header")
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(violations).toEqual([]);
   });
 }

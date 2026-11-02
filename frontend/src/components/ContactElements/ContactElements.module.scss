@@ -27,16 +27,14 @@
 
 .contact-button {
   aspect-ratio: 1 / 1;
-  padding: 20px;
-  border: 1px solid var(--site-border);
-  border-radius: 12px;
-  background: var(--site-surface);
+  border: 20px solid transparent;
+  border-image: url("/img/9-tiling/contact-button.svg") fill 20 / 1.5;
   width: calc(50% - 10px);
   max-width: 240px;
   text-decoration: none;
 
   font-size: 14px;
-  color: var(--site-text);
+  color: #070e14;
 
   box-sizing: border-box;
   display: flex;
@@ -57,7 +55,6 @@
     }
 
     img {
-      filter: var(--site-icon-filter);
       width: 57%;
       height: auto;
       display: block;

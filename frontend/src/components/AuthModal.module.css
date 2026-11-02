@@ -1,7 +1,9 @@
 .shell {
   display: grid;
-  width: min(520px, calc(100vw - 24px));
-  max-height: min(820px, calc(100vh - 24px));
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  max-height: min(820px, calc(100dvh - 32px));
   gap: 18px;
   padding: clamp(20px, 5vw, 28px);
   overflow-y: auto;
@@ -15,7 +17,7 @@
 
 .header {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
   padding-bottom: 18px;
@@ -52,6 +54,7 @@
 .success {
   margin: 6px 0 0;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .subtitle,
@@ -94,7 +97,7 @@
 
 @media (max-width: 480px) {
   .header {
-    grid-template-columns: 54px 1fr;
+    grid-template-columns: 54px minmax(0, 1fr);
   }
 
   .header img {
@@ -106,4 +109,10 @@
   .title {
     font-size: 25px;
   }
+}
+
+html[data-site-design="legacy"] .shell {
+  --g-color-base-brand: #0d6efd;
+  --g-color-base-brand-hover: #0b5ed7;
+  --g-color-text-brand-contrast: #fff;
 }

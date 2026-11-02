@@ -5,8 +5,10 @@
   flex: 0 0 auto;
   z-index: 1000;
 
-  background: var(--site-surface);
-  border-bottom: 1px solid var(--site-border);
+  background-image: url("/img/header-bg.svg");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
 
   font-family: $font-minecraft-seven;
   font-size: 14px;
@@ -62,7 +64,7 @@
 .logo-button {
   border: none;
   background: transparent;
-  color: var(--site-text);
+  color: #070e14;
   border-radius: 8px;
   padding: 6px 12px;
   white-space: nowrap;
@@ -82,7 +84,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--site-text);
+  color: #070e14;
   justify-content: center;
 }
 
@@ -120,10 +122,7 @@
   width: 140px;
   height: 140px;
 
-  background: var(--site-surface);
-  border: 1px solid var(--site-border);
-  border-radius: 8px;
-  box-shadow: var(--site-shadow);
+  background: url("/img/dropdown.svg") center / 100% 100% no-repeat;
 
   display: flex;
   flex-direction: column;
@@ -148,7 +147,7 @@
 .server-option {
   background: transparent;
   border: none;
-  color: var(--site-text);
+  color: #070e14;
   text-align: left;
   font-family: $font-minecraft-seven;
   padding-bottom: 8px;
@@ -197,8 +196,8 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: var(--site-surface-soft);
-  color: var(--site-text);
+  background: #278cf0;
+  color: #070e14;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -11,10 +11,7 @@
   flex-wrap: nowrap;
   gap: 32px;
 
-  background: var(--site-surface);
-  border: 1px solid var(--site-border);
-  border-radius: 12px;
-  box-shadow: var(--site-shadow);
+  background: url("/img/event-card-bg.png") center / 100% 100% no-repeat;
 
   width: 100%;
   max-width: 1440px;
@@ -38,14 +35,14 @@
   overflow-wrap: anywhere;
   font-weight: 400;
   font-family: MinecraftTenFont, sans-serif;
-  color: var(--site-text);
+  color: #141e28;
   text-shadow: none;
   margin: 0;
 }
 
 .info {
   font-family: GeologicaFont, sans-serif;
-  color: var(--site-text-muted);
+  color: #141e28;
   font-size: 20px;
   font-weight: 400;
   margin: 20px 0 0;
@@ -56,7 +53,7 @@
 
 .description {
   font-family: GeologicaFont, sans-serif;
-  color: var(--site-text);
+  color: #141e28;
   font-size: 16px;
   font-weight: 400;
   margin: 20px 0 0;

@@ -192,7 +192,7 @@ export default function HeaderNew() {
                 className={styles.logoButton}
                 onClick={() => navigate("/joutak")}
               >
-                <img src="/img/logo-mini.svg" alt="Logo" />
+                <img src="/img/logo-mini.svg" alt="Logo" draggable={false} />
               </button>
 
               <div className={styles.rightNavGroup}>

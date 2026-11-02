@@ -2,17 +2,23 @@
 
 The production V2 page after PR #146 mixed theme-aware text with fixed dark
 backgrounds. In light mode, the main community/action card rendered dark text
-on a dark panel. Several other surfaces used image-based frames or unrelated
-palettes, and Bootstrap controls did not follow the Gravity theme.
+on a dark panel. Bootstrap controls also did not follow the Gravity theme.
 
 ## Changes
 
 - Shared background, surface, inset surface, foreground, secondary text,
   accent, on-accent text and shadow roles for each theme.
-- Gravity link, brand and secondary text roles follow the site palette;
-  Bootstrap receives the same theme through `data-bs-theme`.
-- Navigation, footers, action cards, events, gallery, contacts, account and
-  system-page panels use theme-aware surfaces. Image artwork retains its colors.
+- Only V2 layouts override Gravity link and brand roles;
+  legacy layouts retain their original Gravity palette and dark navigation.
+  Bootstrap receives the same theme through `data-bs-theme` only in V2.
+  Neutral secondary text contrast is corrected in both variants.
+- Footers, action cards, gallery, account and system-page panels use theme-aware
+  surfaces. Original blue navigation, event and contact artwork and the original
+  accent palette are preserved. Dark text provides contrast on blue artwork.
+- Fallback header controls use centered SVG icons and equal 44 px hit areas.
+- Legacy server carousels share JouTak’s edge-to-edge layout.
+- The login dialog uses one responsive width with equal margins, wrapping text,
+  a locally scoped legacy blue action, and accessible Email-only field labels.
 - Consistent restrained borders and radii, more comfortable paragraph leading,
   less dominant heading shadows and responsive spacing.
 - Action buttons preserve a usable height on mobile; focus outlines remain
@@ -28,7 +34,7 @@ legacy/V2 responsive tests cover 320–2560 px. This does not exercise real
 payments, credentials, or account changes.
 
 Local validation: frontend lint, Prettier, Stylelint, production build and
-111 unit tests passed. The full 44-test browser matrix passed; after the final
-palette and legal-footer edits, the six theme/account checks and six document
-checks were rerun successfully. Legal documents now show only itmocraft@itmo.ru
-in the feedback section and have no bottom navigation/contact buttons.
+111 unit tests passed. The initial full 44-test browser matrix passed. Follow-up
+checks cover theme contrast, account forms, legacy responsive pages and centered
+login dialogs in both themes. Legal documents show only itmocraft@itmo.ru in the
+feedback section and have no bottom navigation/contact buttons.

@@ -103,6 +103,7 @@
     },
     "eslint-plugin-jsx-a11y": {
       "eslint": "$eslint"
-    }
+    },
+    "minimatch": "^11.0.4"
   }
 }

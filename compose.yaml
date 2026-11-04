@@ -163,8 +163,6 @@ services:
     ports:
       - "127.0.0.1:${DEV_FRONTEND_PORT:-5173}:5173"
     volumes:
-      # Mount only live-editable inputs. Dependencies stay in the image, so a
-      # normal `docker compose up --build` cannot reuse a stale node_modules.
       - ./frontend/src:/app/src:ro
       - ./frontend/public:/app/public:ro
       - ./frontend/index.html:/app/index.html:ro
@@ -181,6 +179,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+    networks:
+      - joutak_net
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runtime
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    command: ["python", "manage.py", "qcluster"]
+    working_dir: /app/backend
+    environment: *backend-environment
+    volumes:
+      - ./backend:/app/backend:ro
     networks:
       - joutak_net
 

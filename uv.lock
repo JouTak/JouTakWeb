@@ -37,6 +37,7 @@ dependencies = [
     { name = "django-ninja-jwt" },
     { name = "django-otp" },
     { name = "django-phonenumber-field", extra = ["phonenumberslite"] },
+    { name = "django-q2" },
     { name = "django-ratelimit" },
     { name = "django-simple-history" },
     { name = "django-two-factor-auth" },
@@ -88,6 +89,7 @@ requires-dist = [
     { name = "django-ninja-jwt", specifier = ">=5.3.7" },
     { name = "django-otp", specifier = ">=1.6.1" },
     { name = "django-phonenumber-field", extras = ["phonenumberslite"], specifier = ">=8.1.0" },
+    { name = "django-q2", specifier = ">=1.7.3" },
     { name = "django-ratelimit", specifier = ">=4.1.0" },
     { name = "django-simple-history", specifier = ">=3.7.0" },
     { name = "django-two-factor-auth", specifier = ">=1.17.0" },
@@ -555,6 +557,31 @@ wheels = [
 [package.optional-dependencies]
 phonenumberslite = [
     { name = "phonenumberslite" },
+]
+
+[[package]]
+name = "django-picklefield"
+version = "3.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/93/03/13114bccbd1ec8c026ac1ff33dae75ae6c6a5632e4769ee9cda283b9f57e/django_picklefield-3.4.0.tar.gz", hash = "sha256:3a1f740536c0e60d0dba43aa89ccdbe86760d4c3f8ec47799eae122baa741d0a", size = 12555, upload-time = "2025-11-27T03:11:53.13Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/b7/139eb1419ca7b27fd714925b8d0eed6efb592479dcf2155fed6c0c87c956/django_picklefield-3.4.0-py3-none-any.whl", hash = "sha256:929bcfbae5b48bd22a52bc04521fdfdd152eee36abb9f20228f9480f9df65f45", size = 10031, upload-time = "2025-11-27T03:11:51.937Z" },
+]
+
+[[package]]
+name = "django-q2"
+version = "1.11.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-picklefield" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c8/6d/d5e103f31e64d61ad20da154200105d9f80a8e7b582afe80a377c70a1e3e/django_q2-1.11.1.tar.gz", hash = "sha256:640caf961f9098f26e00a22b743c4eb63da681a5390829b1ed951db677866e67", size = 100892, upload-time = "2026-08-26T02:47:43.592Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/77/5448ec49605848eae6d6812994e71a312c2535821cf93853e1756e0b26a8/django_q2-1.11.1-py3-none-any.whl", hash = "sha256:b7e7cc030811babc1824de6c5888faec9e84ecd21572401bfdf48770ea67805f", size = 129780, upload-time = "2026-08-26T02:47:42.108Z" },
 ]
 
 [[package]]

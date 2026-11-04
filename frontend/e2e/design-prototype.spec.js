@@ -61,9 +61,9 @@ function pageDocument({ path, product, legacyAlias }, variant = "v2") {
                   `${product} background`,
                 ),
                 logo: asset(`${product}.logo`, `${product} logo`),
-                eyebrow: "Design prototype",
+                eyebrow: "Комьюнити",
                 title: product,
-                description: "Tester-only page",
+                description: "Больше, чем просто сервер!",
                 primary_action: null,
               },
               {
@@ -224,6 +224,30 @@ for (const variant of ["legacy", "v2"]) {
             ).toBeVisible();
           }
           await page.evaluate(() => document.fonts.ready);
+          if (variant === "legacy") {
+            await expect(
+              page.getByRole("button", { name: "Toggle navigation" }),
+            ).toHaveCount(
+              ["/joutak", "/minigames"].includes(route.path) ? 1 : 0,
+            );
+            const offset = await page
+              .getByTestId("header-server-selector")
+              .evaluate((element) => {
+                const selector = element.getBoundingClientRect();
+                const header = element.closest("nav").getBoundingClientRect();
+                return Math.abs(
+                  selector.left +
+                    selector.width / 2 -
+                    header.left -
+                    header.width / 2,
+                );
+              });
+            expect(
+              offset,
+              `${width}px ${route.path} server selector center`,
+            ).toBeLessThanOrEqual(1);
+          }
+
           await expect
             .poll(
               () =>
@@ -513,3 +537,207 @@ test("pending page data has an accessible loading state", async ({ page }) => {
     page.getByRole("link", { name: "Основное действие" }),
   ).toBeVisible();
 });
+
+for (const theme of ["light", "dark"]) {
+  for (const width of [320, 1440]) {
+    test(`theme readability ${theme} at ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      test.setTimeout(120_000);
+      await page.addInitScript(
+        (value) => localStorage.setItem("joutak_theme_v1", value),
+        theme,
+      );
+      await page.setViewportSize({ width, height: 1000 });
+      await page.route("https://forms.yandex.ru/**", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: "<!doctype html><title>Payment fixture</title><p>Payment form</p>",
+        }),
+      );
+      for (const path of [
+        "/",
+        "/joutak",
+        "/joutak/pay",
+        "/itmocraft",
+        "/legacy",
+        "/minigames",
+        "/contact",
+        "/privacy-policy",
+        "/session-expired",
+        "/confirm-email",
+        "/reset-password",
+        "/terms-of-use",
+        "/missing",
+        "/login",
+      ]) {
+        await page.goto(path, { waitUntil: "networkidle" });
+        await page.evaluate(() => document.fonts.ready);
+        expect(
+          await page.evaluate(
+            () =>
+              document.documentElement.scrollWidth <=
+              document.documentElement.clientWidth,
+          ),
+        ).toBe(true);
+        const { violations } = await new AxeBuilder({ page })
+          .withRules(["color-contrast"])
+          .analyze();
+        expect(violations, `${theme} ${width}px ${path}`).toEqual([]);
+        if (["/joutak", "/contact", "/privacy-policy"].includes(path)) {
+          await page.screenshot({
+            path: testInfo.outputPath(`${theme}-${path.slice(1)}.png`),
+            fullPage: true,
+          });
+        }
+      }
+    });
+  }
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`account forms readable in ${theme}`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.setViewportSize({ width: 320, height: 1000 });
+    await page.addInitScript((value) => {
+      localStorage.setItem("joutak_theme_v1", value);
+      sessionStorage.setItem(
+        "joutak_auth",
+        JSON.stringify({ session_token: "visual-fixture" }),
+      );
+    }, theme);
+    let accountComplete = true;
+    await page.route("http://127.0.0.1:8000/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.startsWith("/bff/")) return route.fallback();
+      let body = { data: [] };
+      if (path.endsWith("/auth/me"))
+        body = {
+          username: "design-tester",
+          email: "tester@example.com",
+          email_verified: true,
+          profile_state: accountComplete ? "personalized" : "basic",
+          profile_complete: accountComplete,
+          registration_completed: accountComplete,
+          personalization_interstitial_enabled: false,
+          personalization_ui_enabled: true,
+          personalization_context: "new_registration",
+          missing_fields: ["minecraft_nick", "vk_username"],
+          has_2fa: false,
+        };
+      if (path.endsWith("/account/sessions")) body = [];
+      if (path.endsWith("/account/email"))
+        body = {
+          data: [
+            { email: "tester@example.com", primary: true, verified: true },
+          ],
+        };
+      if (path.endsWith("/authenticators/totp"))
+        body = { data: { enabled: false } };
+      await route.fulfill({
+        status: route.request().method() === "OPTIONS" ? 204 : 200,
+        headers: {
+          "access-control-allow-origin": "http://127.0.0.1:4173",
+          "access-control-allow-credentials": "true",
+          "access-control-allow-headers": "*",
+        },
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+    for (const [path, title] of [
+      ["/account/security", "Настройки и безопасность"],
+      ["/account/complete-registration", "Заверши регистрацию"],
+    ]) {
+      accountComplete = path === "/account/security";
+      await page.goto(path, { waitUntil: "networkidle" });
+      await expect(
+        page.getByRole("heading", { name: title, exact: true }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(true);
+      const { violations } = await new AxeBuilder({ page })
+        .withRules(["color-contrast"])
+        .analyze();
+      expect(violations).toEqual([]);
+    }
+  });
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`legacy login dialog centered in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.unroute("http://127.0.0.1:8000/bff/pages/**");
+    await mockPageDocuments(page, { variant: "legacy" });
+    await page.addInitScript(
+      (value) => localStorage.setItem("joutak_theme_v1", value),
+      theme,
+    );
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-site-design",
+      "legacy",
+    );
+    await page.getByRole("button", { name: "Войти", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("textbox", { name: "Email", exact: true }),
+    ).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const bounds = await dialog.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return {
+        left: box.left,
+        right: document.documentElement.clientWidth - box.right,
+        overflow: element.scrollWidth > element.clientWidth,
+      };
+    });
+    expect(bounds.left).toBeGreaterThanOrEqual(15);
+    expect(Math.abs(bounds.left - bounds.right)).toBeLessThanOrEqual(2);
+    expect(bounds.overflow).toBe(false);
+    const { violations } = await new AxeBuilder({ page })
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(violations).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath(`legacy-login-${theme}.png`),
+    });
+  });
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`V2 notification and legacy header remain readable in ${theme}`, async ({
+    page,
+  }, testInfo) => {
+    await page.addInitScript(
+      (value) => localStorage.setItem("joutak_theme_v1", value),
+      theme,
+    );
+    await page.goto("/");
+    const title = page.getByText("Комьюнити", { exact: true });
+    await expect(title).toBeVisible();
+    await expect(title).toHaveCSS("color", "rgb(23, 19, 10)");
+    await expect(title).toHaveCSS("text-shadow", "none");
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: testInfo.outputPath(`v2-${theme}.png`) });
+    await page.getByRole("button", { name: "Открыть список серверов" }).click();
+    await page.getByRole("button", { name: "Legacy", exact: true }).click();
+    await expect(page).toHaveURL(/\/legacy$/);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-site-design",
+      "legacy",
+    );
+    const { violations } = await new AxeBuilder({ page })
+      .include("header")
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(violations).toEqual([]);
+  });
+}

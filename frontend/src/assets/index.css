@@ -7,6 +7,10 @@
   --site-text-muted: #aebbc7;
   --site-border: rgb(236 247 255 / 14%);
   --site-accent: #3c9bf9;
+  --site-on-accent: #071c30;
+  --site-icon-filter: invert(1);
+  --site-surface-soft: #192936;
+  --site-shadow: 0 8px 28px rgb(0 0 0 / 18%);
   --site-accent-shadow: rgb(0 62 124 / 69%);
 }
 
@@ -18,6 +22,10 @@
   --site-text-muted: #53616f;
   --site-border: rgb(16 24 32 / 16%);
   --site-accent: #0969c7;
+  --site-on-accent: #fff;
+  --site-icon-filter: none;
+  --site-surface-soft: #eaf1f7;
+  --site-shadow: 0 8px 28px rgb(20 44 68 / 7%);
   --site-accent-shadow: rgb(9 105 199 / 24%);
 }
 
@@ -94,14 +102,14 @@ footer {
 
 .skeleton-block {
   position: relative;
-  background: rgb(255 255 255 / 4%);
+  background: var(--site-surface-soft);
   overflow: hidden;
 }
 
 .skeleton-line {
   height: 12px;
   border-radius: 6px;
-  background: rgb(255 255 255 / 12%);
+  background: var(--site-border);
 }
 
 .skeleton-block::after {
@@ -168,5 +176,45 @@ footer {
 }
 
 .lh-xs {
-  line-height: 1.125 !important;
+  line-height: 1.55 !important;
 }
+
+/* Shared text roles stay readable on both site and Gravity surfaces. */
+
+:root[data-site-design="v2"] .g-root {
+  --g-color-base-background: var(--site-background);
+  --g-color-text-primary: var(--site-text);
+  --g-color-base-brand: var(--site-accent);
+  --g-color-base-brand-hover: var(--site-accent);
+  --g-color-line-brand: var(--site-accent);
+  --g-color-text-brand: var(--site-accent);
+  --g-color-text-brand-contrast: var(--site-on-accent);
+  --g-color-text-link: var(--site-accent);
+  --g-color-text-link-hover: var(--site-accent);
+  --g-color-text-link-visited: var(--site-accent);
+  --g-color-text-link-visited-hover: var(--site-accent);
+  --g-color-text-secondary: var(--site-text-muted);
+  --g-color-text-hint: var(--site-text-muted);
+}
+
+.page-footer small {
+  color: var(--site-text-muted);
+}
+
+/* stylelint-disable selector-class-pattern -- Gravity UI vendor classes */
+
+.g-avatar_theme_normal.g-avatar_view_outlined {
+  --g-avatar-text-color: var(--g-color-text-secondary);
+}
+
+/* stylelint-enable selector-class-pattern */
+
+/* Neutral text contrast is independent of the V2 brand palette. */
+/* stylelint-disable selector-class-pattern -- Gravity UI vendor classes */
+
+.g-root_theme_light {
+  --g-color-text-secondary: #53616f;
+  --g-color-text-hint: #53616f;
+}
+
+/* stylelint-enable selector-class-pattern */

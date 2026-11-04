@@ -30,15 +30,15 @@
 
 .project-info h3 {
   color: var(--site-accent);
-  font-size: 40px;
+  font-size: 32px;
   font-weight: 500;
 }
 
 .project-info p {
   color: var(--site-text);
   font-size: 20px;
-  font-weight: 300;
-  line-height: 1.2;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 .grid {

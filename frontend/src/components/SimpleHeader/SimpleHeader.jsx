@@ -6,13 +6,17 @@ import {
   Loader,
   Modal,
   Select,
+  ThemeProvider,
 } from "@gravity-ui/uikit";
 import { useCallback, useMemo, useState } from "react";
 import Offcanvas from "react-bootstrap/Offcanvas";
+import { FiMoon, FiSun, FiUser } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuthProfile } from "../../hooks/useAuthProfile";
+import { normalizeRoutePath } from "../../routing/pageRegistry";
 import { logout } from "../../services/api";
+import { useThemePreference } from "../../theme/themeContext";
 import { getProfileDisplayName } from "../../utils/accountIdentity";
 import {
   getPersonalizationNoticeKey,
@@ -29,6 +33,7 @@ import {
 import { getPathByProject, getProjectByPath } from "../../utils/projectUtils";
 import AuthModal from "../AuthModal";
 import DynamicMenu from "../DynamicMenu";
+import styles from "./SimpleHeader.module.css";
 
 function isPersonalizationFlowPath(pathname) {
   return (
@@ -61,16 +66,20 @@ function ProjectSelect() {
   };
 
   return (
-    <div>
-      сервер /&nbsp;
+    <div className={styles.projectSelect}>
+      сервер /
       <Select options={options} value={selectedValue} onUpdate={handleUpdate} />
     </div>
   );
 }
 
 const SimpleHeader = () => {
+  const { theme, toggleTheme } = useThemePreference();
   const navigate = useNavigate();
   const location = useLocation();
+  const hasServerMenu = ["/joutak", "/minigames", "/legacy"].includes(
+    normalizeRoutePath(location.pathname),
+  );
 
   const [authOpen, setAuthOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -152,8 +161,7 @@ const SimpleHeader = () => {
       view="flat"
       aria-label={profile ? "Меню аккаунта" : "Войти"}
       title={profile ? "Меню аккаунта" : "Войти"}
-      style={{ padding: 0, borderRadius: 12 }}
-      className="ms-2"
+      className={styles.iconButton}
     >
       <Avatar
         size="m"
@@ -168,70 +176,99 @@ const SimpleHeader = () => {
   return (
     <>
       <header>
-        <nav className="navbar navbar-dark bg-dark">
-          <div className="container-fluid d-flex justify-content-between align-items-center px-3 px-lg-4">
-            <a className="navbar-brand" href="https://joutak.ru">
-              <img
-                src="/img/icons/logo.png"
-                alt="Logo"
-                width="30"
-                height="30"
-                className="d-inline-block align-text-top"
-              />
-            </a>
-
-            <div className="mx-auto">
-              <ProjectSelect />
-            </div>
-
-            <div className="d-flex align-items-center">
-              {loadingProfile ? (
-                <Loader size="m" className="ms-2" />
-              ) : profile ? (
-                <DropdownMenu
-                  size="m"
-                  renderSwitcher={renderAccountSwitcher}
-                  items={[
-                    ...(!registrationCompleted
-                      ? [
-                          [
-                            {
-                              text: "Завершить профиль",
-                              action: goOnboarding,
-                            },
-                          ],
-                        ]
-                      : []),
-                    [{ text: "Аккаунт и безопасность", action: goSecurity }],
-                    { text: "Выйти", action: onLogout, theme: "danger" },
-                  ]}
-                />
-              ) : (
-                <Button
-                  size="m"
-                  view="flat"
-                  onClick={openAuth}
-                  aria-label="Войти"
-                  title="Войти"
-                  className="ms-2"
-                  style={{ padding: 0, borderRadius: 12 }}
-                >
-                  <Avatar size="m" text="?" view="outlined" title="Гость" />
-                </Button>
-              )}
-
-              <button
-                className="navbar-toggler ms-2"
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                aria-controls="offcanvasDarkNavbar"
-                aria-label="Toggle navigation"
+        <ThemeProvider theme="dark">
+          <nav className="navbar navbar-dark bg-dark" data-bs-theme="dark">
+            <div className={styles.layout}>
+              <a
+                className="navbar-brand"
+                href="https://joutak.ru"
+                draggable={false}
               >
-                <span className="navbar-toggler-icon"></span>
-              </button>
+                <img
+                  src="/img/icons/logo.png"
+                  alt="Logo"
+                  draggable={false}
+                  width="30"
+                  height="30"
+                  className="d-inline-block align-text-top"
+                />
+              </a>
+
+              <div
+                className={styles.selector}
+                data-testid="header-server-selector"
+              >
+                <ProjectSelect />
+              </div>
+
+              <div className={styles.controls}>
+                <Button
+                  view="flat"
+                  size="l"
+                  className={styles.iconButton}
+                  onClick={toggleTheme}
+                  aria-label={
+                    theme === "dark"
+                      ? "Включить светлую тему"
+                      : "Включить тёмную тему"
+                  }
+                >
+                  {theme === "dark" ? (
+                    <FiSun size={20} aria-hidden="true" />
+                  ) : (
+                    <FiMoon size={20} aria-hidden="true" />
+                  )}
+                </Button>
+                {loadingProfile ? (
+                  <Loader size="m" className="ms-2" />
+                ) : profile ? (
+                  <DropdownMenu
+                    size="m"
+                    renderSwitcher={renderAccountSwitcher}
+                    items={[
+                      ...(!registrationCompleted
+                        ? [
+                            [
+                              {
+                                text: "Завершить профиль",
+                                action: goOnboarding,
+                              },
+                            ],
+                          ]
+                        : []),
+                      [{ text: "Аккаунт и безопасность", action: goSecurity }],
+                      { text: "Выйти", action: onLogout, theme: "danger" },
+                    ]}
+                  />
+                ) : (
+                  <Button
+                    size="m"
+                    view="flat"
+                    onClick={openAuth}
+                    aria-label="Войти"
+                    title="Войти"
+                    className={styles.iconButton}
+                  >
+                    <FiUser size={20} aria-hidden="true" />
+                  </Button>
+                )}
+
+                {hasServerMenu && (
+                  <button
+                    className="navbar-toggler ms-2"
+                    type="button"
+                    onClick={() => setMenuOpen(true)}
+                    aria-expanded={menuOpen}
+                    aria-controls="offcanvasDarkNavbar"
+                    aria-label="Toggle navigation"
+                  >
+                    <span className="navbar-toggler-icon"></span>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        </nav>
+          </nav>
+        </ThemeProvider>
         {showPostSignupBanner && (
           <div
             style={{
@@ -273,23 +310,27 @@ const SimpleHeader = () => {
         )}
       </header>
 
-      <Offcanvas
-        show={menuOpen}
-        onHide={closeOffcanvas}
-        placement="start"
-        scroll
-        id="offcanvasDarkNavbar"
-        className="text-bg-dark"
-      >
-        <Offcanvas.Header closeButton closeVariant="white">
-          <Offcanvas.Title id="offcanvasDarkNavbarLabel">Меню</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body>
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <DynamicMenu />
-          </ul>
-        </Offcanvas.Body>
-      </Offcanvas>
+      {hasServerMenu && (
+        <Offcanvas
+          show={menuOpen}
+          onHide={closeOffcanvas}
+          placement="start"
+          scroll
+          id="offcanvasDarkNavbar"
+          className="text-bg-dark"
+        >
+          <Offcanvas.Header closeButton closeVariant="white">
+            <Offcanvas.Title id="offcanvasDarkNavbarLabel">
+              Меню
+            </Offcanvas.Title>
+          </Offcanvas.Header>
+          <Offcanvas.Body>
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+              <DynamicMenu />
+            </ul>
+          </Offcanvas.Body>
+        </Offcanvas>
+      )}
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 

@@ -1,7 +1,7 @@
 .footer {
   padding: 48px max(24px, calc((100vw - 1280px) / 2));
-  color: #ecf7ff;
-  background: #00080f;
+  color: var(--site-text);
+  background: var(--site-surface);
   border-top: 1px solid rgb(60 155 249 / 24%);
 }
 
@@ -20,7 +20,7 @@
 
 .heading {
   margin: 0 0 16px;
-  color: #fff;
+  color: var(--site-text);
   font-size: 1.25rem;
   font-weight: 600;
 }
@@ -34,14 +34,14 @@
 }
 
 .links a {
-  color: rgb(236 247 255 / 72%);
+  color: var(--site-text-muted);
   text-decoration: none;
 }
 
 .social-column {
   display: grid;
   gap: 20px;
-  color: rgb(236 247 255 / 72%);
+  color: var(--site-text-muted);
 }
 
 .social-column p {
@@ -68,7 +68,7 @@
 }
 
 .links a:hover {
-  color: #fff;
+  color: var(--site-text);
 }
 
 .brand:focus-visible,

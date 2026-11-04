@@ -1,10 +1,9 @@
 import { Button, Select, Text } from "@gravity-ui/uikit";
 import PropTypes from "prop-types";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import DocumentMarkdown from "../components/documents/DocumentMarkdown";
 import {
-  PageActions,
   PageNotice,
   PagePanel,
   PageShell,
@@ -17,7 +16,6 @@ import {
 import styles from "./LegalDocument.module.css";
 
 export default function LegalDocument({ documentType }) {
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const document = documents[documentType];
   const version = findDocumentVersion(document, params.get("version"));
@@ -107,14 +105,6 @@ export default function LegalDocument({ documentType }) {
             </Button>
           </PageNotice>
         )}
-        <PageActions>
-          <Button view="action" size="l" onClick={() => navigate("/")}>
-            На главную ITMOcraft
-          </Button>
-          <Button view="outlined" size="l" onClick={() => navigate("/contact")}>
-            Связаться с нами
-          </Button>
-        </PageActions>
       </PagePanel>
     </PageShell>
   );

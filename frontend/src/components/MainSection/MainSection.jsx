@@ -37,9 +37,14 @@ export default function MainSection({
       )}
       <div className={styles.mainSectionInner}>
         {logoMedia ? (
-          <ResponsiveMedia media={logoMedia} alt={logoAlt} eager />
+          <ResponsiveMedia
+            media={logoMedia}
+            alt={logoAlt}
+            eager
+            draggable={false}
+          />
         ) : (
-          <img src={logoSrc} alt={logoAlt} />
+          <img src={logoSrc} alt={logoAlt} draggable={false} />
         )}
       </div>
     </div>

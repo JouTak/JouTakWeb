@@ -1,5 +1,5 @@
 .footer {
-  background-color: #00080f;
+  background-color: var(--site-surface);
   padding: 36px 40px 30px;
   margin-top: 0;
   font-family: GeologicaFont, sans-serif;
@@ -45,14 +45,14 @@
 }
 
 .heading {
-  color: #fff;
+  color: var(--site-text);
   font-size: 20px;
   font-weight: 500;
   margin: 0 0 14px;
 }
 
 .subitem {
-  color: rgb(255 255 255 / 75%);
+  color: var(--site-text-muted);
   margin: 0 0 6px;
   font-size: 16px;
   font-weight: 300;
@@ -111,7 +111,7 @@
 }
 
 .copyright {
-  color: rgb(255 255 255 / 75%);
+  color: var(--site-text-muted);
   margin: 0;
   font-size: 16px;
   font-weight: 300;
@@ -120,7 +120,7 @@
 
 .subitem:hover,
 .copyright:hover {
-  color: #fff;
+  color: var(--site-text);
 }
 
 @media (max-width: 1200px) {

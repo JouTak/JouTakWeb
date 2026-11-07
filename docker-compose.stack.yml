@@ -166,6 +166,23 @@ services:
     deploy:
       replicas: 1
 
+  worker:
+    image: ghcr.io/joutak/joutakweb-api:${BACKEND_TAG:-latest}
+    env_file:
+      - ./.env.production
+    working_dir: /app/backend
+    entrypoint: ["/usr/bin/tini", "--"]
+    command: ["python", "manage.py", "qcluster"]
+    environment: *backend-environment
+    secrets:
+      - django_secret_key
+      - database_url
+      - sentry_dsn
+    networks:
+      - joutak_net
+    deploy:
+      replicas: 1
+
   frontend:
     image: ghcr.io/joutak/joutakweb:${FRONTEND_TAG:-latest}
     env_file:

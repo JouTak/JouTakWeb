@@ -71,6 +71,20 @@ ProviderIdStr = Annotated[
 
 
 # ---------- Generic ----------
+class EmailDeliveryOut(Schema):
+    status: Literal["waiting", "retrying", "sent", "error", "cancelled"]
+    next_attempt_at: datetime | None = None
+    # Earliest time a manual resend is accepted again
+    next_allowed_at: datetime | None = None
+    is_smtp_down: bool = False
+
+
+class ResendEmailOut(Schema):
+    ok: bool
+    message: str | None = None
+    delivery: EmailDeliveryOut
+
+
 class FieldErrorItem(Schema):
     message: str
     code: str | None = None
@@ -85,6 +99,9 @@ class ErrorOut(Schema):
     errors: dict[str, list[FieldErrorItem]] | None = None
     # Convenience: first message per field (flat)
     fields: dict[str, str] | None = None
+    # Rate limiting / cooldown (HTTP 429)
+    retry_after_seconds: int | None = None
+    next_allowed_at: datetime | None = None
 
 
 class OkOut(Schema):
@@ -185,6 +202,8 @@ class ProfileOut(Schema):
     last_name: str | None = None
     avatar_url: str | None = None
     email_verified: bool = False
+    # None, если письма подтверждения ещё не отправлялись
+    email_delivery: EmailDeliveryOut | None = None
     profile_complete: bool = False
     account_active: bool = False
     registration_completed: bool = False
@@ -206,6 +225,7 @@ class ProfileOut(Schema):
 
 class AccountStatusOut(Schema):
     email_verified: bool = False
+    email_delivery: EmailDeliveryOut | None = None
     profile_complete: bool = False
     account_active: bool = False
     registration_completed: bool = False

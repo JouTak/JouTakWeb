@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     "allauth.headless",
     "allauth.usersessions",
     "allauth.socialaccount.providers.yandex",
+    "django_q",
     # Project apps
     "core.apps.CoreConfig",
     "accounts.apps.AccountsConfig",
@@ -473,6 +474,53 @@ FF_PROFILE_PERSONALIZATION_INTERSTITIAL = config(
 FF_PROFILE_PERSONALIZATION_ENFORCE = config(
     "FF_PROFILE_PERSONALIZATION_ENFORCE", cast=bool, default=False
 )
+
+
+# ─── Account e-mail delivery (background worker) ───────────────────────────
+# A temporary SMTP failure is retried with a delay that doubles each time:
+# BASE, 2*BASE, 4*BASE ... capped at MAX. With the defaults 24 tries span
+# about 22 hours. After that, or on a permanent error, the status is "error".
+EMAIL_DELIVERY_MAX_ATTEMPTS = config(
+    "EMAIL_DELIVERY_MAX_ATTEMPTS", cast=int, default=24
+)
+EMAIL_DELIVERY_BACKOFF_BASE_SECONDS = config(
+    "EMAIL_DELIVERY_BACKOFF_BASE_SECONDS", cast=int, default=60
+)
+EMAIL_DELIVERY_BACKOFF_MAX_SECONDS = config(
+    "EMAIL_DELIVERY_BACKOFF_MAX_SECONDS", cast=int, default=3600
+)
+# A worker owns a mail for this long; if it dies, the try is taken over.
+EMAIL_DELIVERY_LEASE_SECONDS = config(
+    "EMAIL_DELIVERY_LEASE_SECONDS", cast=int, default=180
+)
+# Minimum pause between two mails of one kind to one address. Repeated or
+# manual requests inside it get the current mail; the API answers 429.
+EMAIL_RESEND_COOLDOWN_SECONDS = config(
+    "EMAIL_RESEND_COOLDOWN_SECONDS", cast=int, default=60
+)
+
+# ─── Django Q2 (background email delivery) ─────────────────────────────────
+Q_CLUSTER = {
+    "name": "joutak_q",
+    # Parallel worker processes.
+    "workers": 2,
+    # Restart a worker after N tasks to bound memory growth.
+    "recycle": 500,
+    # Hard limit (seconds) for one task, e.g. a single SMTP send.
+    "timeout": 60,
+    # Seconds before the broker redelivers an unacknowledged task.
+    "retry": 120,
+    # Safety net for unexpected crashes; e-mail retries are our own.
+    "max_attempts": 3,
+    "compress": True,
+    # Keep only the last 250 successful task records.
+    "save_limit": 250,
+    "queue_limit": 500,
+    "cpu_affinity": 1,
+    "label": "Django Q",
+    "orm": "default",
+    "sync": False,
+}
 
 
 def as_public_settings() -> dict[str, object]:

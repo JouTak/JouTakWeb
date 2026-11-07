@@ -116,3 +116,56 @@ class UserProfile(models.Model):
                 name="core_userpr_is_itmo_17f9c2_idx",
             ),
         )
+
+
+class EmailVerificationTask(models.Model):
+    class Status(models.TextChoices):
+        WAITING = "waiting", "В очереди"
+        RETRYING = "retrying", "Повторная попытка (ошибка SMTP)"
+        SENT = "sent", "Отправлено"
+        ERROR = "error", "Ошибка отправки"
+        CANCELLED = "cancelled", "Отменено"
+
+    class Kind(models.TextChoices):
+        EMAIL_CONFIRMATION = "email_confirmation", "Подтверждение почты"
+        EMAIL_CONFIRMATION_SIGNUP = (
+            "email_confirmation_signup",
+            "Подтверждение почты при регистрации",
+        )
+        PASSWORD_RESET = "password_reset", "Восстановление пароля"
+
+    CONFIRMATION_KINDS = (
+        Kind.EMAIL_CONFIRMATION,
+        Kind.EMAIL_CONFIRMATION_SIGNUP,
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="email_verification_tasks",
+        null=True,
+        blank=True,
+    )
+    email = models.EmailField(db_index=True)
+    kind = models.CharField(
+        max_length=32,
+        choices=Kind.choices,
+        default=Kind.EMAIL_CONFIRMATION,
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.WAITING,
+    )
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    # Earliest moment a new mail of this kind may be requested (cooldown).
+    next_allowed_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    last_error = models.CharField(max_length=64, blank=True, default="")
+    locked_until = models.DateTimeField(null=True, blank=True)
+    task_id = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = (models.Index(fields=["email", "status"]),)

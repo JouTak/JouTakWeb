@@ -60,7 +60,7 @@
 }
 
 .step-button:focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid var(--site-accent);
   outline-offset: 3px;
 }
 

@@ -19,7 +19,7 @@ const ITMOCRAFT_CAROUSEL_ITEMS = [
 
 const SimpleItmoCraftPage = () => {
   return (
-    <div className="text-center container my-4">
+    <div className="text-center">
       <ImageCarousel items={ITMOCRAFT_CAROUSEL_ITEMS} />
 
       <div className="p-5 mb-4 rounded-3">

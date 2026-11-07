@@ -144,7 +144,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
   const emailOk = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 
   function validateLogin() {
-    if (!login.trim()) return "Укажите email или старый логин.";
+    if (!login.trim()) return "Укажите email.";
     if (!password) return "Введите пароль.";
     return null;
   }
@@ -356,7 +356,11 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
       onClose={close}
       aria-labelledby="auth-modal-title"
       disableBodyScrollLock
-      style={{ "--g-modal-width": "520px" }}
+      style={{
+        "--g-modal-width": "min(520px, calc(100vw - 32px))",
+        "--g-modal-margin": "16px",
+        "--g-modal-border-radius": "12px",
+      }}
     >
       <div className={styles.shell}>
         <div className={styles.header}>
@@ -373,7 +377,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
         {isLogin ? (
           <form onSubmit={onLoginSubmit} className={styles.form}>
             <div className={styles.field}>
-              <span className={styles.label}>Email или старый логин</span>
+              <span className={styles.label}>Email</span>
               <TextInput
                 size="l"
                 value={login}
@@ -382,7 +386,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 autoComplete="username"
                 controlRef={loginInputRef}
                 disabled={busy}
-                aria-label="Email или старый логин"
+                controlProps={{ "aria-label": "Email" }}
               />
             </div>
             <div className={styles.field}>
@@ -395,7 +399,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 name="joutak__password"
                 autoComplete="current-password"
                 disabled={busy}
-                aria-label="Пароль"
+                controlProps={{ "aria-label": "Пароль" }}
               />
             </div>
             <Button
@@ -469,7 +473,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 autoComplete="one-time-code"
                 controlRef={mfaCodeInputRef}
                 disabled={busy}
-                aria-label="Код подтверждения"
+                controlProps={{ "aria-label": "Код подтверждения" }}
               />
             </div>
 
@@ -556,7 +560,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                     autoComplete="email"
                     controlRef={resetEmailInputRef}
                     disabled={busy}
-                    aria-label="Email"
+                    controlProps={{ "aria-label": "Email" }}
                   />
                 </div>
                 {resetError ? (
@@ -599,7 +603,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 autoComplete="email"
                 controlRef={signupEmailInputRef}
                 disabled={busy}
-                aria-label="Email"
+                controlProps={{ "aria-label": "Email" }}
               />
             </div>
             <div className={styles.field}>
@@ -612,7 +616,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 name="joutak__password"
                 autoComplete="new-password"
                 disabled={busy}
-                aria-label="Пароль"
+                controlProps={{ "aria-label": "Пароль" }}
               />
             </div>
             <div className={styles.field}>
@@ -625,7 +629,7 @@ function AuthModalContent({ onClose, successRedirectTo = null }) {
                 name="joutak__password"
                 autoComplete="new-password"
                 disabled={busy}
-                aria-label="Повторите пароль"
+                controlProps={{ "aria-label": "Повторите пароль" }}
               />
             </div>
             <Button

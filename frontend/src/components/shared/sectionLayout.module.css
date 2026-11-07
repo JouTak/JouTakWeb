@@ -7,15 +7,15 @@
 }
 
 .inner {
-  max-width: 1440px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .title {
   font-family: MinecraftTenFont, sans-serif;
   color: var(--site-accent);
-  text-shadow: 5px 5px 0 var(--site-accent-shadow);
-  font-size: 64px;
+  text-shadow: none;
+  font-size: 48px;
   font-weight: 400;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -27,7 +27,7 @@
   }
 
   .title {
-    font-size: 56px;
+    font-size: 44px;
   }
 }
 

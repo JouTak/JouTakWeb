@@ -48,16 +48,16 @@ vi.mock("@gravity-ui/uikit", async () => {
       value,
       onUpdate,
       type = "text",
-      "aria-label": ariaLabel,
+      controlProps = {},
       label,
       controlRef,
       disabled,
     }) => (
       <label>
-        <span>{label || ariaLabel}</span>
+        <span>{label || controlProps["aria-label"]}</span>
         <input
           ref={controlRef}
-          aria-label={ariaLabel || label}
+          aria-label={controlProps["aria-label"] || label}
           type={type}
           value={value}
           disabled={disabled}
@@ -125,7 +125,7 @@ describe("AuthModal MFA flow", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.change(screen.getByLabelText("Email или старый логин"), {
+    fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "player@example.com" },
     });
     fireEvent.change(screen.getByLabelText("Пароль"), {
@@ -153,7 +153,7 @@ describe("AuthModal MFA flow", () => {
 });
 
 async function submitPasswordLogin() {
-  fireEvent.change(screen.getByLabelText("Email или старый логин"), {
+  fireEvent.change(screen.getByLabelText("Email"), {
     target: { value: "player@example.com" },
   });
   fireEvent.change(screen.getByLabelText("Пароль"), {
@@ -245,7 +245,7 @@ it("clears credentials and restores login mode when reopened", () => {
     </MemoryRouter>
   );
   const { rerender } = render(modal(true));
-  fireEvent.change(screen.getByLabelText("Email или старый логин"), {
+  fireEvent.change(screen.getByLabelText("Email"), {
     target: { value: "private@example.com" },
   });
   fireEvent.change(screen.getByLabelText("Пароль"), {
@@ -253,6 +253,6 @@ it("clears credentials and restores login mode when reopened", () => {
   });
   rerender(modal(false));
   rerender(modal(true));
-  expect(screen.getByLabelText("Email или старый логин")).toHaveValue("");
+  expect(screen.getByLabelText("Email")).toHaveValue("");
   expect(screen.getByLabelText("Пароль")).toHaveValue("");
 });

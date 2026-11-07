@@ -62,11 +62,12 @@ describe("LegalDocument", () => {
         screen.getByRole("navigation", { name: "Содержание документа" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "На главную ITMOcraft" }),
-      ).toBeInTheDocument();
+        screen.queryByRole("button", { name: "На главную ITMOcraft" }),
+      ).not.toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Связаться с нами" }),
-      ).toBeInTheDocument();
+        screen.queryByRole("button", { name: "Связаться с нами" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("itmocraft@itmo.ru")).toBeInTheDocument();
     },
   );
 });

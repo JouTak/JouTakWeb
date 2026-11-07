@@ -8,6 +8,7 @@ export default function ResponsiveMedia({
   className,
   pictureClassName,
   eager = false,
+  draggable,
   sizes = "100vw",
 }) {
   const descriptor = getMediaDescriptor(media);
@@ -31,6 +32,7 @@ export default function ResponsiveMedia({
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : "auto"}
         decoding="async"
+        draggable={draggable}
       />
     </picture>
   );
@@ -42,5 +44,6 @@ ResponsiveMedia.propTypes = {
   className: PropTypes.string,
   pictureClassName: PropTypes.string,
   eager: PropTypes.bool,
+  draggable: PropTypes.bool,
   sizes: PropTypes.string,
 };

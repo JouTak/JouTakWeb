@@ -11,16 +11,13 @@
   flex-wrap: nowrap;
   gap: 32px;
 
-  background-image: url("/img/event-card-bg.png");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100% 100%;
+  background: url("/img/event-card-bg.png") center / 100% 100% no-repeat;
 
   width: 100%;
   max-width: 1440px;
-  min-height: 520px;
+  min-height: 360px;
 
-  padding: 28px 100px;
+  padding: clamp(24px, 4vw, 48px);
   box-sizing: border-box;
 }
 
@@ -39,15 +36,15 @@
   font-weight: 400;
   font-family: MinecraftTenFont, sans-serif;
   color: #141e28;
-  text-shadow: 5px 5px #006bd4;
+  text-shadow: none;
   margin: 0;
 }
 
 .info {
   font-family: GeologicaFont, sans-serif;
-  color: #141e28b2;
+  color: #141e28;
   font-size: 20px;
-  font-weight: 300;
+  font-weight: 400;
   margin: 20px 0 0;
   display: flex;
   align-items: center;
@@ -58,10 +55,10 @@
   font-family: GeologicaFont, sans-serif;
   color: #141e28;
   font-size: 16px;
-  font-weight: 300;
+  font-weight: 400;
   margin: 20px 0 0;
   line-height: 1.4;
-  max-width: 325px;
+  max-width: 60ch;
 }
 
 .event-media {

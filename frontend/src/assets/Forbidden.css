@@ -1,0 +1,87 @@
+@import url("./ErrorPages.css");
+
+.forbidden-content {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 20px;
+}
+
+.forbidden-page .page-info {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  max-width: 600px;
+}
+
+.forbidden-page #warden {
+  height: 450px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.forbidden-page #table {
+  height: 170px;
+  margin-top: 20px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 1200px) {
+  .forbidden-content {
+    flex-direction: column-reverse;
+    gap: 20px;
+    padding: 20px;
+    min-height: auto;
+  }
+
+  .forbidden-page #warden {
+    height: 370px;
+    margin-bottom: 20px;
+  }
+
+  .forbidden-page .page-info {
+    order: 1;
+    width: 100%;
+    padding: 0 15px;
+  }
+
+  .forbidden-page h1 {
+    font-size: 60px;
+  }
+
+  .forbidden-page h2 {
+    font-size: 30px;
+  }
+
+  .forbidden-page .buttons {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .forbidden-page #warden {
+    height: 200px;
+  }
+
+  .forbidden-page h1 {
+    font-size: 70px;
+  }
+
+  .forbidden-page h2 {
+    font-size: 30px;
+  }
+
+  .forbidden-page .primary-btn,
+  .forbidden-page .secondary-btn,
+  .forbidden-page .tertiary-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+}

@@ -1,0 +1,46 @@
+@import url("./ErrorPages.css");
+
+.notfound-page {
+  text-align: center;
+}
+
+.notfound-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+@media (max-width: 600px) {
+  .notfound-content {
+    min-height: auto;
+    padding-top: 100px;
+    justify-content: flex-start;
+    gap: 20px;
+  }
+
+  .notfound-page h1 {
+    font-size: 60px;
+  }
+
+  .notfound-page h2 {
+    font-size: 30px;
+  }
+
+  .notfound-page p {
+    font-size: 14px;
+  }
+
+  .notfound-page .buttons {
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 0;
+  }
+
+  .notfound-page .primary-btn,
+  .notfound-page .secondary-btn {
+    width: 120px;
+    padding: 8px;
+  }
+}

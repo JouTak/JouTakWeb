@@ -1,0 +1,50 @@
+import "../assets/NotFound.css";
+
+import { useState } from "react";
+
+import darkModeIconUrl from "../assets/images/dark-mode-icon.svg";
+import lightModeIconUrl from "../assets/images/light-mode-icon.svg";
+
+export default function NotFound() {
+  const [darkMode, setDarkMode] = useState(false);
+
+  return (
+    <div className={`error-page notfound-page ${darkMode ? "darkmode" : ""}`}>
+      <header>
+        <button
+          id="theme-switch"
+          onClick={() => setDarkMode(!darkMode)}
+          aria-label="кнопка, которая переключает тему страницы между темной и светлой"
+        >
+          <img
+            src={lightModeIconUrl}
+            alt="иконка солнца, символизирующая светлую тему страницы"
+          />
+          <img
+            src={darkModeIconUrl}
+            alt="иконка луны, символизирующая тёмную тему страницы"
+          />
+        </button>
+      </header>
+
+      <main className="notfound-content">
+        <h1>404</h1>
+        <h2>NOT FOUND</h2>
+
+        <p className="light-font">Страница не существует или была удалена.</p>
+
+        <div className="buttons">
+          <button
+            onClick={() => window.history.back()}
+            className="secondary-btn"
+          >
+            Назад
+          </button>
+          <a href="/" className="primary-btn">
+            На главную
+          </a>
+        </div>
+      </main>
+    </div>
+  );
+}

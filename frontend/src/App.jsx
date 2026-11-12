@@ -1,5 +1,11 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import {
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import AuthModal from "./components/AuthModal.jsx";
 import Layout from "./components/Layout";
@@ -10,10 +16,11 @@ import {
   PagePanel,
   PageShell,
 } from "./components/ui/PageShell.jsx";
+import { ErrorPageRoute } from "./pages/ErrorPageRoute.jsx";
 import { isSafeInternalPath } from "./services/urlSafety";
+
 const Legacy = lazy(() => import("./pages/Legacy.jsx"));
 const Contact = lazy(() => import("./pages/Contact/Contact.jsx"));
-const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const AccountSecurity = lazy(() => import("./pages/AccountSecurity.jsx"));
 const AccountOnboarding = lazy(() => import("./pages/AccountOnboarding.jsx"));
 const SessionExpired = lazy(() => import("./pages/SessionExpired.jsx"));
@@ -67,74 +74,95 @@ function LoginModalRoute() {
   );
 }
 
+function StandardLayout() {
+  return (
+    <Layout>
+      <Suspense fallback={<LoadingPage />}>
+        <Outlet />
+      </Suspense>
+    </Layout>
+  );
+}
+
 function AppRoutes() {
   const location = useLocation();
   const background = location.state && location.state.background;
 
   return (
-    <Suspense fallback={<LoadingPage />}>
+    <>
       <Routes location={background || location}>
-        <Route path="/" element={<ItmoCraftRoute />} />
-        <Route path="/joutak" element={<JouTakRoute />} />
-        <Route path="/legacy" element={<Legacy />} />
-        <Route path="/minigames" element={<MinigamesRoute />} />
-        <Route path="/itmocraft" element={<ItmoCraftRoute legacyAlias />} />
-        <Route path="/contact" element={<Contact />} />
+        <Route path="/403" element={<ErrorPageRoute type="403" />} />
         <Route
-          path="/account/security"
-          element={
-            <RequireAuth>
-              <AccountSecurity />
-            </RequireAuth>
-          }
+          path="/restricted"
+          element={<ErrorPageRoute type="restricted" />}
         />
-        <Route
-          path="/account/onboarding"
-          element={
-            <RequireAuth>
-              <AccountOnboarding />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/account/complete-registration"
-          element={
-            <RequireAuth>
-              <AccountOnboarding />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/account/complete-profile"
-          element={
-            <RequireAuth>
-              <AccountOnboarding />
-            </RequireAuth>
-          }
-        />
-        <Route path="/joutak/pay" element={<Pay />} />
-        <Route path="/session-expired" element={<SessionExpired />} />
-        <Route path="/confirm-email" element={<ConfirmEmail />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route
-          path="/privacy-policy"
-          element={<LegalDocument documentType="privacy" />}
-        />
-        <Route
-          path="/terms-of-use"
-          element={<LegalDocument documentType="terms" />}
-        />
+        <Route path="/404" element={<ErrorPageRoute type="404" />} />
 
-        <Route path="/login" element={<LoginModalRoute />} />
-        <Route path="*" element={<NotFound />} />
+        <Route element={<StandardLayout />}>
+          <Route path="/" element={<ItmoCraftRoute />} />
+          <Route path="/joutak" element={<JouTakRoute />} />
+          <Route path="/legacy" element={<Legacy />} />
+          <Route path="/minigames" element={<MinigamesRoute />} />
+          <Route path="/itmocraft" element={<ItmoCraftRoute legacyAlias />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route
+            path="/account/security"
+            element={
+              <RequireAuth>
+                <AccountSecurity />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/account/onboarding"
+            element={
+              <RequireAuth>
+                <AccountOnboarding />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/account/complete-registration"
+            element={
+              <RequireAuth>
+                <AccountOnboarding />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/account/complete-profile"
+            element={
+              <RequireAuth>
+                <AccountOnboarding />
+              </RequireAuth>
+            }
+          />
+          <Route path="/joutak/pay" element={<Pay />} />
+          <Route path="/session-expired" element={<SessionExpired />} />
+          <Route path="/confirm-email" element={<ConfirmEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/privacy-policy"
+            element={<LegalDocument documentType="privacy" />}
+          />
+          <Route
+            path="/terms-of-use"
+            element={<LegalDocument documentType="terms" />}
+          />
+          <Route path="/login" element={<LoginModalRoute />} />
+        </Route>
+
+        <Route path="*" element={<ErrorPageRoute type="404" />} />
       </Routes>
 
       {background && (
         <Routes>
-          <Route path="/login" element={<LoginModalRoute />} />
+          <Route element={<StandardLayout />}>
+            <Route path="/login" element={<LoginModalRoute />} />
+          </Route>
         </Routes>
       )}
-    </Suspense>
+    </>
   );
 }
 
@@ -142,9 +170,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      <Layout>
-        <AppRoutes />
-      </Layout>
+      <AppRoutes />
     </>
   );
 }

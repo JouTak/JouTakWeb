@@ -182,7 +182,7 @@ class StrictAccountAdapter(DefaultAccountAdapter):
             ).first()
             tracker = (
                 EmailVerificationTask.objects.filter(
-                    email=email, kind__in=purpose
+                    user=user, email__iexact=email, kind__in=purpose
                 )
                 .order_by("-updated_at", "-id")
                 .first()
@@ -197,6 +197,7 @@ class StrictAccountAdapter(DefaultAccountAdapter):
             tracker.user = user
             tracker.kind = kind
             tracker.status = EmailVerificationTask.Status.WAITING
+            tracker.error_category = None
             tracker.attempts = 0
             tracker.last_error = ""
             tracker.next_attempt_at = None

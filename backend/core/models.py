@@ -126,6 +126,12 @@ class EmailVerificationTask(models.Model):
         ERROR = "error", "Ошибка отправки"
         CANCELLED = "cancelled", "Отменено"
 
+    class ErrorCategory(models.TextChoices):
+        SMTP_UNAVAILABLE = "smtp_unavailable", "SMTP-сервер недоступен"
+        MESSAGE_REJECTED = "message_rejected", "Письмо отклонено сервером"
+        INTERNAL_ERROR = "internal_error", "Внутренняя ошибка отправки"
+        WORKER_INTERRUPTED = "worker_interrupted", "Воркер прервал отправку"
+
     class Kind(models.TextChoices):
         EMAIL_CONFIRMATION = "email_confirmation", "Подтверждение почты"
         EMAIL_CONFIRMATION_SIGNUP = (
@@ -162,6 +168,13 @@ class EmailVerificationTask(models.Model):
     next_allowed_at = models.DateTimeField(null=True, blank=True)
     attempts = models.PositiveSmallIntegerField(default=0)
     last_error = models.CharField(max_length=64, blank=True, default="")
+    error_category = models.CharField(
+        max_length=32,
+        choices=ErrorCategory.choices,
+        null=True,
+        blank=True,
+        default=None,
+    )
     locked_until = models.DateTimeField(null=True, blank=True)
     task_id = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

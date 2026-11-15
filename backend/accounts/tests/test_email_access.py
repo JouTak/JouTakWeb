@@ -301,3 +301,73 @@ class OutageApiTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [known])
         self.assertIn("reset-password?key=", message_text(mail.outbox[0]))
+
+
+class ReviewFixesTests(TestCase):
+    def test_error_category_distinguishes_smtp_from_internal_and_rejected(self) -> None:
+        from accounts.services.email_delivery import (
+            ErrorCategory,
+            classify_delivery_error,
+        )
+
+        self.assertEqual(
+            classify_delivery_error(SMTP_DOWN),
+            ErrorCategory.SMTP_UNAVAILABLE,
+        )
+        self.assertEqual(
+            classify_delivery_error(RuntimeError("unexpected")),
+            ErrorCategory.INTERNAL_ERROR,
+        )
+        user, address = make_user()
+        tracker = make_tracker(
+            user,
+            address.email,
+            status=Status.RETRYING,
+            attempts=1,
+        )
+        tracker.error_category = ErrorCategory.INTERNAL_ERROR
+        state = describe_delivery(tracker)
+        self.assertEqual(state["error_category"], "internal_error")
+        self.assertFalse(state["is_smtp_down"])
+
+    def test_signal_cancellation_is_scoped_to_user(self) -> None:
+        user_a, addr_a = make_user()
+        user_b = User.objects.create_user(
+            username="other_user_b",
+            email="other_b@example.com",
+            password="Password123!",
+        )
+        addr_b = EmailAddress.objects.create(
+            user=user_b,
+            email=addr_a.email,
+            verified=False,
+            primary=False,
+        )
+        task_a = make_tracker(
+            user_a,
+            addr_a.email,
+            kind=Kind.PASSWORD_RESET,
+            status=Status.WAITING,
+        )
+        addr_b.delete()
+        task_a.refresh_from_db()
+        self.assertEqual(task_a.status, Status.WAITING)
+
+    def test_check_email_worker_accepts_fresh_heartbeat_when_idle(self) -> None:
+        from accounts.apps import EMAIL_DISPATCH_SCHEDULE_NAME
+        from accounts.tasks import record_worker_heartbeat
+        from django.core.management import call_command
+        from django_q.models import Schedule
+
+        Schedule.objects.update_or_create(
+            name=EMAIL_DISPATCH_SCHEDULE_NAME,
+            defaults={
+                "func": "accounts.tasks.dispatch_due_emails",
+                "schedule_type": Schedule.MINUTES,
+                "minutes": 1,
+                "repeats": -1,
+                "next_run": timezone.now() - timezone.timedelta(hours=2),
+            },
+        )
+        record_worker_heartbeat()
+        call_command("check_email_worker")

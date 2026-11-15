@@ -12,18 +12,25 @@ from django.utils import timezone
 Kind = EmailVerificationTask.Kind
 
 
-def cancel_pending_mails(email: str, kinds: tuple[str, ...]) -> int:
-    """Cancel queued mails of the given kinds for ``email``.
+def cancel_pending_mails(
+    user_id: int | None, email: str, kinds: tuple[str, ...]
+) -> int:
+    """Cancel queued mails of the given kinds for ``user_id`` and ``email``.
 
-    Returns the count. A mail that a worker is sending right now cannot be
-    recalled; the worker also re-checks the address before it sends.
+    Scoped to ``user_id`` so an action on another account sharing the
+    same address under ``ACCOUNT_PREVENT_ENUMERATION`` never cancels this
+    user's pending mail.
     """
+    if user_id is None:
+        return 0
     return EmailVerificationTask.objects.filter(
+        user_id=user_id,
         email__iexact=email,
         kind__in=kinds,
         status__in=ACTIVE_STATUSES,
     ).update(
         status=EmailVerificationTask.Status.CANCELLED,
+        error_category=None,
         next_attempt_at=None,
         locked_until=None,
         updated_at=timezone.now(),
@@ -36,12 +43,11 @@ def cancel_pending_mails(email: str, kinds: tuple[str, ...]) -> int:
     dispatch_uid="accounts.verified_email_cancels_confirmation",
 )
 def cancel_confirmation_when_verified(sender, instance, **kwargs) -> None:
-    # Covers every way an address becomes verified: the confirmation
-    # link, a social login, the admin. A password reset mail to a
-    # verified address is still wanted, so only confirmations go.
     if instance.verified:
         cancel_pending_mails(
-            instance.email, EmailVerificationTask.CONFIRMATION_KINDS
+            instance.user_id,
+            instance.email,
+            EmailVerificationTask.CONFIRMATION_KINDS,
         )
 
 
@@ -51,9 +57,8 @@ def cancel_confirmation_when_verified(sender, instance, **kwargs) -> None:
     dispatch_uid="accounts.deleted_email_cancels_mail",
 )
 def cancel_mail_when_deleted(sender, instance, **kwargs) -> None:
-    # An address replaced or removed (including with the account): no
-    # mail, a password reset token included, may go to it any more.
     cancel_pending_mails(
+        instance.user_id,
         instance.email,
         (*EmailVerificationTask.CONFIRMATION_KINDS, Kind.PASSWORD_RESET),
     )

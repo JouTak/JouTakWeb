@@ -31,8 +31,6 @@ class AccountsConfig(AppConfig):
     verbose_name = "Модуль конфигурации Аккаунтов"
 
     def ready(self) -> None:
-        # Imported here: the handlers need the models, which are not
-        # loaded yet when this module is imported.
         from accounts import signals  # noqa: F401, PLC0415
 
         post_migrate.connect(

@@ -4,6 +4,8 @@ from datetime import timedelta
 from io import StringIO
 
 from accounts.apps import EMAIL_DISPATCH_SCHEDULE_NAME
+from accounts.tasks import WORKER_HEARTBEAT_CACHE_KEY
+from django.core.cache import cache
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
@@ -12,6 +14,10 @@ from django_q.models import Schedule
 
 
 class CheckEmailWorkerTests(TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        cache.delete(WORKER_HEARTBEAT_CACHE_KEY)
+
     def schedule(self):
         return Schedule.objects.filter(name=EMAIL_DISPATCH_SCHEDULE_NAME)
 

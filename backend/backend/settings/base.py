@@ -501,6 +501,8 @@ EMAIL_RESEND_COOLDOWN_SECONDS = config(
 
 # ─── Django Q2 (background email delivery) ─────────────────────────────────
 Q_CLUSTER = {
+    # Do not replay missed schedule ticks after idle or downtime.
+    "catch_up": False,
     "name": "joutak_q",
     # Parallel worker processes.
     "workers": 2,

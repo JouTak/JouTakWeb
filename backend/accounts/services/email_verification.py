@@ -11,6 +11,7 @@ from accounts.services.email_delivery import (
     ACTIVE_STATUSES,
     describe_delivery,
     latest_confirmation_tracker,
+    pending_email_address,
 )
 from accounts.transport.schemas import EmailDeliveryOut, ResendEmailOut
 from allauth.account.adapter import get_adapter
@@ -46,24 +47,26 @@ def _result(message: str, tracker: EmailVerificationTask) -> ResendEmailOut:
 class EmailVerificationService:
     @staticmethod
     def resend(request: HttpRequest, user) -> ResendEmailOut:
-        """Queue a confirmation mail for the user's primary address.
+        """Queue a confirmation mail for the address awaiting confirmation.
 
-        If a mail is already queued, its current state is returned and
-        nothing new is queued. Inside the cooldown after the previous
-        mail ``EmailResendCooldownError`` is raised.
+        That is an unverified primary address or, with a pending e-mail
+        change, the new address (the verified primary one is neither used
+        nor switched). If a mail is already queued, its current state is
+        returned and nothing new is queued. Inside the cooldown after the
+        previous mail ``EmailResendCooldownError`` is raised.
         """
-        address = EmailAddress.objects.filter(user=user, primary=True).first()
+        address = pending_email_address(user)
         if address is None:
+            if EmailAddress.objects.filter(user=user, verified=True).exists():
+                raise_structured_error(
+                    400,
+                    detail="Email is already verified",
+                    error_code=EMAIL_ALREADY_VERIFIED,
+                )
             raise_structured_error(
                 400,
                 detail="No email address to verify",
                 error_code=EMAIL_ADDRESS_MISSING,
-            )
-        if address.verified:
-            raise_structured_error(
-                400,
-                detail="Email is already verified",
-                error_code=EMAIL_ALREADY_VERIFIED,
             )
 
         tracker = latest_confirmation_tracker(user, address.email)

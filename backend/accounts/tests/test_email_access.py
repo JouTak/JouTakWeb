@@ -147,6 +147,15 @@ class CancellationTests(TestCase):
         tracker.refresh_from_db()
         self.assertEqual(tracker.status, Status.CANCELLED)
 
+    def test_deleting_the_address_cancels_a_password_reset_mail(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(user, address.email, Kind.PASSWORD_RESET)
+
+        address.delete()
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.CANCELLED)
+
     def test_deleting_the_account_drops_the_mail(self) -> None:
         user, address = make_user()
         tracker_id = make_tracker(user, address.email).id

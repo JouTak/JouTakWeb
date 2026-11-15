@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 Status = EmailVerificationTask.Status
 ACTIVE_STATUSES = (Status.WAITING, Status.RETRYING)
 DISPATCH_BATCH_SIZE = 50
+# ``last_error`` of a mail given up because its tries ran out.
+ATTEMPTS_EXHAUSTED = "AttemptsExhausted"
 
 _DELIVER_NOW: ContextVar[bool] = ContextVar(
     "account_mail_deliver_now", default=False
@@ -104,6 +106,21 @@ def latest_confirmation_tracker(
     )
 
 
+def pending_email_address(user) -> EmailAddress | None:
+    """The address that awaits confirmation, if any.
+
+    With a pending e-mail change this is the new address, while the old
+    one stays primary and verified (nothing is switched automatically).
+    If several addresses are unverified, the newest one is taken: it is
+    the one the user asked to confirm last.
+    """
+    return (
+        EmailAddress.objects.filter(user=user, verified=False)
+        .order_by("-pk")
+        .first()
+    )
+
+
 def describe_delivery(tracker: EmailVerificationTask) -> dict[str, object]:
     """Delivery state in the shape of ``EmailDeliveryOut``.
 
@@ -117,6 +134,7 @@ def describe_delivery(tracker: EmailVerificationTask) -> dict[str, object]:
         and tracker.attempts >= settings.EMAIL_DELIVERY_MAX_ATTEMPTS
     )
     return {
+        "email": tracker.email,
         "status": tracker.status,
         "next_attempt_at": tracker.next_attempt_at,
         "next_allowed_at": tracker.next_allowed_at,
@@ -141,21 +159,38 @@ def attempt_delivery(tracker_id: int) -> None:
 
     Does nothing if the tracker is finished, not due yet, or leased by
     another worker. Delivery errors never propagate: they are recorded
-    on the tracker (retry or final error).
+    on the tracker (retry or final error). Every claim counts as a try,
+    so a worker that dies mid-try cannot extend the limit: when the
+    lease expires and no tries are left, the mail ends in an error.
     """
     now = timezone.now()
-    lease = timedelta(seconds=settings.EMAIL_DELIVERY_LEASE_SECONDS)
-    claimed = (
+    max_attempts = settings.EMAIL_DELIVERY_MAX_ATTEMPTS
+    claimable = (
         EmailVerificationTask.objects.filter(
             id=tracker_id, status__in=ACTIVE_STATUSES
         )
         .filter(Q(locked_until__isnull=True) | Q(locked_until__lte=now))
         .filter(Q(next_attempt_at__isnull=True) | Q(next_attempt_at__lte=now))
-        .update(
-            locked_until=now + lease,
-            attempts=F("attempts") + 1,
-            updated_at=now,
+    )
+    abandoned = claimable.filter(attempts__gte=max_attempts).update(
+        status=Status.ERROR,
+        last_error=ATTEMPTS_EXHAUSTED,
+        next_attempt_at=None,
+        locked_until=None,
+        updated_at=now,
+    )
+    if abandoned:
+        logger.error(
+            "email_delivery.abandoned",
+            extra={"tracker_id": tracker_id, "attempt": max_attempts},
         )
+        return
+
+    lease = timedelta(seconds=settings.EMAIL_DELIVERY_LEASE_SECONDS)
+    claimed = claimable.filter(attempts__lt=max_attempts).update(
+        locked_until=now + lease,
+        attempts=F("attempts") + 1,
+        updated_at=now,
     )
     if not claimed:
         return
@@ -163,9 +198,10 @@ def attempt_delivery(tracker_id: int) -> None:
     tracker = EmailVerificationTask.objects.get(id=tracker_id)
     try:
         delivered = deliver_tracker(tracker)
-    except OSError as exc:
-        # smtplib.SMTPException, ConnectionError, TimeoutError and
-        # socket.gaierror are all OSError subclasses.
+    except Exception as exc:
+        # SMTP and network errors (OSError subclasses), but also anything
+        # unexpected: none of them may leave the mail active without a
+        # decision. They are retried within the same limit of tries.
         _record_failure(tracker, exc)
         return
 
@@ -204,7 +240,7 @@ def due_tracker_ids(limit: int = DISPATCH_BATCH_SIZE) -> list[int]:
     )
 
 
-def _record_failure(tracker: EmailVerificationTask, exc: OSError) -> None:
+def _record_failure(tracker: EmailVerificationTask, exc: Exception) -> None:
     permanent = is_permanent_error(exc)
     exhausted = tracker.attempts >= settings.EMAIL_DELIVERY_MAX_ATTEMPTS
     final = permanent or exhausted
@@ -258,9 +294,19 @@ def _deliver_confirmation(tracker: EmailVerificationTask) -> bool:
     return True
 
 
+def _user_owns_email(user, email: str) -> bool:
+    addresses = EmailAddress.objects.filter(user_id=user.pk)
+    if addresses.exists():
+        return addresses.filter(email__iexact=email).exists()
+    return (user.email or "").lower() == email.lower()
+
+
 def _deliver_password_reset(tracker: EmailVerificationTask) -> bool:
     user = tracker.user
     if user is None or not user.is_active:
+        return False
+    if not _user_owns_email(user, tracker.email):
+        # The address was changed or removed while the mail waited.
         return False
     with deliver_now():
         password_reset_flow.request_password_reset(

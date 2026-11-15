@@ -72,6 +72,8 @@ ProviderIdStr = Annotated[
 
 # ---------- Generic ----------
 class EmailDeliveryOut(Schema):
+    # The address the mail goes to (the one awaiting confirmation)
+    email: str | None = None
     status: Literal["waiting", "retrying", "sent", "error", "cancelled"]
     next_attempt_at: datetime | None = None
     # Earliest time a manual resend is accepted again

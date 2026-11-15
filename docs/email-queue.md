@@ -20,10 +20,16 @@
    `accounts.tasks.dispatch_due_emails`, раз в минуту.
 4. Постоянная ошибка (получатель отклонён, 5xx на данные письма) или
    исчерпанные попытки: статус `error`, повторов нет. Пользователь может
-   запросить письмо снова.
+   запросить письмо снова. Непредвиденные ошибки (не SMTP) повторяются в
+   пределах того же лимита. Каждый захват записи считается попыткой, поэтому
+   обработчик, который умер посреди попытки, не продлевает лимит: после
+   истечения аренды запись переходит в `error` (`last_error` равен
+   `AttemptsExhausted`).
 5. Если адрес уже подтверждён, заменён или удалён, письмо не отправляется,
-   статус `cancelled`. Подтверждение, удаление адреса и аккаунта отменяют
-   ожидающие письма сразу (`accounts/signals.py`).
+   статус `cancelled`. Для сброса пароля перед отправкой проверяется, что
+   адрес всё ещё принадлежит пользователю. Подтверждение, удаление адреса и
+   аккаунта отменяют ожидающие письма сразу (`accounts/signals.py`); при
+   удалении адреса отменяется и письмо сброса пароля на него.
 6. Повторные запросы не создают пачку писем: пока письмо в очереди, API
    возвращает его статус; после отправки действует пауза
    `EMAIL_RESEND_COOLDOWN_SECONDS`.
@@ -47,6 +53,12 @@
   `.env.production`, как у `backend`.
 - Без Docker: `uv run python backend/manage.py qcluster --settings
   backend.settings.dev` в отдельном терминале рядом с `runserver`.
+
+У обработчика нет HTTP-порта, поэтому унаследованная от образа проверка
+`/health` ему не подходит. В compose-файлах задана своя проверка:
+`manage.py check_email_worker` завершается с ошибкой, если кластер перестал
+двигать расписание `accounts-email-dispatch` (запись отстаёт больше 10
+минут) или расписания нет.
 
 ## Настройки (переменные окружения)
 
@@ -76,8 +88,11 @@ uv run pytest backend/accounts/tests/test_email_access.py \
   backend/accounts/tests/test_email_resend.py -q
 ```
 
-Вручную, без Docker. Создайте файл `backend/backend/settings/local_smtp_down.py`
-(не коммитить):
+Вручную, без Docker. Для проверки нужен локальный файл настроек
+`backend/backend/settings/local_smtp_down.py`. Он существует только на вашей
+машине, поэтому исключите его из git (`echo
+backend/backend/settings/local_smtp_down.py >> .git/info/exclude`) и создайте
+с таким содержимым:
 
 ```python
 from .dev import *  # noqa: F403
@@ -130,15 +145,26 @@ for t in T.objects.order_by('-updated_at')[:20]:
 ## Контракт API для фронтенда
 
 - `GET /api/account/status`, `GET /api/auth/me`: `email_verified` (bool) и
-  `email_delivery` (`null` для подтверждённого адреса или если письма не
-  было) с полями `status` (`waiting`, `retrying`, `sent`, `error`,
-  `cancelled`), `next_attempt_at`, `next_allowed_at`, `is_smtp_down`.
-  `is_smtp_down: true` означает, что почтовый сервис недоступен;
-  `waiting` при `false` это обычное ожидание в очереди.
-- `POST /api/account/email/resend`:
-  - 200, `delivery` с текущим статусом и `next_allowed_at`. Если письмо уже
-    в очереди, новое не создаётся;
-  - 400, `error_code`: `EMAIL_ALREADY_VERIFIED` или `EMAIL_ADDRESS_MISSING`;
+  `email_delivery`: состояние письма для адреса, **ожидающего
+  подтверждения** (`null`, если такого адреса нет или письма не было).
+  Поля: `email` (адрес, на который идёт письмо), `status` (`waiting`,
+  `retrying`, `sent`, `error`, `cancelled`), `next_attempt_at`,
+  `next_allowed_at`, `is_smtp_down`. `is_smtp_down: true` означает, что
+  почтовый сервис недоступен; `waiting` при `false` это обычное ожидание в
+  очереди.
+- Ожидающий подтверждения адрес: неподтверждённый основной адрес или, при
+  смене email (`ACCOUNT_CHANGE_EMAIL`), новый адрес. Старый основной адрес
+  остаётся подтверждённым и основным, `email_verified` относится к нему, а
+  `email_delivery` описывает письмо на новый адрес. Если неподтверждённых
+  адресов несколько, берётся самый новый. `primary` и `verified` API сам не
+  переключает.
+- `POST /api/account/email/resend` (для ожидающего подтверждения адреса,
+  см. выше):
+  - 200, `delivery` с текущим статусом, адресом `email` и `next_allowed_at`.
+    Если письмо уже в очереди, новое не создаётся;
+  - 400, `error_code`: `EMAIL_ALREADY_VERIFIED` (нет адреса, ожидающего
+    подтверждения, а подтверждённый есть) или `EMAIL_ADDRESS_MISSING` (нет
+    ни одного адреса);
   - 401: нет сессии;
   - 429: слишком рано. Поля `error_code: EMAIL_RESEND_COOLDOWN`,
     `retry_after_seconds`, `next_allowed_at` и заголовок `Retry-After`.

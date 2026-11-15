@@ -175,6 +175,30 @@ class WorkerTests(TestCase):
         tracker.refresh_from_db()
         self.assertEqual(tracker.status, Status.SENT)
 
+    def test_password_reset_to_a_replaced_address_is_cancelled(self) -> None:
+        user, _address = make_user()
+        tracker = make_tracker(user, "old@example.com", Kind.PASSWORD_RESET)
+
+        send_email_task(tracker.id)
+
+        self.assertEqual(mail.outbox, [])
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.CANCELLED)
+
+    def test_password_reset_to_another_address_of_the_user_is_sent(
+        self,
+    ) -> None:
+        user, _address = make_user()
+        EmailAddress.objects.create(
+            user=user, email="second@example.com", primary=False
+        )
+        tracker = make_tracker(user, "second@example.com", Kind.PASSWORD_RESET)
+
+        send_email_task(tracker.id)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["second@example.com"])
+
     def test_verified_address_cancels_the_mail(self) -> None:
         user, address = make_user(verified=True)
         tracker = make_tracker(user, address.email)

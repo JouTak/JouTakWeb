@@ -30,6 +30,10 @@ Status = EmailVerificationTask.Status
 SMTP_DOWN = smtplib.SMTPServerDisconnected("down")
 
 
+class WorkerKilled(BaseException):
+    """Stands for a worker process that dies in the middle of a try."""
+
+
 def make_user(email: str = "retry@example.com"):
     user = get_user_model().objects.create_user(
         username="retry_user", email=email, password="StrongPass123!"
@@ -255,6 +259,63 @@ class RetryTests(TestCase):
         self.assertEqual(tracker.status, Status.WAITING)
         self.assertEqual(tracker.attempts, 0)
         self.assertEqual(tracker.last_error, "")
+
+    def test_unexpected_error_is_retried_within_the_limit(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(user, address.email)
+
+        with smtp_fails(RuntimeError("boom")):
+            attempt_delivery(tracker.id)
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.RETRYING)
+        self.assertEqual(tracker.attempts, 1)
+        self.assertEqual(tracker.last_error, "RuntimeError")
+        self.assertIsNone(tracker.locked_until)
+
+    def test_unexpected_errors_end_in_error_when_tries_run_out(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(
+            user, address.email, status=Status.RETRYING, attempts=2
+        )
+
+        with smtp_fails(RuntimeError("boom")):
+            attempt_delivery(tracker.id)
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.ERROR)
+        self.assertEqual(tracker.attempts, 3)
+
+    def test_killed_worker_cannot_extend_the_limit(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(user, address.email)
+
+        for _ in range(3):
+            with (
+                mock.patch(
+                    "accounts.services.email_delivery.deliver_tracker",
+                    side_effect=WorkerKilled,
+                ),
+                self.assertRaises(WorkerKilled),
+            ):
+                attempt_delivery(tracker.id)
+            # The lease of the dead worker expires.
+            EmailVerificationTask.objects.filter(id=tracker.id).update(
+                locked_until=timezone.now() - timedelta(seconds=1)
+            )
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.WAITING)
+        self.assertEqual(tracker.attempts, 3)
+
+        dispatch_due_emails()
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.ERROR)
+        self.assertEqual(tracker.last_error, "AttemptsExhausted")
+        self.assertEqual(tracker.attempts, 3)
+        self.assertIsNone(tracker.locked_until)
+        self.assertEqual(mail.outbox, [])
 
     def test_failure_log_has_no_address_or_content(self) -> None:
         user, address = make_user()

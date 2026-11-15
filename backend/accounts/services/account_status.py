@@ -7,6 +7,7 @@ from accounts.api.errors import raise_structured_error
 from accounts.services.email_delivery import (
     describe_delivery,
     latest_confirmation_tracker,
+    pending_email_address,
 )
 from accounts.services.personalization import personalization_complete
 from allauth.account.models import EmailAddress
@@ -110,9 +111,13 @@ class AccountStatusService:
         if not complete:
             blocking_reasons.append(PROFILE_FIELDS_INCOMPLETE)
 
+        # The state of the mail to the address awaiting confirmation: an
+        # unverified primary one, or the new one of a pending change (the
+        # old primary address may stay verified meanwhile).
         delivery_data = None
-        if not email_verified and user.email:
-            last_task = latest_confirmation_tracker(user, user.email)
+        pending = pending_email_address(user)
+        if pending is not None:
+            last_task = latest_confirmation_tracker(user, pending.email)
             if last_task:
                 delivery_data = describe_delivery(last_task)
 

@@ -73,9 +73,7 @@ class PendingChangeApiTests(APITestCase):
         )
         limited = self.resend(token)
         self.assertEqual(limited.status_code, 429, limited.content)
-        self.assertEqual(
-            limited.json()["error_code"], "EMAIL_RESEND_COOLDOWN"
-        )
+        self.assertEqual(limited.json()["error_code"], "EMAIL_RESEND_COOLDOWN")
 
         EmailVerificationTask.objects.filter(email=new_email).update(
             next_allowed_at=timezone.now() - timedelta(seconds=1)

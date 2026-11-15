@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from accounts.api.errors import raise_structured_error
+from accounts.services.email_delivery import (
+    describe_delivery,
+    latest_confirmation_tracker,
+    pending_email_address,
+)
 from accounts.services.personalization import personalization_complete
 from allauth.account.models import EmailAddress
 from core.models import UserProfile
@@ -14,6 +19,7 @@ from featureflags.services import RequestEvaluationContext, evaluate_many
 User = get_user_model()
 PROFILE_PERSONALIZATION_REQUIRED = "PROFILE_PERSONALIZATION_REQUIRED"
 PROFILE_FIELDS_INCOMPLETE = "PROFILE_FIELDS_INCOMPLETE"
+EMAIL_VERIFICATION_REQUIRED = "EMAIL_VERIFICATION_REQUIRED"
 PERSONALIZATION_CONTEXT_COMPLETE = "complete"
 PERSONALIZATION_CONTEXT_NEW_REGISTRATION = "new_registration"
 PERSONALIZATION_CONTEXT_LEGACY_REQUIRED = "legacy_required"
@@ -104,8 +110,20 @@ class AccountStatusService:
         blocking_reasons: list[str] = []
         if not complete:
             blocking_reasons.append(PROFILE_FIELDS_INCOMPLETE)
+
+        # The state of the mail to the address awaiting confirmation: an
+        # unverified primary one, or the new one of a pending change (the
+        # old primary address may stay verified meanwhile).
+        delivery_data = None
+        pending = pending_email_address(user)
+        if pending is not None:
+            last_task = latest_confirmation_tracker(user, pending.email)
+            if last_task:
+                delivery_data = describe_delivery(last_task)
+
         return {
             "email_verified": email_verified,
+            "email_delivery": delivery_data,
             "profile_complete": complete,
             # Backward-compat fields: now tied to profile personalization only.
             "account_active": complete,
@@ -130,6 +148,25 @@ class AccountStatusService:
             "personalization_prompt_variant": personalization_prompt_variant,
             "missing_fields": missing,
         }
+
+    @staticmethod
+    def require_email_verified(user: User) -> None:
+        """Gate for actions that need a confirmed e-mail address.
+
+        Call it in the service or endpoint of every such action. It looks
+        only at the address, never at the delivery state of the mail, so
+        a mail outage does not restrict users who already confirmed it,
+        and confirming the address lifts the restriction at once. Other
+        checks (personalization, MFA, permissions) stay independent.
+        """
+        if AccountStatusService.is_email_verified(user):
+            return
+        raise_structured_error(
+            403,
+            detail="Email verification is required for this action",
+            error_code=EMAIL_VERIFICATION_REQUIRED,
+            blocking_reasons=[EMAIL_VERIFICATION_REQUIRED],
+        )
 
     @staticmethod
     def require_personalized_profile(user: User) -> None:

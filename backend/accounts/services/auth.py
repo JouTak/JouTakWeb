@@ -205,6 +205,7 @@ class AuthService:
             last_name=getattr(user, "last_name", None) or None,
             avatar_url=None,
             email_verified=status["email_verified"],
+            email_delivery=status["email_delivery"],
             profile_complete=status["profile_complete"],
             account_active=status["account_active"],
             registration_completed=status["registration_completed"],

@@ -75,18 +75,24 @@ class EmailDeliveryOut(Schema):
     # The address the mail goes to (the one awaiting confirmation)
     email: str | None = None
     status: Literal["waiting", "retrying", "sent", "error", "cancelled"]
-    error_category: Literal[
-        "smtp_unavailable",
-        "message_rejected",
-        "internal_error",
-        "worker_interrupted",
-    ] | None = None
-    error_category: Literal[
-        "smtp_unavailable",
-        "message_rejected",
-        "internal_error",
-        "worker_interrupted",
-    ] | None = None
+    error_category: (
+        Literal[
+            "smtp_unavailable",
+            "message_rejected",
+            "internal_error",
+            "worker_interrupted",
+        ]
+        | None
+    ) = None
+    error_category: (
+        Literal[
+            "smtp_unavailable",
+            "message_rejected",
+            "internal_error",
+            "worker_interrupted",
+        ]
+        | None
+    ) = None
     next_attempt_at: datetime | None = None
     # Earliest time a manual resend is accepted again
     next_allowed_at: datetime | None = None

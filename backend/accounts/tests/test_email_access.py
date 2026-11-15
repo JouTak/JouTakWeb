@@ -4,18 +4,24 @@ import smtplib
 from unittest import mock
 
 from accounts.api.errors import StructuredHttpError
+from accounts.apps import EMAIL_DISPATCH_SCHEDULE_NAME
 from accounts.services.account_status import AccountStatusService
 from accounts.services.email_delivery import (
+    ErrorCategory,
     attempt_delivery,
+    classify_delivery_error,
     describe_delivery,
 )
+from accounts.tasks import record_worker_heartbeat
 from accounts.tests.base import APITestCase
 from allauth.account.models import EmailAddress
 from core.models import EmailVerificationTask
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from django_q.models import Schedule
 
 User = get_user_model()
 Kind = EmailVerificationTask.Kind
@@ -304,12 +310,7 @@ class OutageApiTests(APITestCase):
 
 
 class ReviewFixesTests(TestCase):
-    def test_error_category_distinguishes_smtp_from_internal_and_rejected(self) -> None:
-        from accounts.services.email_delivery import (
-            ErrorCategory,
-            classify_delivery_error,
-        )
-
+    def test_error_category_distinguishes_smtp_from_internal(self) -> None:
         self.assertEqual(
             classify_delivery_error(SMTP_DOWN),
             ErrorCategory.SMTP_UNAVAILABLE,
@@ -353,12 +354,7 @@ class ReviewFixesTests(TestCase):
         task_a.refresh_from_db()
         self.assertEqual(task_a.status, Status.WAITING)
 
-    def test_check_email_worker_accepts_fresh_heartbeat_when_idle(self) -> None:
-        from accounts.apps import EMAIL_DISPATCH_SCHEDULE_NAME
-        from accounts.tasks import record_worker_heartbeat
-        from django.core.management import call_command
-        from django_q.models import Schedule
-
+    def test_check_email_worker_accepts_fresh_heartbeat(self) -> None:
         Schedule.objects.update_or_create(
             name=EMAIL_DISPATCH_SCHEDULE_NAME,
             defaults={

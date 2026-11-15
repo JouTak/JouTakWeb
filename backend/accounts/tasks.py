@@ -16,7 +16,9 @@ WORKER_HEARTBEAT_CACHE_KEY = "accounts:email_worker:heartbeat"
 
 
 def record_worker_heartbeat() -> None:
-    cache.set(WORKER_HEARTBEAT_CACHE_KEY, timezone.now().isoformat(), timeout=3600)
+    cache.set(
+        WORKER_HEARTBEAT_CACHE_KEY, timezone.now().isoformat(), timeout=3600
+    )
 
 
 def send_email_task(tracker_id: int) -> None:

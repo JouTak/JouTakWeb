@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 
 from accounts.services.email_delivery import (
@@ -10,15 +11,24 @@ from django.core.cache import cache
 from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
+
 # django-q kills a task after Q_CLUSTER["timeout"] (60 s): stop earlier.
 DISPATCH_TIME_BUDGET_SECONDS = 40
 WORKER_HEARTBEAT_CACHE_KEY = "accounts:email_worker:heartbeat"
 
 
 def record_worker_heartbeat() -> None:
-    cache.set(
-        WORKER_HEARTBEAT_CACHE_KEY, timezone.now().isoformat(), timeout=3600
-    )
+    """Mark the worker alive. Best effort: a cache problem must never stop
+    the delivery of mail."""
+    try:
+        cache.set(
+            WORKER_HEARTBEAT_CACHE_KEY,
+            timezone.now().isoformat(),
+            timeout=3600,
+        )
+    except Exception:
+        logger.warning("email_worker.heartbeat_failed")
 
 
 def send_email_task(tracker_id: int) -> None:

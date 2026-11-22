@@ -129,10 +129,10 @@ def pending_email_address(user) -> EmailAddress | None:
 def describe_delivery(tracker: EmailVerificationTask) -> dict[str, object]:
     """Delivery state in the shape of ``EmailDeliveryOut``.
 
-    ``error_category`` is populated whenever the tracker is retrying or in
-    final error, and ``None`` for waiting, sent, or cancelled mails.
-    ``is_smtp_down`` is true only when ``error_category`` is
-    ``smtp_unavailable``.
+    ``error_category`` explains a failure: it is set while the mail is
+    retrying or in final error and is ``None`` for waiting, sent and
+    cancelled mails. Trackers written before the field existed get a
+    category derived from their status.
     """
     has_error = tracker.status in (Status.RETRYING, Status.ERROR)
     category = tracker.error_category if has_error else None
@@ -152,7 +152,6 @@ def describe_delivery(tracker: EmailVerificationTask) -> dict[str, object]:
         "error_category": category,
         "next_attempt_at": tracker.next_attempt_at,
         "next_allowed_at": tracker.next_allowed_at,
-        "is_smtp_down": category == ErrorCategory.SMTP_UNAVAILABLE,
     }
 
 

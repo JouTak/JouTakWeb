@@ -153,6 +153,22 @@ class CancellationTests(TestCase):
         tracker.refresh_from_db()
         self.assertEqual(tracker.status, Status.CANCELLED)
 
+    def test_cancelled_mail_loses_its_error_category(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(
+            user,
+            address.email,
+            status=Status.RETRYING,
+            attempts=2,
+            error_category=ErrorCategory.SMTP_UNAVAILABLE,
+        )
+
+        address.delete()
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.CANCELLED)
+        self.assertIsNone(tracker.error_category)
+
     def test_deleting_the_address_cancels_a_password_reset_mail(self) -> None:
         user, address = make_user()
         tracker = make_tracker(user, address.email, Kind.PASSWORD_RESET)
@@ -177,25 +193,45 @@ class CancellationTests(TestCase):
 
 @override_settings(EMAIL_DELIVERY_MAX_ATTEMPTS=3)
 class DeliveryStateTests(TestCase):
-    def test_outage_flag_tells_waiting_from_unavailable(self) -> None:
+    def test_error_category_tells_waiting_from_failures(self) -> None:
         user, address = make_user()
         cases = [
-            (Status.WAITING, 0, False),
-            (Status.RETRYING, 1, True),
-            (Status.SENT, 1, False),
-            (Status.ERROR, 1, False),
-            (Status.ERROR, 3, True),
-            (Status.CANCELLED, 1, False),
+            # status, attempts, stored category, last_error, expected
+            (Status.WAITING, 0, None, "", None),
+            (Status.SENT, 1, "smtp_unavailable", "", None),
+            (Status.CANCELLED, 1, "smtp_unavailable", "", None),
+            (Status.RETRYING, 1, "smtp_unavailable", "", "smtp_unavailable"),
+            (Status.RETRYING, 1, "internal_error", "", "internal_error"),
+            (Status.ERROR, 1, "message_rejected", "", "message_rejected"),
+            (Status.ERROR, 3, "smtp_unavailable", "", "smtp_unavailable"),
+            (Status.ERROR, 3, "worker_interrupted", "", "worker_interrupted"),
+            # rows written before the field existed
+            (Status.RETRYING, 1, None, "", "smtp_unavailable"),
+            (Status.ERROR, 1, None, "", "message_rejected"),
+            (Status.ERROR, 3, None, "", "smtp_unavailable"),
+            (
+                Status.ERROR,
+                3,
+                None,
+                "AttemptsExhausted",
+                "worker_interrupted",
+            ),
         ]
-        for status, attempts, expected in cases:
-            with self.subTest(status=status, attempts=attempts):
+        for status, attempts, stored, last_error, expected in cases:
+            with self.subTest(status=status, attempts=attempts, stored=stored):
                 tracker = make_tracker(
-                    user, address.email, status=status, attempts=attempts
+                    user,
+                    address.email,
+                    status=status,
+                    attempts=attempts,
+                    error_category=stored,
+                    last_error=last_error,
                 )
 
                 state = describe_delivery(tracker)
 
-                self.assertEqual(state["is_smtp_down"], expected)
+                self.assertEqual(state["error_category"], expected)
+                self.assertNotIn("is_smtp_down", state)
 
 
 class OutageApiTests(APITestCase):
@@ -224,7 +260,7 @@ class OutageApiTests(APITestCase):
         data = me.json()
         self.assertFalse(data["email_verified"])
         self.assertEqual(data["email_delivery"]["status"], "waiting")
-        self.assertFalse(data["email_delivery"]["is_smtp_down"])
+        self.assertIsNone(data["email_delivery"]["error_category"])
 
         # The mail server is back: the worker sends the queued mail.
         tracker = EmailVerificationTask.objects.get(email=email.lower())
@@ -233,11 +269,12 @@ class OutageApiTests(APITestCase):
         tracker.refresh_from_db()
         self.assertEqual(tracker.status, Status.SENT)
 
-    def test_profile_reports_retrying_as_a_mail_outage(self) -> None:
+    def test_profile_reports_the_error_category_of_a_retry(self) -> None:
         payload = self.signup_and_auth()
         user = User.objects.get(email=payload["email"].lower())
         EmailVerificationTask.objects.filter(user=user).update(
             status=Status.RETRYING,
+            error_category=ErrorCategory.SMTP_UNAVAILABLE,
             attempts=2,
             next_attempt_at=timezone.now(),
         )
@@ -245,7 +282,10 @@ class OutageApiTests(APITestCase):
         data = self.me(payload["session_token"]).json()
 
         self.assertEqual(data["email_delivery"]["status"], "retrying")
-        self.assertTrue(data["email_delivery"]["is_smtp_down"])
+        self.assertEqual(
+            data["email_delivery"]["error_category"], "smtp_unavailable"
+        )
+        self.assertNotIn("is_smtp_down", data["email_delivery"])
 
     def test_verified_users_are_not_affected_by_the_outage(self) -> None:
         payload = self.signup_and_auth()
@@ -329,7 +369,6 @@ class ReviewFixesTests(TestCase):
         tracker.error_category = ErrorCategory.INTERNAL_ERROR
         state = describe_delivery(tracker)
         self.assertEqual(state["error_category"], "internal_error")
-        self.assertFalse(state["is_smtp_down"])
 
     def test_signal_cancellation_is_scoped_to_user(self) -> None:
         user_a, addr_a = make_user()

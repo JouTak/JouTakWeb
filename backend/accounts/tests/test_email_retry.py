@@ -14,7 +14,7 @@ from accounts.services.email_delivery import (
     backoff_seconds,
     is_permanent_error,
 )
-from accounts.tasks import dispatch_due_emails
+from accounts.tasks import dispatch_due_emails, send_email_task
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress, EmailConfirmationHMAC
 from core.models import EmailVerificationTask
@@ -78,6 +78,7 @@ class RetryTests(TestCase):
         self.assertEqual(tracker.status, Status.RETRYING)
         self.assertEqual(tracker.attempts, 1)
         self.assertEqual(tracker.last_error, "SMTPServerDisconnected")
+        self.assertEqual(tracker.error_category, "smtp_unavailable")
         self.assertIsNone(tracker.locked_until)
         delay = (tracker.next_attempt_at - before).total_seconds()
         self.assertTrue(59 <= delay <= 70, delay)
@@ -109,6 +110,7 @@ class RetryTests(TestCase):
         tracker.refresh_from_db()
         self.assertEqual(tracker.status, Status.ERROR)
         self.assertEqual(tracker.attempts, 3)
+        self.assertEqual(tracker.error_category, "smtp_unavailable")
         self.assertIsNone(tracker.next_attempt_at)
 
     def test_permanent_error_stops_at_once(self) -> None:
@@ -125,6 +127,7 @@ class RetryTests(TestCase):
         self.assertEqual(tracker.status, Status.ERROR)
         self.assertEqual(tracker.attempts, 1)
         self.assertEqual(tracker.last_error, "SMTPRecipientsRefused")
+        self.assertEqual(tracker.error_category, "message_rejected")
         self.assertIsNone(tracker.next_attempt_at)
 
     def test_error_classification(self) -> None:
@@ -232,6 +235,36 @@ class RetryTests(TestCase):
         self.assertEqual(tracker.status, Status.SENT)
         self.assertEqual(tracker.attempts, 2)
 
+    def test_success_clears_the_error_category(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(
+            user,
+            address.email,
+            status=Status.RETRYING,
+            attempts=1,
+            error_category="smtp_unavailable",
+            last_error="SMTPServerDisconnected",
+        )
+
+        attempt_delivery(tracker.id)
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.SENT)
+        self.assertIsNone(tracker.error_category)
+        self.assertEqual(tracker.last_error, "")
+
+    def test_cache_failure_does_not_stop_delivery(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(user, address.email)
+
+        with mock.patch("accounts.tasks.cache") as fake_cache:
+            fake_cache.set.side_effect = RuntimeError("cache is down")
+            send_email_task(tracker.id)
+
+        self.assertEqual(len(mail.outbox), 1)
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.SENT)
+
     def test_second_attempt_does_not_send_twice(self) -> None:
         user, address = make_user()
         tracker = make_tracker(user, address.email)
@@ -249,6 +282,7 @@ class RetryTests(TestCase):
             status=Status.ERROR,
             attempts=5,
             last_error="SMTPRecipientsRefused",
+            error_category="message_rejected",
         )
         confirmation = EmailConfirmationHMAC(address)
 
@@ -259,6 +293,7 @@ class RetryTests(TestCase):
         self.assertEqual(tracker.status, Status.WAITING)
         self.assertEqual(tracker.attempts, 0)
         self.assertEqual(tracker.last_error, "")
+        self.assertIsNone(tracker.error_category)
 
     def test_unexpected_error_is_retried_within_the_limit(self) -> None:
         user, address = make_user()
@@ -271,6 +306,7 @@ class RetryTests(TestCase):
         self.assertEqual(tracker.status, Status.RETRYING)
         self.assertEqual(tracker.attempts, 1)
         self.assertEqual(tracker.last_error, "RuntimeError")
+        self.assertEqual(tracker.error_category, "internal_error")
         self.assertIsNone(tracker.locked_until)
 
     def test_unexpected_errors_end_in_error_when_tries_run_out(self) -> None:
@@ -313,6 +349,7 @@ class RetryTests(TestCase):
         tracker.refresh_from_db()
         self.assertEqual(tracker.status, Status.ERROR)
         self.assertEqual(tracker.last_error, "AttemptsExhausted")
+        self.assertEqual(tracker.error_category, "worker_interrupted")
         self.assertEqual(tracker.attempts, 3)
         self.assertIsNone(tracker.locked_until)
         self.assertEqual(mail.outbox, [])

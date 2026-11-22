@@ -35,6 +35,30 @@ class CheckEmailWorkerTests(TestCase):
         with self.assertRaises(CommandError):
             call_command("check_email_worker")
 
+    def test_fresh_heartbeat_is_healthy_even_if_the_schedule_lags(
+        self,
+    ) -> None:
+        self.schedule().update(next_run=timezone.now() - timedelta(hours=2))
+        cache.set(WORKER_HEARTBEAT_CACHE_KEY, timezone.now().isoformat())
+
+        call_command("check_email_worker")
+
+    def test_old_heartbeat_and_stale_schedule_mean_the_worker_is_down(
+        self,
+    ) -> None:
+        old = timezone.now() - timedelta(minutes=11)
+        self.schedule().update(next_run=old)
+        cache.set(WORKER_HEARTBEAT_CACHE_KEY, old.isoformat())
+
+        with self.assertRaises(CommandError):
+            call_command("check_email_worker")
+
+    def test_garbage_heartbeat_is_ignored(self) -> None:
+        self.schedule().update(next_run=timezone.now() + timedelta(minutes=1))
+        cache.set(WORKER_HEARTBEAT_CACHE_KEY, "not a date")
+
+        call_command("check_email_worker")
+
     def test_missing_schedule_is_reported(self) -> None:
         self.schedule().delete()
 

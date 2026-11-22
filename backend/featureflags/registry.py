@@ -193,6 +193,36 @@ FEATURE_REGISTRY: dict[str, dict] = {
         "visual_impact": "Может блокировать действия до заполнения профиля.",
         "rollout_policy": BOOLEAN_ROLLOUT_POLICY,
     },
+    "site_403_page_ui": {
+        "title": "Страница ошибки 403",
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": (True, False),
+        "pages": ["*"],
+        "sticky": False,
+        "description": (
+            "Открывает страницы ошибок доступа (403 и restricted) "
+            "выбранной аудитории."
+        ),
+        "visual_impact": "Показывает полноэкранные страницы 403 и restricted.",
+        "rollout_policy": BOOLEAN_ROLLOUT_POLICY,
+    },
+    "site_404_page_ui": {
+        "title": "Страница ошибки 404",
+        "kind": "boolean",
+        "default_env": None,
+        "default_fallback": False,
+        "variants": (True, False),
+        "pages": ["*"],
+        "sticky": False,
+        "description": (
+            "Открывает новую страницу ошибки «Не найдено» (404) "
+            "выбранной аудитории."
+        ),
+        "visual_impact": "Показывает полноэкранную страницу ошибки 404.",
+        "rollout_policy": BOOLEAN_ROLLOUT_POLICY,
+    },
 }
 
 

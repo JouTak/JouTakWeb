@@ -193,44 +193,26 @@ class CancellationTests(TestCase):
 
 @override_settings(EMAIL_DELIVERY_MAX_ATTEMPTS=3)
 class DeliveryStateTests(TestCase):
-    def test_error_category_tells_waiting_from_failures(self) -> None:
+    def test_error_category_is_the_stored_one(self) -> None:
         user, address = make_user()
         cases = [
-            # status, attempts, stored category, last_error, expected
-            (Status.WAITING, 0, None, "", None),
-            (Status.SENT, 1, "smtp_unavailable", "", None),
-            (Status.CANCELLED, 1, "smtp_unavailable", "", None),
-            (Status.RETRYING, 1, "smtp_unavailable", "", "smtp_unavailable"),
-            (Status.RETRYING, 1, "internal_error", "", "internal_error"),
-            (Status.ERROR, 1, "message_rejected", "", "message_rejected"),
-            (Status.ERROR, 3, "smtp_unavailable", "", "smtp_unavailable"),
-            (Status.ERROR, 3, "worker_interrupted", "", "worker_interrupted"),
-            # rows written before the field existed
-            (Status.RETRYING, 1, None, "", "smtp_unavailable"),
-            (Status.ERROR, 1, None, "", "message_rejected"),
-            (Status.ERROR, 3, None, "", "smtp_unavailable"),
-            (
-                Status.ERROR,
-                3,
-                None,
-                "AttemptsExhausted",
-                "worker_interrupted",
-            ),
+            (Status.WAITING, None),
+            (Status.RETRYING, "smtp_unavailable"),
+            (Status.RETRYING, "internal_error"),
+            (Status.ERROR, "message_rejected"),
+            (Status.ERROR, "worker_interrupted"),
+            (Status.SENT, None),
+            (Status.CANCELLED, None),
         ]
-        for status, attempts, stored, last_error, expected in cases:
-            with self.subTest(status=status, attempts=attempts, stored=stored):
+        for status, stored in cases:
+            with self.subTest(status=status, stored=stored):
                 tracker = make_tracker(
-                    user,
-                    address.email,
-                    status=status,
-                    attempts=attempts,
-                    error_category=stored,
-                    last_error=last_error,
+                    user, address.email, status=status, error_category=stored
                 )
 
                 state = describe_delivery(tracker)
 
-                self.assertEqual(state["error_category"], expected)
+                self.assertEqual(state["error_category"], stored)
                 self.assertNotIn("is_smtp_down", state)
 
 

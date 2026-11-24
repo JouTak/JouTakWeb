@@ -13,9 +13,11 @@ exponentially growing delay, or a final error.
 
 from __future__ import annotations
 
+import errno
 import logging
 import smtplib
 import socket
+import ssl
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -85,11 +87,40 @@ def is_permanent_error(exc: BaseException) -> bool:
     return False
 
 
+# Errors of the network or of the SMTP server. Other OSError subclasses
+# (a missing template file, no permission) happen while the message is
+# prepared: they are our own errors, not an outage of the mail service.
+_TRANSPORT_ERRORS = (
+    smtplib.SMTPException,
+    ConnectionError,
+    TimeoutError,
+    socket.gaierror,
+    socket.herror,
+    ssl.SSLError,
+)
+# Network errnos that Python does not turn into ConnectionError.
+_NETWORK_ERRNOS = frozenset(
+    {
+        errno.ENETDOWN,
+        errno.ENETUNREACH,
+        errno.EHOSTDOWN,
+        errno.EHOSTUNREACH,
+        errno.EADDRNOTAVAIL,
+    }
+)
+
+
+def _is_transport_error(exc: BaseException) -> bool:
+    if isinstance(exc, _TRANSPORT_ERRORS):
+        return True
+    return isinstance(exc, OSError) and exc.errno in _NETWORK_ERRNOS
+
+
 def classify_delivery_error(exc: BaseException) -> str:
     """Map an exception to a structured ``ErrorCategory``."""
     if is_permanent_error(exc):
         return ErrorCategory.MESSAGE_REJECTED
-    if isinstance(exc, (smtplib.SMTPException, OSError, socket.timeout)):
+    if _is_transport_error(exc):
         return ErrorCategory.SMTP_UNAVAILABLE
     return ErrorCategory.INTERNAL_ERROR
 
@@ -129,27 +160,14 @@ def pending_email_address(user) -> EmailAddress | None:
 def describe_delivery(tracker: EmailVerificationTask) -> dict[str, object]:
     """Delivery state in the shape of ``EmailDeliveryOut``.
 
-    ``error_category`` explains a failure: it is set while the mail is
-    retrying or in final error and is ``None`` for waiting, sent and
-    cancelled mails. Trackers written before the field existed get a
-    category derived from their status.
+    ``error_category`` is the stored reason of the last failure. It is set
+    while the mail is retrying or in final error, and reset to ``None`` on
+    a new request, on success and on cancellation.
     """
-    has_error = tracker.status in (Status.RETRYING, Status.ERROR)
-    category = tracker.error_category if has_error else None
-    if has_error and category is None:
-        if tracker.last_error == ATTEMPTS_EXHAUSTED:
-            category = ErrorCategory.WORKER_INTERRUPTED
-        elif (
-            tracker.status == Status.ERROR
-            and tracker.attempts < settings.EMAIL_DELIVERY_MAX_ATTEMPTS
-        ):
-            category = ErrorCategory.MESSAGE_REJECTED
-        else:
-            category = ErrorCategory.SMTP_UNAVAILABLE
     return {
         "email": tracker.email,
         "status": tracker.status,
-        "error_category": category,
+        "error_category": tracker.error_category,
         "next_attempt_at": tracker.next_attempt_at,
         "next_allowed_at": tracker.next_allowed_at,
     }

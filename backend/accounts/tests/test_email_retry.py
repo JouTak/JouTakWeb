@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import errno
 import smtplib
 import socket
+import ssl
 from datetime import timedelta
 from unittest import mock
 
@@ -12,6 +14,7 @@ from accounts.apps import (
 from accounts.services.email_delivery import (
     attempt_delivery,
     backoff_seconds,
+    classify_delivery_error,
     is_permanent_error,
 )
 from accounts.tasks import dispatch_due_emails, send_email_task
@@ -152,6 +155,50 @@ class RetryTests(TestCase):
         for exc, expected in cases:
             with self.subTest(exc=repr(exc)):
                 self.assertEqual(is_permanent_error(exc), expected)
+
+    def test_error_category_separates_preparation_from_smtp(self) -> None:
+        cases = [
+            (SMTP_DOWN, "smtp_unavailable"),
+            (smtplib.SMTPDataError(451, b"try later"), "smtp_unavailable"),
+            (smtplib.SMTPAuthenticationError(535, b"bad"), "smtp_unavailable"),
+            (TimeoutError("timed out"), "smtp_unavailable"),
+            (ConnectionRefusedError("refused"), "smtp_unavailable"),
+            (socket.gaierror(-2, "unknown host"), "smtp_unavailable"),
+            (ssl.SSLError("handshake failed"), "smtp_unavailable"),
+            (
+                OSError(errno.ENETUNREACH, "Network is unreachable"),
+                "smtp_unavailable",
+            ),
+            (
+                OSError(errno.EHOSTUNREACH, "No route to host"),
+                "smtp_unavailable",
+            ),
+            (
+                smtplib.SMTPRecipientsRefused({"a": (550, b"x")}),
+                "message_rejected",
+            ),
+            (smtplib.SMTPDataError(554, b"spam"), "message_rejected"),
+            # errors while the message is prepared are our own
+            (FileNotFoundError("template.txt"), "internal_error"),
+            (PermissionError("template.txt"), "internal_error"),
+            (IsADirectoryError("templates"), "internal_error"),
+            (OSError("cannot read the template"), "internal_error"),
+            (RuntimeError("template error"), "internal_error"),
+        ]
+        for exc, expected in cases:
+            with self.subTest(exc=repr(exc)):
+                self.assertEqual(classify_delivery_error(exc), expected)
+
+    def test_file_error_during_preparation_is_an_internal_error(self) -> None:
+        user, address = make_user()
+        tracker = make_tracker(user, address.email)
+
+        with smtp_fails(FileNotFoundError("template.txt")):
+            attempt_delivery(tracker.id)
+
+        tracker.refresh_from_db()
+        self.assertEqual(tracker.status, Status.RETRYING)
+        self.assertEqual(tracker.error_category, "internal_error")
 
     def test_retry_is_not_run_before_it_is_due(self) -> None:
         user, address = make_user()

@@ -4,6 +4,11 @@ from accounts.api.openapi_params import (
 )
 from accounts.api.query_params import optional_str_query
 from accounts.services.account_status import AccountStatusService
+from accounts.services.email_verification import (
+    EMAIL_RESEND_COOLDOWN,
+    EmailResendCooldownError,
+    EmailVerificationService,
+)
 from accounts.services.profile import ProfileService
 from accounts.services.sessions import SessionService
 from accounts.transport.schemas import (
@@ -15,6 +20,7 @@ from accounts.transport.schemas import (
     OkOut,
     ProfileUpdateIn,
     ProfileUpdateOut,
+    ResendEmailOut,
     RevokeOut,
     RevokeSessionsIn,
     SessionIdStr,
@@ -23,7 +29,7 @@ from accounts.transport.schemas import (
 from allauth.headless.contrib.ninja.security import x_session_token_auth
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from ninja import Body, File, Router
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
@@ -32,6 +38,35 @@ User = get_user_model()
 account_router = Router(tags=["Account"], auth=[x_session_token_auth])
 BODY_REQUIRED = Body(...)
 AVATAR_REQUIRED = File(...)
+
+
+@account_router.post(
+    "/email/resend",
+    response={
+        200: ResendEmailOut,
+        400: ErrorOut,
+        401: ErrorOut,
+        429: ErrorOut,
+    },
+    summary="Resend email verification",
+    operation_id="account_resend_email_verification",
+)
+def resend_email_verification(
+    request: HttpRequest,
+    response: HttpResponse,
+) -> ResendEmailOut | tuple[int, ErrorOut]:
+    user = _require_authenticated_user(request)
+    SessionService.assert_session_allowed(request)
+    try:
+        return EmailVerificationService.resend(request, user)
+    except EmailResendCooldownError as exc:
+        response["Retry-After"] = str(exc.retry_after_seconds)
+        return 429, ErrorOut(
+            detail="Too many requests. Please try again later.",
+            error_code=EMAIL_RESEND_COOLDOWN,
+            retry_after_seconds=exc.retry_after_seconds,
+            next_allowed_at=exc.next_allowed_at,
+        )
 
 
 def _require_authenticated_user(request: HttpRequest) -> User:
